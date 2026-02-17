@@ -29,3 +29,4 @@ Also infer these secondary signals (each 0.00 to 1.00):
 - irreversibility: Can this be undone? 0 = fully reversible, 1 = permanent/lethal
 - stakes: How much is on the line? 0 = trivial, 1 = existential
 - time_pressure: How much does delay cost? 0 = can wait forever,
+};
