@@ -293,8 +293,11 @@ input[type="range"]:disabled {
 
 .decision-badge.commit { color: var(--commit); border-color: var(--commit); background: rgba(0,255,136,0.08); box-shadow: 0 0 30px rgba(0,255,136,0.1); }
 .decision-badge.wait { color: var(--wait); border-color: var(--wait); background: rgba(255,170,0,0.08); box-shadow: 0 0 30px rgba(255,170,0,0.1); }
+.decision-badge.hold { color: #88aaff; border-color: #88aaff; background: rgba(136,170,255,0.08); box-shadow: 0 0 30px rgba(136,170,255,0.1); }
+.decision-badge.escalate { color: #aa88ff; border-color: #aa88ff; background: rgba(170,136,255,0.08); box-shadow: 0 0 30px rgba(170,136,255,0.1); animation: escalate-pulse 2s ease-in-out infinite; }
 .decision-badge.toxic { color: var(--toxic); border-color: var(--toxic); background: rgba(255,51,85,0.08); box-shadow: 0 0 30px rgba(255,51,85,0.1); animation: toxic-pulse 1.5s ease-in-out infinite; }
 @keyframes toxic-pulse { 0%, 100% { box-shadow: 0 0 30px rgba(255,51,85,0.1); } 50% { box-shadow: 0 0 50px rgba(255,51,85,0.25); } }
+@keyframes escalate-pulse { 0%, 100% { box-shadow: 0 0 30px rgba(170,136,255,0.1); } 50% { box-shadow: 0 0 45px rgba(170,136,255,0.2); } }
 .decision-sub { font-size: 0.55rem; font-weight: 400; letter-spacing: 0.1em; margin-top: 2px; opacity: 0.7; }
 
 .viewport-stats {
@@ -304,6 +307,25 @@ input[type="range"]:disabled {
 .vstat { text-align: center; }
 .vstat-label { font-family: var(--mono); font-size: 0.55rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); }
 .vstat-value { font-family: var(--mono); font-size: 1.1rem; font-weight: 600; color: var(--text); }
+
+/* ─── DECISION SURFACE GRID ─── */
+.decision-surface { margin-top: 0.6rem; padding: 0.6rem; background: var(--surface); border: 1px solid var(--border); border-radius: 4px; }
+.surface-title { font-family: var(--mono); font-size: 0.55rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.5rem; }
+.surface-grid { display: grid; grid-template-columns: 2.2rem 1fr 1fr 1fr; grid-template-rows: auto 1fr 1fr 1fr; gap: 2px; font-family: var(--mono); font-size: 0.55rem; }
+.sg-header { color: var(--text-muted); text-align: center; padding: 0.2rem; letter-spacing: 0.06em; }
+.sg-label { color: var(--text-muted); display: flex; align-items: center; justify-content: flex-end; padding-right: 0.3rem; font-size: 0.5rem; letter-spacing: 0.04em; }
+.sg-cell { text-align: center; padding: 0.25rem 0.15rem; border-radius: 2px; font-weight: 600; font-size: 0.48rem; letter-spacing: 0.04em; opacity: 0.5; transition: all 0.3s; }
+.sg-cell.active { opacity: 1; box-shadow: 0 0 8px currentColor; transform: scale(1.05); }
+.sg-cell.commit { color: #00ff88; background: rgba(0,255,136,0.12); border: 1px solid rgba(0,255,136,0.25); }
+.sg-cell.hold { color: #88aaff; background: rgba(136,170,255,0.12); border: 1px solid rgba(136,170,255,0.25); }
+.sg-cell.escalate { color: #aa88ff; background: rgba(170,136,255,0.12); border: 1px solid rgba(170,136,255,0.25); }
+.sg-cell.toxic { color: #ff3355; background: rgba(255,51,85,0.12); border: 1px solid rgba(255,51,85,0.25); }
+.sg-cell.wait { color: #ffaa00; background: rgba(255,170,0,0.12); border: 1px solid rgba(255,170,0,0.25); }
+.surface-current { font-family: var(--mono); font-size: 0.5rem; color: var(--text-dim); margin-top: 0.4rem; line-height: 1.4; }
+.surface-current strong { color: var(--text); }
+.surface-legend { display: flex; gap: 0.6rem; margin-top: 0.35rem; font-family: var(--mono); font-size: 0.45rem; color: var(--text-muted); flex-wrap: wrap; }
+.surface-legend span { display: flex; align-items: center; gap: 0.2rem; }
+.legend-dot { width: 6px; height: 6px; border-radius: 1px; display: inline-block; }
 
 /* ─── RIGHT PANEL ─── */
 .panel-right { border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
@@ -654,7 +676,39 @@ input[type="range"]:disabled {
 
         <!-- EXPLANATION WITH TOGGLE -->
         <div>
-          <div class="explain-header">
+          <!-- DECISION SURFACE GRID -->
+          <div class="decision-surface" id="decision-surface">
+            <div class="surface-title">Decision Surface <span style="opacity:0.5">(signal present)</span></div>
+            <div class="surface-grid">
+              <div class="sg-header"></div>
+              <div class="sg-header">LOW</div>
+              <div class="sg-header">MED</div>
+              <div class="sg-header">HIGH</div>
+              <div class="sg-label">I:HI</div>
+              <div class="sg-cell commit" id="sg-hi-lo">CMT</div>
+              <div class="sg-cell commit" id="sg-hi-md">CMT</div>
+              <div class="sg-cell commit" id="sg-hi-hi">CMT</div>
+              <div class="sg-label">I:MD</div>
+              <div class="sg-cell hold" id="sg-md-lo">HLD</div>
+              <div class="sg-cell hold" id="sg-md-md">HLD</div>
+              <div class="sg-cell escalate" id="sg-md-hi">ESC</div>
+              <div class="sg-label">I:LO</div>
+              <div class="sg-cell hold" id="sg-lo-lo">HLD</div>
+              <div class="sg-cell escalate" id="sg-lo-md">ESC</div>
+              <div class="sg-cell toxic" id="sg-lo-hi">TOX</div>
+            </div>
+            <div class="surface-legend">
+              <span><span class="legend-dot" style="background:#00ff88"></span> Commit</span>
+              <span><span class="legend-dot" style="background:#88aaff"></span> Hold</span>
+              <span><span class="legend-dot" style="background:#aa88ff"></span> Escalate</span>
+              <span><span class="legend-dot" style="background:#ff3355"></span> Toxic</span>
+            </div>
+            <div class="surface-current" id="surface-current">
+              <span style="color:var(--text-muted)">URGENCY →</span>
+            </div>
+          </div>
+
+          <div class="explain-header" style="margin-top:0.6rem;">
             <div class="panel-label" style="margin-bottom:0">Assessment</div>
             <div class="explain-toggle">
               <button class="explain-toggle-btn active" data-mode="human">Why?</button>
@@ -713,7 +767,7 @@ input[type="range"]:disabled {
         <span class="flow-arrow">→</span>
         <div class="flow-step">6D state → 3D projection</div>
         <span class="flow-arrow">→</span>
-        <div class="flow-step">COMMIT | WAIT | TOXIC</div>
+        <div class="flow-step">COMMIT | HOLD | WAIT | ESCALATE | TOXIC</div>
         <span class="flow-arrow">→</span>
         <div class="flow-step">Full audit trail</div>
       </div>
@@ -774,7 +828,8 @@ TOXIC     if |r| ≥ τ  BUT  (EV ≤ 0  OR  Integrity < 0.5)
     </div>
 
     <div class="pitch-footer">
-      <div class="copy-line">NERVA INTEGRITY LAYER · Starpoint LLC · Confidential © 2026</div>
+      <div class="contact">Anthony Migliazzo · <a href="mailto:miglanthony@gmail.com">miglanthony@gmail.com</a></div>
+      <div class="copy-line">NERVA INTEGRITY LAYER · Phasewell Research · Confidential © 2026</div>
     </div>
   </div>
 </div>
@@ -867,10 +922,13 @@ Intuition:
 → Auto τ: 0.72 (one-way door — lethal, irreversible)
 → Decision: WAIT</div>
 
-    <h2>Decision Logic</h2>
-    <p><code>COMMIT</code> — Radius meets threshold, positive expected value, integrity above 0.5. Safe to proceed.</p>
-    <p><code>WAIT</code> — Radius below threshold. Insufficient signal. Hold for more data.</p>
-    <p><code>TOXIC_ESCALATION</code> — Sufficient signal but negative EV or low integrity. Block and escalate.</p>
+    <h2>Decision Logic (v8.2 State Machine)</h2>
+    <p><code>COMMIT</code> — Signal present, integrity exceeds dynamic threshold. Proceed with monitoring.</p>
+    <p><code>HOLD</code> — Signal present but integrity insufficient in calm conditions. Monitor and reassess.</p>
+    <p><code>WAIT</code> — No signal detected. Gather more data before acting.</p>
+    <p><code>ESCALATE</code> — High urgency, entropy, or irreversibility with insufficient integrity. Route to human review.</p>
+    <p><code>TOXIC</code> — Hard veto. Critically low integrity on irreversible, high-entropy action. Do not proceed.</p>
+    <p style="margin-top:0.5rem;font-size:0.85rem;opacity:0.8;"><strong>Overrides:</strong> Urgency Override (U≥0.90 + signal + I≥0.45 + reversible → force COMMIT). One-Way Brake (irreversible + I&lt;0.60 → force ESCALATE).</p>
 
     <h2>Mathematical Basis</h2>
     <p>Decision coordinates: <code>x = E + S</code> (intent), <code>y = R</code> (risk), <code>z = Support × Stability</code> (integrity). Projected to Bloch sphere via <code>θ = acos(z/|r|)</code>, <code>φ = atan2(y,x)</code>. Density matrix <code>ρ̂ = |ψ⟩⟨ψ|</code> yields coherence via l₁-norm and entropy via von Neumann formula. All closed-form, O(1) computation.</p>
@@ -893,17 +951,21 @@ const NERVA = {
   },
 
   compute(e, s, r, sup, stab, tau) {
-    const x = e + s;
-    const y = r;
-    const z = sup * stab;
+    // Normalize intent to [0,1] so it doesn't dominate the radius
+    const x = (e + s) / 2;  // intent: averaged, 0-1 range
+    const y = r;             // risk: 0-1
+    const z = sup * stab;   // foundation: 0-1
     const radius = Math.sqrt(x*x + y*y + z*z);
     const theta = radius > 0 ? Math.acos(Math.min(1, z / radius)) : 0;
     const phi = Math.atan2(y, x);
 
     const intent = (e + s) / 2;
     const ev = (intent - r) * z;
-    const integrity = z / Math.max(radius, 0.001);
-    const coherence = Math.exp(-0.5 * Math.abs(phi));
+
+    // Integrity: foundation strength relative to total signal
+    // Weighted to reward strong evidence+stability
+    const integrity = (z * 0.6 + (1 - Math.abs(intent - z)) * 0.4) / Math.max(radius + 0.3, 0.001);
+    const coherence = Math.exp(-0.3 * Math.abs(phi));
 
     const cosH = Math.cos(theta / 2);
     const sinH = Math.sin(theta / 2);
@@ -914,17 +976,86 @@ const NERVA = {
 
     let entropy = 0;
     if (rho00 > 0.001 && rho00 < 0.999) {
-      entropy = -(rho00 * Math.log2(rho00) + rho11 * Math.log2(rho11));
+      const rawEntropy = -(rho00 * Math.log2(rho00) + rho11 * Math.log2(rho11));
+      // Dampen entropy: don't let it dominate decision logic
+      entropy = rawEntropy * 0.7 + 0.3 * (1 - z);
     }
 
+    // ─── STATE MACHINE DECISION LOGIC (v8.2) ───
+    // Reversibility: how easily can this be undone
+    const reversibility = (sup + stab) / 2;
+
+    // Signal margin
+    const margin = (radius - tau) / Math.max(tau, 0.001);
+    const signalPresent = radius >= tau;
+
+    // Urgency mapped from emotion input
+    const U = e;
+    // Irreversibility: inverse of reversibility
+    const Rv = 1 - reversibility;
+    const H = entropy;
+
+    // Dynamic integrity threshold (bold default)
+    // Higher urgency → easier to commit
+    // More irreversible or more entropy → harder to commit
+    const I_commit = Math.max(0.30, Math.min(0.75, 0.52 - (0.20 * U) + (0.12 * Rv) + (0.10 * H)));
+
     let decision;
-    if (radius < tau) {
-      decision = 'WAIT';
-    } else if (ev <= 0 || integrity < 0.5) {
-      decision = 'TOXIC_ESCALATION';
-    } else {
-      decision = 'COMMIT';
+    let matrixCell = '';
+    let overrideUsed = '';
+
+    // 0) Hard veto boundary (keep rare)
+    if (signalPresent && integrity <= 0.20 && Rv >= 0.80 && H >= 0.85) {
+      decision = 'TOXIC';
+      matrixCell = 'RUIN_BOUNDARY';
     }
+    // 1) No-signal branch
+    else if (!signalPresent) {
+      if (U >= 0.85) {
+        decision = 'ESCALATE';
+        matrixCell = 'NO_SIGNAL_HIGH_U';
+      } else if (U >= 0.35) {
+        decision = 'HOLD';
+        matrixCell = 'NO_SIGNAL_MED_U';
+      } else {
+        decision = 'WAIT';
+        matrixCell = 'NO_SIGNAL_LOW_U';
+      }
+    }
+    // 2) Signal-present branch
+    else {
+      if (integrity >= I_commit) {
+        decision = 'COMMIT';
+        matrixCell = 'SIGNAL_HIGH_I';
+      } else {
+        if (U >= 0.75 || H >= 0.85 || Rv >= 0.70) {
+          decision = 'ESCALATE';
+          matrixCell = 'SIGNAL_LOW_I_URGENT';
+        } else {
+          decision = 'HOLD';
+          matrixCell = 'SIGNAL_LOW_I_CALM';
+        }
+      }
+    }
+
+    // Override A: Urgency override (bold bias)
+    // When urgency is extreme and there's signal, allow commitment even with lower integrity
+    // if the scenario is reversible and there's at least some foundation
+    if (U >= 0.90 && signalPresent && integrity >= 0.25 && Rv < 0.70 && z >= 0.15) {
+      decision = 'COMMIT';
+      overrideUsed = 'URGENCY_OVERRIDE';
+      matrixCell = 'OVERRIDE_URGENCY';
+    }
+    // Override B: One-way door brake
+    if (Rv >= 0.80 && integrity < 0.60 && decision === 'COMMIT') {
+      decision = 'ESCALATE';
+      overrideUsed = 'ONE_WAY_BRAKE';
+      matrixCell = 'OVERRIDE_ONEWAY';
+    }
+
+    // Integrity band and urgency band for grid display
+    const integrityBand = integrity >= 0.65 ? 'HIGH' : integrity >= 0.40 ? 'MED' : 'LOW';
+    const urgencyBand = U >= 0.65 ? 'HIGH' : U >= 0.35 ? 'MED' : 'LOW';
 
     let quadrant;
     if (x >= 0.5 && r >= 0.5) quadrant = 'bold_opportunity';
@@ -934,65 +1065,70 @@ const NERVA = {
 
     const quadrantLabels = { bold_opportunity: 'Bold Opportunity', clean_gain: 'Clean Gain', chaotic_risk: 'Chaotic Risk', low_signal: 'Low Signal' };
 
-    // Reversibility score for explanation
-    const reversibility = (sup + stab) / 2;
-
     return {
       decision, quadrant, quadrantLabel: quadrantLabels[quadrant],
       x, y, z, radius, theta, phi,
       ev, integrity, coherence, purity, entropy, reversibility,
-      tau,
+      tau, I_commit, matrixCell, overrideUsed, signalPresent,
+      integrityBand, urgencyBand, margin,
       input: { emotion: e, strategy: s, risk: r, support: sup, stability: stab, threshold: tau }
     };
   },
 
-  // ─── ANALYST EXPLAINER (v8 original) ───
+  // ─── ANALYST EXPLAINER (v8.2) ───
   explainAnalyst(result) {
-    const { decision, integrity, ev, coherence, quadrantLabel, tau, radius } = result;
+    const { decision, integrity, ev, coherence, quadrantLabel, tau, radius, I_commit, matrixCell, overrideUsed, signalPresent } = result;
+    var override = overrideUsed ? ' Override: ' + overrideUsed + '.' : '';
     if (decision === 'COMMIT') {
-      const strength = integrity > 0.7 ? 'strong' : 'adequate';
-      return `Decision state shows <strong>${strength} alignment</strong> between intent and support (integrity ${(integrity*100).toFixed(0)}%). EV +${ev.toFixed(2)}. Coherence ${(coherence*100).toFixed(0)}%. Radius ${radius.toFixed(2)} exceeds τ ${tau.toFixed(2)}. <strong>Proceed with monitoring.</strong>`;
+      var strength = integrity > 0.7 ? 'strong' : 'adequate';
+      return 'Decision state shows <strong>' + strength + ' alignment</strong> (integrity ' + (integrity*100).toFixed(0) + '% vs I_commit ' + (I_commit*100).toFixed(0) + '%). EV ' + (ev >= 0 ? '+' : '') + ev.toFixed(2) + '. r=' + radius.toFixed(2) + ' > t=' + tau.toFixed(2) + '.' + override + ' <strong>Proceed with monitoring.</strong>';
     } else if (decision === 'WAIT') {
-      return `Signal radius ${radius.toFixed(2)} below threshold τ=${tau.toFixed(2)}. <strong>Insufficient signal strength</strong> for commitment. ${quadrantLabel} quadrant. EV ${ev >= 0 ? '+' : ''}${ev.toFixed(2)}. <strong>Gather more data.</strong>`;
+      return 'Signal radius ' + radius.toFixed(2) + ' below threshold t=' + tau.toFixed(2) + '. <strong>Insufficient signal</strong> for commitment. ' + quadrantLabel + '. <strong>Gather more data.</strong>';
+    } else if (decision === 'HOLD') {
+      return 'Signal ' + (signalPresent ? 'present (r=' + radius.toFixed(2) + ')' : 'weak') + ' but integrity ' + (integrity*100).toFixed(0) + '% below I_commit ' + (I_commit*100).toFixed(0) + '%. Conditions not urgent enough to escalate. <strong>Hold position, monitor conditions.</strong>';
+    } else if (decision === 'ESCALATE') {
+      return '<strong>Escalate to human.</strong> Signal ' + (signalPresent ? 'present' : 'absent') + ', integrity ' + (integrity*100).toFixed(0) + '%, but high urgency/entropy/irreversibility requires human judgment.' + override + ' Cell: ' + matrixCell + '.';
     } else {
-      const reason = integrity < 0.5 ? `low integrity (${(integrity*100).toFixed(0)}%)` : `negative EV (${ev.toFixed(2)})`;
-      return `<strong>Action blocked.</strong> Signal present (r=${radius.toFixed(2)} ≥ τ=${tau.toFixed(2)}) but ${reason}. ${quadrantLabel}. <strong>Escalate to human review.</strong>`;
+      return '<strong>HARD VETO.</strong> Integrity critically low (' + (integrity*100).toFixed(0) + '%) on irreversible action with high entropy. <strong>Do not proceed under any circumstances.</strong>';
     }
   },
 
-  // ─── HUMAN EXPLAINER (no math vocabulary) ───
+  // ─── HUMAN EXPLAINER (v8.2 — no math vocabulary) ───
   explainHuman(result) {
-    const { decision, input, reversibility } = result;
+    const { decision, input, reversibility, overrideUsed } = result;
     const { emotion: e, strategy: s, risk: r, support: sup, stability: stab } = input;
 
     // Build situation descriptors
-    const urgencyDesc = e > 0.7 ? 'high urgency' : e > 0.4 ? 'moderate urgency' : 'low urgency';
-    const planDesc = s > 0.7 ? 'a solid plan' : s > 0.4 ? 'a reasonable plan' : 'a weak plan';
-    const riskDesc = r > 0.7 ? 'The risk is significant' : r > 0.4 ? 'There is meaningful risk involved' : 'The risk level is low';
-    const supportDesc = sup > 0.7 ? 'strong supporting evidence' : sup > 0.4 ? 'moderate evidence' : 'weak evidence';
-    const stabilityDesc = stab > 0.7 ? 'stable conditions' : stab > 0.4 ? 'somewhat unstable conditions' : 'unstable conditions';
-    const doorType = reversibility > 0.6 ? 'two-way door — this can be undone' : reversibility > 0.4 ? 'partially reversible' : 'one-way door — this cannot be easily undone';
+    var urgencyDesc = e > 0.7 ? 'high urgency' : e > 0.4 ? 'moderate urgency' : 'low urgency';
+    var planDesc = s > 0.7 ? 'a solid plan' : s > 0.4 ? 'a reasonable plan' : 'a weak plan';
+    var riskDesc = r > 0.7 ? 'The risk is significant' : r > 0.4 ? 'There is meaningful risk involved' : 'The risk level is low';
+    var supportDesc = sup > 0.7 ? 'strong supporting evidence' : sup > 0.4 ? 'moderate evidence' : 'weak evidence';
+    var stabilityDesc = stab > 0.7 ? 'stable conditions' : stab > 0.4 ? 'somewhat unstable conditions' : 'unstable conditions';
+    var doorType = reversibility > 0.6 ? 'two-way door — this can be undone' : reversibility > 0.4 ? 'partially reversible' : 'one-way door — this cannot be easily undone';
 
     if (decision === 'COMMIT') {
-      return `This situation has <strong>${urgencyDesc}</strong> with <strong>${planDesc}</strong> behind it. ${riskDesc}, but there's <strong>${supportDesc}</strong> and <strong>${stabilityDesc}</strong>. This looks like a <strong>${doorType}</strong>. <strong>NERVA recommends proceeding</strong>, with continued monitoring.`;
+      var overrideNote = overrideUsed === 'URGENCY_OVERRIDE' ? ' The extreme urgency justifies acting despite uncertainty.' : '';
+      return 'This situation has <strong>' + urgencyDesc + '</strong> with <strong>' + planDesc + '</strong> behind it. ' + riskDesc + ', but there\'s <strong>' + supportDesc + '</strong> and <strong>' + stabilityDesc + '</strong>. This is a <strong>' + doorType + '</strong>. <strong>NERVA recommends proceeding.</strong>' + overrideNote;
     } else if (decision === 'WAIT') {
-      // What would change it
-      let changeHint = '';
-      if (sup < 0.5) changeHint = 'Getting better data or confirmation would help the most.';
+      var changeHint = '';
+      if (sup < 0.5) changeHint = 'Getting better data would help the most.';
       else if (stab < 0.5) changeHint = 'Waiting for conditions to stabilize would strengthen the case.';
-      else if (s < 0.5) changeHint = 'A clearer plan would make this more actionable.';
       else changeHint = 'More time or better conditions could shift this toward action.';
-
-      return `There's <strong>${urgencyDesc}</strong> and <strong>${planDesc}</strong>, but the picture isn't complete enough to commit. ${riskDesc} under <strong>${stabilityDesc}</strong>, with <strong>${supportDesc}</strong>. This looks like a <strong>${doorType}</strong>. <strong>NERVA recommends waiting.</strong> ${changeHint}`;
+      return 'There\'s <strong>' + urgencyDesc + '</strong> and <strong>' + planDesc + '</strong>, but the signal isn\'t strong enough to act. ' + riskDesc + ' under <strong>' + stabilityDesc + '</strong>. This is a <strong>' + doorType + '</strong>. <strong>NERVA recommends waiting.</strong> ' + changeHint;
+    } else if (decision === 'HOLD') {
+      var changeHint2 = '';
+      if (e < 0.5) changeHint2 = 'If urgency increases or stronger evidence appears, this could become actionable.';
+      else changeHint2 = 'Strengthening the plan or getting better data would move this toward a decision.';
+      return 'There\'s <strong>' + urgencyDesc + '</strong> with <strong>' + planDesc + '</strong>. The situation has signal but not enough alignment to commit. ' + riskDesc + ' under <strong>' + stabilityDesc + '</strong>, with <strong>' + supportDesc + '</strong>. This is a <strong>' + doorType + '</strong>. <strong>Hold position and monitor.</strong> ' + changeHint2;
+    } else if (decision === 'ESCALATE') {
+      var reason = '';
+      if (overrideUsed === 'ONE_WAY_BRAKE') reason = 'Because this is a one-way door with insufficient confidence, ';
+      else if (e >= 0.75) reason = 'Given the high urgency and the stakes involved, ';
+      else reason = 'Given the uncertainty and potential consequences, ';
+      return 'This situation has <strong>' + urgencyDesc + '</strong>. ' + riskDesc + ' under <strong>' + stabilityDesc + '</strong>, with <strong>' + supportDesc + '</strong>. ' + reason + '<strong>a human decision-maker should review this before proceeding.</strong> This is a <strong>' + doorType + '</strong>.';
     } else {
       // TOXIC
-      let dangerDesc = '';
-      if (result.integrity < 0.5) {
-        dangerDesc = 'The foundation for this action is weak — the supporting conditions don\'t justify the risk being taken.';
-      } else {
-        dangerDesc = 'The potential downside outweighs the upside, even though there\'s strong signal pushing toward action.';
-      }
-      return `This situation has <strong>${urgencyDesc}</strong>, but <strong>NERVA is blocking this action.</strong> ${dangerDesc} ${riskDesc} under <strong>${stabilityDesc}</strong>. This is a <strong>${doorType}</strong>. <strong>Escalate to a human decision-maker.</strong>`;
+      return '<strong>NERVA is blocking this action.</strong> This is a <strong>' + doorType + '</strong> with critically low alignment, high uncertainty, and irreversible consequences. ' + riskDesc + ' under <strong>' + stabilityDesc + '</strong>. <strong>Do not proceed. This path risks catastrophic outcomes.</strong>';
     }
   },
 
@@ -1007,6 +1143,12 @@ const NERVA = {
       entropy: +result.entropy.toFixed(3),
       threshold_used: +result.tau.toFixed(3),
       threshold_mode: currentTauMode,
+      I_commit: +result.I_commit.toFixed(3),
+      matrix_cell: result.matrixCell,
+      override: result.overrideUsed || 'NONE',
+      signal_present: result.signalPresent,
+      integrity_band: result.integrityBand,
+      urgency_band: result.urgencyBand,
       bloch: { theta: +result.theta.toFixed(3), phi: +result.phi.toFixed(3), r: +result.radius.toFixed(3) },
       reasoning: NERVA.explainHuman(result).replace(/<[^>]+>/g, ''),
       reasoning_analyst: NERVA.explainAnalyst(result).replace(/<[^>]+>/g, '')
@@ -1018,7 +1160,7 @@ const NERVA = {
       tool: "nerva_validate",
       input: result.input,
       output: NERVA.toJSON(result),
-      meta: { version: "v8.1", latency_target_ms: 10, deterministic: true, threshold_mode: currentTauMode }
+      meta: { version: "v8.2", latency_target_ms: 10, deterministic: true, threshold_mode: currentTauMode }
     };
   }
 };
@@ -1303,24 +1445,49 @@ function update() {
   // 3D
   if (decisionPoint) {
     decisionPoint.position.set(result.x, result.z, result.y);
-    const colors = { COMMIT: 0x00ff88, WAIT: 0xffaa00, TOXIC_ESCALATION: 0xff3355 };
-    decisionPoint.material.color.setHex(colors[result.decision]);
-    decisionPoint.children[0].material.color.setHex(colors[result.decision]);
+    var colors = { COMMIT: 0x00ff88, WAIT: 0xffaa00, HOLD: 0x88aaff, ESCALATE: 0xaa88ff, TOXIC: 0xff3355 };
+    var dColor = colors[result.decision] || 0xffffff;
+    decisionPoint.material.color.setHex(dColor);
+    decisionPoint.children[0].material.color.setHex(dColor);
 
     trailPoints.push(new THREE.Vector3(result.x, result.z, result.y));
     if (trailPoints.length > MAX_TRAIL) trailPoints.shift();
     trailLine.geometry.dispose();
     trailLine.geometry = new THREE.BufferGeometry().setFromPoints(trailPoints);
-    trailLine.material.color.setHex(colors[result.decision]);
+    trailLine.material.color.setHex(dColor);
   }
 
   if (thresholdSphere) thresholdSphere.scale.setScalar(tau * 2);
 
   // Badge
-  const badge = document.getElementById('decision-badge');
-  badge.className = 'decision-badge ' + (result.decision === 'COMMIT' ? 'commit' : result.decision === 'WAIT' ? 'wait' : 'toxic');
-  document.getElementById('decision-text').textContent = result.decision.replace('_', ' ');
+  var badge = document.getElementById('decision-badge');
+  var badgeClass = 'decision-badge ';
+  if (result.decision === 'COMMIT') badgeClass += 'commit';
+  else if (result.decision === 'WAIT') badgeClass += 'wait';
+  else if (result.decision === 'HOLD') badgeClass += 'hold';
+  else if (result.decision === 'ESCALATE') badgeClass += 'escalate';
+  else badgeClass += 'toxic';
+  badge.className = badgeClass;
+  document.getElementById('decision-text').textContent = result.decision;
   document.getElementById('decision-sub').textContent = result.quadrantLabel;
+
+  // Decision Surface Grid — highlight active cell
+  var allCells = document.querySelectorAll('.sg-cell');
+  allCells.forEach(function(c) { c.classList.remove('active'); });
+  var cellMap = {
+    'HIGH-LOW': 'sg-hi-lo', 'HIGH-MED': 'sg-hi-md', 'HIGH-HIGH': 'sg-hi-hi',
+    'MED-LOW': 'sg-md-lo', 'MED-MED': 'sg-md-md', 'MED-HIGH': 'sg-md-hi',
+    'LOW-LOW': 'sg-lo-lo', 'LOW-MED': 'sg-lo-md', 'LOW-HIGH': 'sg-lo-hi'
+  };
+  var activeKey = result.integrityBand + '-' + result.urgencyBand;
+  var activeCell = document.getElementById(cellMap[activeKey]);
+  if (activeCell) activeCell.classList.add('active');
+
+  // Update surface info
+  var surfaceEl = document.getElementById('surface-current');
+  var sigLabel = result.signalPresent ? 'PRESENT' : 'ABSENT';
+  var overrideLabel = result.overrideUsed ? ' | Override: <strong>' + result.overrideUsed + '</strong>' : '';
+  surfaceEl.innerHTML = 'Signal: <strong>' + sigLabel + '</strong> | I: <strong>' + result.integrityBand + '</strong> (' + (result.integrity*100).toFixed(0) + '%) | U: <strong>' + result.urgencyBand + '</strong> | I_commit: ' + (result.I_commit*100).toFixed(0) + '%' + overrideLabel;
 
   // Viewport stats
   document.getElementById('vstat-r').textContent = result.radius.toFixed(2);
