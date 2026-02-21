@@ -526,12 +526,13 @@ input[type="range"]:disabled {
   cursor: pointer; font-size: 0.8rem; background: none; border: none; }
 .guide-tooltip-close:hover { color: var(--text); }
 
-[data-guide] { position: relative; cursor: help; }
-.guide-active [data-guide] { outline: 1px dashed rgba(0,255,136,0.2); outline-offset: 2px; }
+[data-guide] { position: relative; }
+.guide-active [data-guide] { cursor: help; outline: 1px dashed rgba(0,255,136,0.2); outline-offset: 2px; }
 .guide-active [data-guide]:hover { outline-color: rgba(0,255,136,0.5); }
 
 /* ─── GRID CELL TOOLTIPS ─── */
 .sg-cell { cursor: pointer; position: relative; }
+.guide-active .sg-cell { cursor: pointer; }
 .grid-tooltip {
   display: none; position: absolute; z-index: 200; bottom: calc(100% + 6px); left: 50%;
   transform: translateX(-50%); width: 200px; background: #1a1a22;
@@ -702,13 +703,13 @@ input[type="range"]:disabled {
     </div>
 
     <!-- CENTER — 3D VIEWPORT -->
-    <div class="viewport" data-guide="viewport" data-guide-text="The Bloch sphere visualizes your decision as a point in 3D space. Axes: Intent (urgency + strategy), Risk, and Foundation (support × stability). The wireframe sphere represents the commitment threshold — points outside it have enough signal to act.">
+    <div class="viewport">
       <canvas id="three-canvas"></canvas>
-      <div class="decision-badge commit" id="decision-badge" data-guide="badge" data-guide-text="The final decision output. COMMIT = proceed. HOLD = monitor. WAIT = insufficient signal. ESCALATE = route to human review. TOXIC = hard veto. The subtitle shows which quadrant of the decision space you're in.">
+      <div class="decision-badge commit" id="decision-badge">
         <div id="decision-text">COMMIT</div>
         <div class="decision-sub" id="decision-sub">Bold Opportunity</div>
       </div>
-      <div class="viewport-stats">
+      <div class="viewport-stats" data-guide="viewport" data-guide-text="The Bloch sphere above visualizes your decision as a 3D point. |r| = signal strength. θ/φ = angular position. τ = commitment threshold (wireframe sphere). EV = expected value. The decision badge shows: COMMIT, HOLD, WAIT, ESCALATE, or TOXIC.">
         <div class="vstat">
           <div class="vstat-label">|r|</div>
           <div class="vstat-value" id="vstat-r">0.00</div>
