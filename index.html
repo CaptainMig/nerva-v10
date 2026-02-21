@@ -527,6 +527,8 @@ input[type="range"]:disabled {
 .guide-tooltip-close:hover { color: var(--text); }
 
 [data-guide] { position: relative; }
+.guide-anchor { position: absolute; top: 40%; left: 50%; width: 1px; height: 1px; z-index: 50; }
+.guide-active .guide-anchor { width: 30px; height: 30px; margin-left: -15px; margin-top: -15px; border-radius: 50%; outline: 2px dashed rgba(0,255,136,0.3); cursor: help; }
 .guide-active [data-guide] { cursor: help; outline: 1px dashed rgba(0,255,136,0.2); outline-offset: 2px; }
 .guide-active [data-guide]:hover { outline-color: rgba(0,255,136,0.5); }
 
@@ -704,12 +706,13 @@ input[type="range"]:disabled {
 
     <!-- CENTER — 3D VIEWPORT -->
     <div class="viewport">
+      <div class="guide-anchor" data-guide="viewport" data-guide-text="The Bloch sphere visualizes your decision as a 3D point. |r| = signal strength. θ/φ = angular position. τ = commitment threshold (wireframe sphere). EV = expected value. The badge shows COMMIT, HOLD, WAIT, ESCALATE, or TOXIC."></div>
       <canvas id="three-canvas"></canvas>
       <div class="decision-badge commit" id="decision-badge">
         <div id="decision-text">COMMIT</div>
         <div class="decision-sub" id="decision-sub">Bold Opportunity</div>
       </div>
-      <div class="viewport-stats" data-guide="viewport" data-guide-text="The Bloch sphere above visualizes your decision as a 3D point. |r| = signal strength. θ/φ = angular position. τ = commitment threshold (wireframe sphere). EV = expected value. The decision badge shows: COMMIT, HOLD, WAIT, ESCALATE, or TOXIC.">
+      <div class="viewport-stats">
         <div class="vstat">
           <div class="vstat-label">|r|</div>
           <div class="vstat-value" id="vstat-r">0.00</div>
