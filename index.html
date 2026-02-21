@@ -327,6 +327,26 @@ input[type="range"]:disabled {
 .surface-legend span { display: flex; align-items: center; gap: 0.2rem; }
 .legend-dot { width: 6px; height: 6px; border-radius: 1px; display: inline-block; }
 
+/* ─── DECISION MATRIX PANEL ─── */
+.decision-matrix { margin-top: 0.5rem; padding: 0.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: 4px; font-family: var(--mono); font-size: 0.5rem; }
+.dm-title { font-size: 0.55rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.4rem; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+.dm-title .dm-arrow { transition: transform 0.3s; font-size: 0.6rem; }
+.dm-title .dm-arrow.open { transform: rotate(180deg); }
+.dm-body { display: none; }
+.dm-body.open { display: block; }
+.dm-section { padding: 0.3rem 0; border-bottom: 1px solid var(--border); }
+.dm-section:last-child { border-bottom: none; }
+.dm-section-title { font-size: 0.48rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.2rem; }
+.dm-row { display: flex; justify-content: space-between; align-items: center; padding: 0.1rem 0; line-height: 1.5; }
+.dm-label { color: var(--text-dim); }
+.dm-value { color: var(--text); font-weight: 500; }
+.dm-value.pass { color: #00ff88; }
+.dm-value.fail { color: #ff3355; }
+.dm-value.on { color: #ffaa00; }
+.dm-value.off { color: var(--text-muted); }
+.dm-transition { color: #aa88ff; font-weight: 600; margin-top: 0.15rem; }
+.dm-transition-label { color: var(--text-dim); font-size: 0.45rem; }
+
 /* ─── RIGHT PANEL ─── */
 .panel-right { border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
 
@@ -708,6 +728,35 @@ input[type="range"]:disabled {
             </div>
           </div>
 
+          <!-- DECISION MATRIX (v1) DETAIL PANEL -->
+          <div class="decision-matrix" id="decision-matrix">
+            <div class="dm-title" id="dm-toggle">
+              <span>Decision Matrix (v1)</span>
+              <span class="dm-arrow" id="dm-arrow">▼</span>
+            </div>
+            <div class="dm-body" id="dm-body">
+              <div class="dm-section">
+                <div class="dm-row"><span class="dm-label">Signal</span><span class="dm-value" id="dm-signal">—</span></div>
+                <div class="dm-row"><span class="dm-label">Integrity Gate</span><span class="dm-value" id="dm-gate">—</span></div>
+                <div class="dm-row"><span class="dm-label">Urgency</span><span class="dm-value" id="dm-urgency">—</span></div>
+                <div class="dm-row"><span class="dm-label">Reversibility</span><span class="dm-value" id="dm-reversibility">—</span></div>
+                <div class="dm-row"><span class="dm-label">Entropy</span><span class="dm-value" id="dm-entropy">—</span></div>
+                <div class="dm-row"><span class="dm-label">EV Gate</span><span class="dm-value" id="dm-ev-gate">—</span></div>
+              </div>
+              <div class="dm-section">
+                <div class="dm-section-title">Overrides</div>
+                <div class="dm-row"><span class="dm-label">Urgency Override</span><span class="dm-value" id="dm-ov-urgency">OFF</span></div>
+                <div class="dm-row"><span class="dm-label">One-Way Brake</span><span class="dm-value" id="dm-ov-oneway">OFF</span></div>
+                <div class="dm-row"><span class="dm-label">EV Block</span><span class="dm-value" id="dm-ov-ev">OFF</span></div>
+              </div>
+              <div class="dm-section">
+                <div class="dm-section-title">State Machine</div>
+                <div class="dm-transition" id="dm-transition">— → —</div>
+                <div class="dm-transition-label" id="dm-transition-label">—</div>
+              </div>
+            </div>
+          </div>
+
           <div class="explain-header" style="margin-top:0.6rem;">
             <div class="panel-label" style="margin-bottom:0">Assessment</div>
             <div class="explain-toggle">
@@ -1003,6 +1052,7 @@ const NERVA = {
     let decision;
     let matrixCell = '';
     let overrideUsed = '';
+    let preOverrideDecision = '';
 
     // 0) Hard veto boundary (keep rare)
     if (signalPresent && integrity <= 0.20 && Rv >= 0.80 && H >= 0.85) {
@@ -1038,9 +1088,9 @@ const NERVA = {
       }
     }
 
+    preOverrideDecision = decision;
+
     // Override A: Urgency override (bold bias)
-    // When urgency is extreme and there's signal, allow commitment even with lower integrity
-    // if the scenario is reversible and there's at least some foundation
     if (U >= 0.90 && signalPresent && integrity >= 0.25 && Rv < 0.70 && z >= 0.15) {
       decision = 'COMMIT';
       overrideUsed = 'URGENCY_OVERRIDE';
@@ -1051,6 +1101,13 @@ const NERVA = {
       decision = 'ESCALATE';
       overrideUsed = 'ONE_WAY_BRAKE';
       matrixCell = 'OVERRIDE_ONEWAY';
+    }
+    // Override C: Negative EV gate — block COMMIT when expected value is negative
+    // Exception: urgency override can bypass this (sometimes you act despite negative EV)
+    if (ev < 0 && decision === 'COMMIT' && overrideUsed !== 'URGENCY_OVERRIDE') {
+      decision = 'HOLD';
+      overrideUsed = 'EV_BLOCK';
+      matrixCell = 'OVERRIDE_EV_NEGATIVE';
     }
 
     // Integrity band and urgency band for grid display
@@ -1070,7 +1127,7 @@ const NERVA = {
       x, y, z, radius, theta, phi,
       ev, integrity, coherence, purity, entropy, reversibility,
       tau, I_commit, matrixCell, overrideUsed, signalPresent,
-      integrityBand, urgencyBand, margin,
+      integrityBand, urgencyBand, margin, preOverrideDecision, Rv, H,
       input: { emotion: e, strategy: s, risk: r, support: sup, stability: stab, threshold: tau }
     };
   },
@@ -1146,9 +1203,11 @@ const NERVA = {
       I_commit: +result.I_commit.toFixed(3),
       matrix_cell: result.matrixCell,
       override: result.overrideUsed || 'NONE',
+      pre_override_decision: result.preOverrideDecision,
       signal_present: result.signalPresent,
       integrity_band: result.integrityBand,
       urgency_band: result.urgencyBand,
+      reversibility: +result.Rv.toFixed(3),
       bloch: { theta: +result.theta.toFixed(3), phi: +result.phi.toFixed(3), r: +result.radius.toFixed(3) },
       reasoning: NERVA.explainHuman(result).replace(/<[^>]+>/g, ''),
       reasoning_analyst: NERVA.explainAnalyst(result).replace(/<[^>]+>/g, '')
@@ -1160,7 +1219,7 @@ const NERVA = {
       tool: "nerva_validate",
       input: result.input,
       output: NERVA.toJSON(result),
-      meta: { version: "v8.2", latency_target_ms: 10, deterministic: true, threshold_mode: currentTauMode }
+      meta: { version: "v8.4", latency_target_ms: 10, deterministic: true, threshold_mode: currentTauMode }
     };
   }
 };
@@ -1489,6 +1548,51 @@ function update() {
   var overrideLabel = result.overrideUsed ? ' | Override: <strong>' + result.overrideUsed + '</strong>' : '';
   surfaceEl.innerHTML = 'Signal: <strong>' + sigLabel + '</strong> | I: <strong>' + result.integrityBand + '</strong> (' + (result.integrity*100).toFixed(0) + '%) | U: <strong>' + result.urgencyBand + '</strong> | I_commit: ' + (result.I_commit*100).toFixed(0) + '%' + overrideLabel;
 
+  // ─── DECISION MATRIX (v1) PANEL ───
+  var urgencyLabel = result.input.emotion >= 0.75 ? 'HIGH' : result.input.emotion >= 0.35 ? 'MED' : 'LOW';
+  var entropyLabel = result.H >= 0.85 ? 'VERY HIGH' : result.H >= 0.60 ? 'HIGH' : result.H >= 0.35 ? 'MED' : 'LOW';
+  var rvLabel = result.Rv >= 0.70 ? 'ONE-WAY' : result.Rv >= 0.40 ? 'PARTIAL' : 'TWO-WAY';
+
+  var dmSignal = document.getElementById('dm-signal');
+  dmSignal.textContent = (result.signalPresent ? 'PRESENT' : 'ABSENT') + '  r=' + result.radius.toFixed(2) + ' t=' + result.tau.toFixed(2) + ' m=' + (result.margin >= 0 ? '+' : '') + result.margin.toFixed(2);
+  dmSignal.className = 'dm-value ' + (result.signalPresent ? 'pass' : 'fail');
+
+  var dmGate = document.getElementById('dm-gate');
+  var gatePassed = result.integrity >= result.I_commit;
+  dmGate.textContent = (gatePassed ? 'PASS' : 'FAIL') + '  I=' + result.integrity.toFixed(2) + ' I_c=' + result.I_commit.toFixed(2);
+  dmGate.className = 'dm-value ' + (gatePassed ? 'pass' : 'fail');
+
+  document.getElementById('dm-urgency').textContent = urgencyLabel + '  U=' + result.input.emotion.toFixed(2);
+  document.getElementById('dm-reversibility').textContent = rvLabel + '  Rv=' + result.Rv.toFixed(2);
+  document.getElementById('dm-entropy').textContent = entropyLabel + '  H=' + result.H.toFixed(2);
+
+  var dmEvGate = document.getElementById('dm-ev-gate');
+  var evOk = result.ev >= 0;
+  dmEvGate.textContent = (evOk ? 'PASS' : 'NEGATIVE') + '  EV=' + (result.ev >= 0 ? '+' : '') + result.ev.toFixed(3);
+  dmEvGate.className = 'dm-value ' + (evOk ? 'pass' : 'fail');
+
+  var dmOvU = document.getElementById('dm-ov-urgency');
+  dmOvU.textContent = result.overrideUsed === 'URGENCY_OVERRIDE' ? 'ON' : 'OFF';
+  dmOvU.className = 'dm-value ' + (result.overrideUsed === 'URGENCY_OVERRIDE' ? 'on' : 'off');
+
+  var dmOvO = document.getElementById('dm-ov-oneway');
+  dmOvO.textContent = result.overrideUsed === 'ONE_WAY_BRAKE' ? 'ON' : 'OFF';
+  dmOvO.className = 'dm-value ' + (result.overrideUsed === 'ONE_WAY_BRAKE' ? 'on' : 'off');
+
+  var dmOvEv = document.getElementById('dm-ov-ev');
+  dmOvEv.textContent = result.overrideUsed === 'EV_BLOCK' ? 'ON' : 'OFF';
+  dmOvEv.className = 'dm-value ' + (result.overrideUsed === 'EV_BLOCK' ? 'on' : 'off');
+
+  var transition = document.getElementById('dm-transition');
+  var transLabel = document.getElementById('dm-transition-label');
+  if (result.preOverrideDecision !== result.decision) {
+    transition.textContent = result.preOverrideDecision + ' \u2192 ' + result.decision;
+    transLabel.textContent = 'Override: ' + result.overrideUsed;
+  } else {
+    transition.textContent = result.decision;
+    transLabel.textContent = 'Cell: ' + result.matrixCell;
+  }
+
   // Viewport stats
   document.getElementById('vstat-r').textContent = result.radius.toFixed(2);
   document.getElementById('vstat-theta').textContent = result.theta.toFixed(2);
@@ -1769,6 +1873,14 @@ document.getElementById('copy-btn').addEventListener('click', () => {
 document.getElementById('llm-toggle').addEventListener('click', () => {
   document.getElementById('llm-toggle').classList.toggle('open');
   document.getElementById('llm-content').classList.toggle('open');
+});
+
+// Decision Matrix toggle
+document.getElementById('dm-toggle').addEventListener('click', () => {
+  var body = document.getElementById('dm-body');
+  var arrow = document.getElementById('dm-arrow');
+  body.classList.toggle('open');
+  arrow.classList.toggle('open');
 });
 
 
