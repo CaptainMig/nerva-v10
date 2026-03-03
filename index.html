@@ -1049,7 +1049,7 @@ Threshold:            τ = 0.25 + 0.35·S(ρ) + 0.25·R - 0.20·rev</div>
     function showSection(s) {
       document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
       event.target.classList.add('active');
-      document.getElementById('demo-section').style.display = s === 'demo' ? 'flex' : 'n      document.getElementById('demo-section').style.display = s === 'demo' ? 'flex' : 'none';
+      document.getElementById('demo-section').style.display = s === 'demo' ? 'flex' : 'none';
       document.getElementById('pitch-section').style.display = s === 'pitch' ? 'block' : 'none';
       document.getElementById('api-section').style.display = s === 'api' ? 'block' : 'none';
     }
