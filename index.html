@@ -751,40 +751,6 @@
         <div style="text-align: center; margin-top: 0.75rem; font-size: 0.65rem; color: var(--text-muted);">I = Integrity, U = Urgency</div>
       </div>
 
-      <div class="collapsible" id="math-details">
-        <div class="collapsible-header" onclick="toggleCollapsible('math-details')">
-          <span class="collapsible-title">Mathematical Details (v8.3.1)</span>
-          <span class="collapsible-icon">▼</span>
-        </div>
-        <div class="collapsible-content">
-          <div class="collapsible-inner">
-            <div style="margin-bottom: 1.5rem;">
-              <div class="matrix-section-title">Information-Theoretic Threshold</div>
-              <div class="derivation-formula" id="threshold-formula">τ = 0.250 + 0.285 (entropy) + 0.100 (risk) − 0.145 (reversibility) = 0.490</div>
-            </div>
-            <div style="margin-bottom: 1.5rem;">
-              <div class="matrix-section-title">Density Matrix ρ = ½(I + r·σ)</div>
-              <div class="matrix-label">Pauli decomposition — v8.3.1 guarantees r = √(r_x² + r_y² + r_z²)</div>
-              <div class="matrix-grid">
-                <div class="matrix-cell diagonal" id="rho-00">0.652</div>
-                <div class="matrix-cell off-diagonal" id="rho-01">0.159 − 0.116i</div>
-                <div class="matrix-cell off-diagonal" id="rho-10">0.159 + 0.116i</div>
-                <div class="matrix-cell diagonal" id="rho-11">0.348</div>
-              </div>
-            </div>
-            <div>
-              <div class="matrix-section-title">Mathematical Validation</div>
-              <div class="validation-grid" id="validation-grid">
-                <div class="validation-item"><span class="validation-icon valid">✓</span><span>|r| ≤ 1</span></div>
-                <div class="validation-item"><span class="validation-icon valid">✓</span><span>Purity ∈ [0.5, 1]</span></div>
-                <div class="validation-item"><span class="validation-icon valid">✓</span><span>S(ρ) ∈ [0, 1]</span></div>
-                <div class="validation-item"><span class="validation-icon valid">✓</span><span>Components consistent</span></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <div class="collapsible" id="narrative-details">
         <div class="collapsible-header" onclick="toggleCollapsible('narrative-details')">
           <span class="collapsible-title">Decision Trajectory</span>
@@ -884,7 +850,36 @@ Threshold:  τ = 0.25 + 0.35·S(ρ) + 0.25·R − 0.20·reversibility</div>
     "components_consistent": true
   }
 }</div>
-      <p style="margin-top: 2rem; font-size: 0.8rem; color: var(--text-muted);">Nielsen & Chuang (2010), Ch. 2 & 11 · Grok normalization fix applied</p>
+      <p style="margin-top: 2rem; font-size: 0.8rem; color: var(--text-muted);">Nielsen & Chuang (2010), Ch. 2 & 11</p>
+
+      <h3>Technical Verification</h3>
+      <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:1.5rem;">For technical due diligence. The live values below update whenever you run the Demo — they reflect the actual computed state of the last evaluation.</p>
+
+      <div style="margin-bottom:1.5rem;">
+        <div class="matrix-section-title">Information-Theoretic Threshold (live)</div>
+        <div class="derivation-formula" id="threshold-formula">Run a demo evaluation to see live threshold decomposition</div>
+      </div>
+
+      <div style="margin-bottom:1.5rem;">
+        <div class="matrix-section-title">Density Matrix ρ = ½(I + r·σ)</div>
+        <div class="matrix-label">Pauli decomposition — v8.3.1 guarantees r = √(r_x² + r_y² + r_z²)</div>
+        <div class="matrix-grid">
+          <div class="matrix-cell diagonal" id="rho-00">—</div>
+          <div class="matrix-cell off-diagonal" id="rho-01">—</div>
+          <div class="matrix-cell off-diagonal" id="rho-10">—</div>
+          <div class="matrix-cell diagonal" id="rho-11">—</div>
+        </div>
+      </div>
+
+      <div>
+        <div class="matrix-section-title">Mathematical Validation</div>
+        <div class="validation-grid" id="validation-grid">
+          <div class="validation-item"><span class="validation-icon valid">✓</span><span>|r| ≤ 1</span></div>
+          <div class="validation-item"><span class="validation-icon valid">✓</span><span>Purity ∈ [0.5, 1]</span></div>
+          <div class="validation-item"><span class="validation-icon valid">✓</span><span>S(ρ) ∈ [0, 1]</span></div>
+          <div class="validation-item"><span class="validation-icon valid">✓</span><span>Components consistent</span></div>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -1126,6 +1121,8 @@ Threshold:  τ = 0.25 + 0.35·S(ρ) + 0.25·R − 0.20·reversibility</div>
         btn.disabled = false;
 
         evaluate();
+        // Clear status after 2.5 seconds
+        setTimeout(() => { statusEl.textContent = ''; }, 2500);
         // Auto-open narrative after parse
         setTimeout(() => {
           const nd = document.getElementById('narrative-details');
