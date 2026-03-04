@@ -25,6 +25,30 @@
       --border-medium: rgba(148, 163, 184, 0.2);
       --glow-blue: rgba(59, 130, 246, 0.15);
     }
+    body.light-mode {
+      --bg-primary: #f8fafc;
+      --bg-secondary: #f1f5f9;
+      --bg-tertiary: #e2e8f0;
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #94a3b8;
+      --accent-blue: #2563eb;
+      --accent-cyan: #0891b2;
+      --accent-green: #059669;
+      --accent-yellow: #d97706;
+      --accent-orange: #ea580c;
+      --accent-red: #dc2626;
+      --border-subtle: rgba(15, 23, 42, 0.1);
+      --border-medium: rgba(15, 23, 42, 0.2);
+      --glow-blue: rgba(37, 99, 235, 0.1);
+    }
+    body.light-mode header {
+      background: rgba(248, 250, 252, 0.92);
+    }
+    body.light-mode .code-block {
+      background: #e2e8f0;
+      color: #0f172a;
+    }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       font-family: 'Inter', -apple-system, sans-serif;
@@ -541,6 +565,7 @@
       <button class="active" onclick="showSection('demo')">Demo</button>
       <button onclick="showSection('pitch')">About</button>
       <button onclick="showSection('api')">API</button>
+      <button id="theme-toggle" onclick="toggleTheme()" style="background:rgba(148,163,184,0.1);border:1px solid var(--border-medium);padding:0.4rem 0.75rem;border-radius:6px;color:var(--text-secondary);font-size:0.75rem;cursor:pointer;margin-left:0.5rem;transition:all 0.2s;" title="Toggle light/dark mode">☀️</button>
     </nav>
   </header>
 
@@ -568,7 +593,7 @@
         <button class="preset-btn" onclick="loadPreset('surgical')"><strong>Surgical</strong>Patient anomaly</button>
       </div>
 
-      <div class="section-title">Input Parameters</div>
+      <div class="section-title" style="display:flex;align-items:center;gap:0.4rem;">Input Parameters <span class="tooltip" style="display:inline-block;cursor:help;"><span class="help-icon">?</span><span class="tooltip-content" style="width:240px;"><div class="tooltip-title">Input Parameters</div><div class="tooltip-desc">Six dimensions that define the decision state. Adjust manually or use Parse with AI to set them from a natural language scenario description.</div></span></span></div>
       <div class="slider-group">
         <div class="slider-header">
           <span class="slider-label"><strong>E</strong> — Urgency</span>
@@ -611,7 +636,7 @@
       </div>
 
       <div class="threshold-section">
-        <div class="section-title">τ — Commitment Threshold</div>
+        <div class="section-title" style="display:flex;align-items:center;gap:0.4rem;">τ — Commitment Threshold <span class="tooltip" style="display:inline-block;cursor:help;"><span class="help-icon">?</span><span class="tooltip-content" style="width:250px;"><div class="tooltip-title">Commitment Threshold (τ)</div><div class="tooltip-desc">The minimum signal magnitude needed before NERVA can recommend action. In Auto mode, it's derived mathematically from entropy, risk, and reversibility — so uncertain or high-stakes situations automatically raise the bar.</div><span class="tooltip-formula">τ = 0.25 + 0.35·S(ρ) + 0.25·R − 0.20·rev</span></span></span></div>
         <div class="threshold-modes">
           <button class="threshold-btn active" id="btn-auto" onclick="setThresholdMode('auto')">Auto</button>
           <button class="threshold-btn" id="btn-manual" onclick="setThresholdMode('manual')">Manual</button>
@@ -629,7 +654,7 @@
           <strong>Auto:</strong> τ computed from entropy, risk, and reversibility using information-theoretic derivation.
         </div>
       </div>
-      <button class="evaluate-btn" onclick="evaluate()">EVALUATE</button>
+      </div>
     </aside>
 
     <section class="results" id="results">
@@ -729,7 +754,7 @@
       </div>
 
       <div class="decision-matrix">
-        <div class="matrix-section-title">Decision Zone Map</div>
+        <div class="matrix-section-title" style="display:flex;align-items:center;gap:0.4rem;">Decision Zone Map <span class="tooltip" style="display:inline-block;cursor:help;"><span class="help-icon">?</span><span class="tooltip-content" style="width:260px;left:0;transform:none;"><div class="tooltip-title">Decision Zone Map</div><div class="tooltip-desc">Shows where your current decision state sits across the Integrity (vertical) and Urgency (horizontal) axes. The glowing dot is your live position. Zones are colored by decision outcome — move sliders to see the dot shift in real time.</div></span></span></div>
         <div style="position: relative; width: 100%; max-width: 400px; margin: 0 auto;">
           <canvas id="decision-zone-canvas" width="400" height="300" style="width: 100%; border-radius: 8px;"></canvas>
           <div id="zone-indicator" style="position: absolute; font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; padding: 4px 8px; border-radius: 4px; pointer-events: none; transition: all 0.3s ease; background: rgba(0,0,0,0.8); color: white; display: none;"></div>
@@ -743,7 +768,7 @@
 
       <div class="collapsible" id="narrative-details">
         <div class="collapsible-header" onclick="toggleCollapsible('narrative-details')">
-          <span class="collapsible-title">Decision Trajectory</span>
+          <span class="collapsible-title" style="display:flex;align-items:center;gap:0.4rem;">Decision Trajectory <span class="tooltip" style="display:inline-block;cursor:help;" onclick="event.stopPropagation()"><span class="help-icon">?</span><span class="tooltip-content" style="width:260px;left:0;transform:none;"><div class="tooltip-title">Decision Trajectory</div><div class="tooltip-desc">A plain-English explanation of why NERVA reached this decision. Shows the key factors that pushed the state toward COMMIT, HOLD, WAIT, ESCALATE, or TOXIC — and what would need to change to shift the outcome.</div></span></span></span>
           <span class="collapsible-icon">▼</span>
         </div>
         <div class="collapsible-content">
@@ -1060,8 +1085,8 @@ Threshold:  τ = 0.25 + 0.35·S(ρ) + 0.25·R − 0.20·reversibility</div>
       const w = canvas.width;
       const h = canvas.height;
       
-      // Clear with dark background
-      ctx.fillStyle = '#0a0a0f';
+      // Clear with theme-aware background
+      ctx.fillStyle = document.body.classList.contains('light-mode') ? '#e2e8f0' : '#0a0a0f';
       ctx.fillRect(0, 0, w, h);
       
       // Draw gradient zones with vibrant colors
@@ -1177,8 +1202,16 @@ Threshold:  τ = 0.25 + 0.35·S(ρ) + 0.25·R − 0.20·reversibility</div>
     }
 
     function toggleCollapsible(id) { document.getElementById(id).classList.toggle('open'); }
+    
+    function toggleTheme() {
+      const isLight = document.body.classList.toggle('light-mode');
+      document.getElementById('theme-toggle').textContent = isLight ? '🌙' : '☀️';
+      // Redraw canvas with correct bg color
+      evaluate();
+    }
+
     function showSection(s) {
-      document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('nav button:not(#theme-toggle)').forEach(b => b.classList.remove('active'));
       event.target.classList.add('active');
       document.getElementById('demo-section').style.display = s === 'demo' ? 'flex' : 'none';
       document.getElementById('pitch-section').style.display = s === 'pitch' ? 'block' : 'none';
