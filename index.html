@@ -760,7 +760,7 @@
         </div>
         
         <div style="position: relative; width: 100%; max-width: 400px; margin: 0 auto;">
-          <canvas id="decision-zone-canvas" width="400" height="300" style="width: 100%; border-radius: 8px;"></canvas>
+          <canvas id="decision-zone-canvas" width="480" height="300" style="width: 100%; border-radius: 8px;"></canvas>
           <div id="zone-indicator" style="position: absolute; font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; padding: 4px 8px; border-radius: 4px; pointer-events: none; transition: all 0.3s ease; background: rgba(0,0,0,0.8); color: white; display: none;"></div>
         </div>
         
@@ -1188,19 +1188,23 @@ Threshold:  τ = 0.25 + 0.35·S(ρ) + 0.25·R − 0.20·reversibility</div>
       ctx.fillStyle = document.body.classList.contains('light-mode') ? '#e8edf4' : '#0a0a0f';
       ctx.fillRect(0, 0, w, h);
 
+      // Reserve right 60px for signal meter
+      const meterW = 60;
+      const zoneW = w - meterW;
+
       // NERVA thresholds — must match nervaValidate logic exactly
       const iHigh = 0.6, iMed = 0.4, uHigh = 0.7;
       const y_iHigh = (1 - iHigh) * h;
       const y_iMed  = (1 - iMed) * h;
-      const x_uHigh = uHigh * w;
+      const x_uHigh = uHigh * zoneW;
 
-      // === DRAW ZONES (full width) ===
+      // === DRAW ZONES ===
       // COMMIT: I >= 0.6 (full row)
       ctx.fillStyle = 'rgba(16, 235, 150, 0.28)';
-      ctx.fillRect(0, 0, w, y_iHigh);
+      ctx.fillRect(0, 0, zoneW, y_iHigh);
       ctx.strokeStyle = 'rgba(16, 235, 150, 0.6)';
       ctx.lineWidth = 1;
-      ctx.strokeRect(0.5, 0.5, w - 1, y_iHigh - 1);
+      ctx.strokeRect(0.5, 0.5, zoneW - 1, y_iHigh - 1);
 
       // HOLD: 0.4 <= I < 0.6, U < 0.7
       ctx.fillStyle = 'rgba(255, 180, 30, 0.22)';
@@ -1210,9 +1214,9 @@ Threshold:  τ = 0.25 + 0.35·S(ρ) + 0.25·R − 0.20·reversibility</div>
 
       // ESCALATE: 0.4 <= I < 0.6, U >= 0.7
       ctx.fillStyle = 'rgba(255, 120, 50, 0.28)';
-      ctx.fillRect(x_uHigh, y_iHigh, w - x_uHigh, y_iMed - y_iHigh);
+      ctx.fillRect(x_uHigh, y_iHigh, zoneW - x_uHigh, y_iMed - y_iHigh);
       ctx.strokeStyle = 'rgba(255, 120, 50, 0.6)';
-      ctx.strokeRect(x_uHigh + 0.5, y_iHigh + 0.5, w - x_uHigh - 1, y_iMed - y_iHigh - 1);
+      ctx.strokeRect(x_uHigh + 0.5, y_iHigh + 0.5, zoneW - x_uHigh - 1, y_iMed - y_iHigh - 1);
 
       // ESCALATE: I < 0.4, U < 0.7
       ctx.fillStyle = 'rgba(255, 120, 50, 0.22)';
@@ -1222,9 +1226,9 @@ Threshold:  τ = 0.25 + 0.35·S(ρ) + 0.25·R − 0.20·reversibility</div>
 
       // TOXIC: I < 0.4, U >= 0.7
       ctx.fillStyle = 'rgba(255, 60, 80, 0.32)';
-      ctx.fillRect(x_uHigh, y_iMed, w - x_uHigh, h - y_iMed);
+      ctx.fillRect(x_uHigh, y_iMed, zoneW - x_uHigh, h - y_iMed);
       ctx.strokeStyle = 'rgba(255, 60, 80, 0.7)';
-      ctx.strokeRect(x_uHigh + 0.5, y_iMed + 0.5, w - x_uHigh - 1, h - y_iMed - 1);
+      ctx.strokeRect(x_uHigh + 0.5, y_iMed + 0.5, zoneW - x_uHigh - 1, h - y_iMed - 1);
 
       // === ZONE LABELS ===
       ctx.font = 'bold 11px JetBrains Mono';
@@ -1233,7 +1237,7 @@ Threshold:  τ = 0.25 + 0.35·S(ρ) + 0.25·R − 0.20·reversibility</div>
 
       ctx.shadowColor = 'rgba(16, 235, 150, 0.7)';
       ctx.fillStyle = '#10eb96';
-      ctx.fillText('COMMIT', w / 2, y_iHigh / 2 + 4);
+      ctx.fillText('COMMIT', zoneW / 2, y_iHigh / 2 + 4);
 
       ctx.shadowColor = 'rgba(255, 180, 30, 0.7)';
       ctx.fillStyle = '#ffb41e';
@@ -1241,21 +1245,20 @@ Threshold:  τ = 0.25 + 0.35·S(ρ) + 0.25·R − 0.20·reversibility</div>
 
       ctx.shadowColor = 'rgba(255, 120, 50, 0.7)';
       ctx.fillStyle = '#ff7832';
-      ctx.fillText('ESC', x_uHigh + (w - x_uHigh) / 2, y_iHigh + (y_iMed - y_iHigh) / 2 + 4);
+      ctx.fillText('ESC', x_uHigh + (zoneW - x_uHigh) / 2, y_iHigh + (y_iMed - y_iHigh) / 2 + 4);
       ctx.fillText('ESC', x_uHigh / 2, y_iMed + (h - y_iMed) / 2 + 4);
 
       ctx.shadowColor = 'rgba(255, 60, 80, 0.8)';
       ctx.fillStyle = '#ff3c50';
-      ctx.fillText('TOXIC', x_uHigh + (w - x_uHigh) / 2, y_iMed + (h - y_iMed) / 2 + 4);
+      ctx.fillText('TOXIC', x_uHigh + (zoneW - x_uHigh) / 2, y_iMed + (h - y_iMed) / 2 + 4);
       ctx.shadowBlur = 0;
 
       // === THRESHOLD DASHED LINES ===
       ctx.strokeStyle = 'rgba(148, 163, 184, 0.35)';
       ctx.lineWidth = 1;
       ctx.setLineDash([5, 4]);
-
-      ctx.beginPath(); ctx.moveTo(0, y_iHigh); ctx.lineTo(w, y_iHigh); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(0, y_iMed);  ctx.lineTo(w, y_iMed);  ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, y_iHigh); ctx.lineTo(zoneW, y_iHigh); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, y_iMed);  ctx.lineTo(zoneW, y_iMed);  ctx.stroke();
       ctx.beginPath(); ctx.moveTo(x_uHigh, y_iHigh); ctx.lineTo(x_uHigh, h); ctx.stroke();
       ctx.setLineDash([]);
 
@@ -1268,8 +1271,70 @@ Threshold:  τ = 0.25 + 0.35·S(ρ) + 0.25·R − 0.20·reversibility</div>
       ctx.textAlign = 'center';
       ctx.fillText('U=0.7', x_uHigh, h - 3);
 
+      // === SIGNAL METER (right panel) ===
+      const meterX = zoneW + meterW / 2;
+      const meterTop = 22;
+      const meterBarH = h - 50;
+      const meterBarX = zoneW + 20;
+      const meterBarW = 18;
+
+      // Meter background panel
+      ctx.fillStyle = document.body.classList.contains('light-mode') ? 'rgba(200,210,225,0.5)' : 'rgba(20, 30, 48, 0.8)';
+      ctx.fillRect(zoneW, 0, meterW, h);
+      ctx.strokeStyle = 'rgba(148, 163, 184, 0.2)';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(zoneW, 0); ctx.lineTo(zoneW, h); ctx.stroke();
+
+      // SIGNAL label at top
+      ctx.fillStyle = 'rgba(148, 163, 184, 0.8)';
+      ctx.font = 'bold 7px JetBrains Mono';
+      ctx.textAlign = 'center';
+      ctx.fillText('SIGNAL', meterX, 13);
+
+      // Meter bar background
+      ctx.fillStyle = 'rgba(148, 163, 184, 0.12)';
+      ctx.fillRect(meterBarX, meterTop, meterBarW, meterBarH);
+      ctx.strokeStyle = 'rgba(148, 163, 184, 0.25)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(meterBarX, meterTop, meterBarW, meterBarH);
+
+      // τ threshold line
+      const tauY = meterTop + meterBarH * (1 - tau);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(meterBarX - 4, tauY);
+      ctx.lineTo(meterBarX + meterBarW + 4, tauY);
+      ctx.stroke();
+
+      // τ value label
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      ctx.font = 'bold 7px JetBrains Mono';
+      ctx.textAlign = 'center';
+      ctx.fillText('τ=' + tau.toFixed(2), meterX, tauY - 3);
+
+      // Signal fill bar
+      const signalCleared = r >= tau;
+      const signalFillH = Math.min(r, 1) * meterBarH;
+      const fillColor = signalCleared ? 'rgba(16, 235, 150, 0.85)' : 'rgba(80, 160, 255, 0.75)';
+      ctx.fillStyle = fillColor;
+      ctx.fillRect(meterBarX + 1, meterTop + meterBarH - signalFillH, meterBarW - 2, signalFillH);
+
+      // |r| value label
+      const rLabelY = meterTop + meterBarH - signalFillH - 4;
+      ctx.fillStyle = signalCleared ? '#10eb96' : '#50a0ff';
+      ctx.font = 'bold 7px JetBrains Mono';
+      ctx.textAlign = 'center';
+      ctx.fillText('|r|=' + r.toFixed(2), meterX, Math.max(meterTop + 8, Math.min(rLabelY, meterTop + meterBarH - 4)));
+
+      // Status at bottom
+      ctx.fillStyle = signalCleared ? '#10eb96' : '#50a0ff';
+      ctx.font = 'bold 7px JetBrains Mono';
+      ctx.textAlign = 'center';
+      ctx.fillText(signalCleared ? '✓ GO' : '○ WAIT', meterX, h - 5);
+
       // === POSITION DOT ===
-      const posX = urgency * w;
+      const posX = urgency * zoneW;
       const posY = (1 - integrity) * h;
 
       const decisionColors = {
@@ -1319,7 +1384,7 @@ Threshold:  τ = 0.25 + 0.35·S(ρ) + 0.25·R − 0.20·reversibility</div>
       ctx.fillStyle = isWait ? 'rgba(255,255,255,0.6)' : 'white';
       ctx.fill();
 
-      // "in ZONE zone" label under dot when WAIT (using same thresholds as NERVA)
+      // "in ZONE zone" label under dot when WAIT
       if (isWait) {
         let zLabel;
         if (integrity >= iHigh) zLabel = 'COMMIT';
@@ -1334,6 +1399,7 @@ Threshold:  τ = 0.25 + 0.35·S(ρ) + 0.25·R − 0.20·reversibility</div>
         ctx.fillText('in ' + zLabel + ' zone', posX, posY + 24);
       }
     }
+
 
     function toggleCollapsible(id) { document.getElementById(id).classList.toggle('open'); }
 
