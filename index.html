@@ -539,13 +539,22 @@
     <div class="logo">NERVA <span>v8.3.1</span></div>
     <nav>
       <button class="active" onclick="showSection('demo')">Demo</button>
-      <button onclick="showSection('pitch')">Pitch</button>
+      <button onclick="showSection('pitch')">About</button>
       <button onclick="showSection('api')">API</button>
     </nav>
   </header>
 
   <main id="demo-section">
     <aside class="sidebar">
+      <div style="background:rgba(59,130,246,0.07);border:1px solid rgba(59,130,246,0.2);border-radius:10px;padding:1rem;margin-bottom:1.25rem;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:0.7rem;color:var(--accent-cyan);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.6rem;">What is NERVA?</div>
+        <p style="font-size:0.78rem;color:var(--text-secondary);line-height:1.65;margin-bottom:0.75rem;">NERVA is a <strong style="color:var(--text-primary);">decision integrity engine</strong>. It takes a situation — any high-stakes decision — and evaluates whether the conditions are right to act, wait, escalate to a human, or veto entirely.</p>
+        <p style="font-size:0.78rem;color:var(--text-secondary);line-height:1.65;margin-bottom:0.75rem;">It does this by mapping the decision into a mathematical state space borrowed from quantum information theory. The result is a single, auditable signal: <strong style="color:var(--text-primary);">COMMIT, HOLD, WAIT, ESCALATE, or TOXIC</strong>.</p>
+        <div style="border-top:1px solid rgba(59,130,246,0.15);padding-top:0.75rem;margin-top:0.25rem;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--accent-yellow);margin-bottom:0.4rem;">⚠ One-Way Brake</div>
+          <p style="font-size:0.75rem;color:var(--text-secondary);line-height:1.6;">Some decisions can't be undone. When NERVA detects a low-reversibility situation with an incomplete foundation, it automatically escalates — even if all other signals say go. This is the One-Way Brake: a hard override that routes irreversible decisions to human review, no matter what.</p>
+        </div>
+      </div>
       <div class="section-title">Describe Scenario</div>
       <textarea class="scenario-textarea" id="scenario-text" placeholder="Describe the decision context in natural language...&#10;&#10;e.g. &quot;High urgency drone strike with weak intel and degraded comms&quot;"></textarea>
       <button id="parse-btn" onclick="parseScenario()" style="width:100%;margin-top:0.75rem;padding:0.75rem;background:linear-gradient(135deg,rgba(59,130,246,0.2),rgba(6,182,212,0.2));border:1px solid rgba(59,130,246,0.4);border-radius:8px;color:#60a5fa;font-family:'JetBrains Mono',monospace;font-size:0.8rem;font-weight:600;cursor:pointer;letter-spacing:0.05em;transition:all 0.2s;">⚡ PARSE WITH AI</button>
@@ -775,61 +784,65 @@
           </div>
         </div>
       </div>
+
+      <div class="collapsible" id="narrative-details">
+        <div class="collapsible-header" onclick="toggleCollapsible('narrative-details')">
+          <span class="collapsible-title">Decision Trajectory</span>
+          <span class="collapsible-icon">▼</span>
+        </div>
+        <div class="collapsible-content">
+          <div class="collapsible-inner">
+            <div id="narrative-label" style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:var(--accent-cyan);margin-bottom:0.75rem;"></div>
+            <div id="narrative-trajectory" style="font-size:0.85rem;color:var(--text-primary);line-height:1.7;margin-bottom:1rem;"></div>
+            <div class="matrix-section-title" style="margin-bottom:0.5rem;">Key Factors</div>
+            <div id="narrative-factors" style="font-size:0.8rem;color:var(--text-secondary);line-height:1.8;"></div>
+          </div>
+        </div>
+      </div>
     </section>
   </main>
 
-  <!-- Pitch Section -->
+  <!-- About Section -->
   <section class="pitch-section" id="pitch-section">
     <div class="api-content">
       <h2># NERVA v8.3.1</h2>
-      <p><strong>AI That Knows When NOT to Act</strong></p>
-      <p>Fast, explainable decision integrity for autonomous systems — mathematically rigorous, technically defensible.</p>
-      
-      <h3>Problem</h3>
-      <p>Autonomous systems optimize for outcomes without moral reasoning. Drones, trading bots, AVs, surgical robots — they do what the math says. When the math is wrong, consequences are catastrophic and unexplainable.</p>
-      <p>Current guardrails are either <strong>too slow</strong> for real-time or <strong>too opaque</strong> for audit.</p>
+      <p><strong>Decision Integrity Layer for Autonomous Systems</strong></p>
+      <p style="color:var(--text-secondary);">Built by Phasewell Research. Mathematically grounded in quantum information theory.</p>
 
-      <h3>Solution</h3>
-      <p>NERVA is a <strong>decision integrity layer</strong> — a safety filter using density matrix formalism from quantum information theory.</p>
-      <div class="code-block" style="text-align: center;">System proposes action → 6D state → Bloch projection → COMMIT | HOLD | WAIT | ESCALATE | TOXIC</div>
+      <h3>What It Does</h3>
+      <p>Autonomous systems — drones, trading algorithms, surgical robots, self-driving vehicles — make decisions at machine speed. Most guardrails either slow things down too much or can't explain themselves after the fact.</p>
+      <p>NERVA sits between a proposed action and its execution. It evaluates the decision state and returns one of five verdicts — with full mathematical provenance for every call.</p>
+      <div class="code-block" style="text-align:center;">Proposed action → 6D state vector → Bloch sphere projection → COMMIT | HOLD | WAIT | ESCALATE | TOXIC</div>
 
-      <h3>Why v8.3.1</h3>
-      <p>We identified and corrected a normalization inconsistency (credit: Grok). The math is now <strong>provably rigorous</strong>:</p>
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1.5rem 0;">
-        <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; padding: 1rem;">
-          <div style="font-size: 0.7rem; color: var(--accent-red); text-transform: uppercase; margin-bottom: 0.5rem;">v8.3 Issue</div>
-          <ul style="font-size: 0.8rem; margin-left: 1rem;"><li>r ≠ √(r_x² + r_y² + r_z²)</li><li>Density matrix inconsistent with entropy</li></ul>
-        </div>
-        <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; padding: 1rem;">
-          <div style="font-size: 0.7rem; color: var(--accent-green); text-transform: uppercase; margin-bottom: 0.5rem;">v8.3.1 Fixed</div>
-          <ul style="font-size: 0.8rem; margin-left: 1rem;"><li>All components use /√3 normalization</li><li>r computed FROM components</li></ul>
-        </div>
-      </div>
-
-      <h3>Mathematical Foundation</h3>
+      <h3>How It Works</h3>
+      <p>Each decision is mapped to six input dimensions: urgency, strategy quality, risk exposure, evidence support, environmental stability. These collapse into a Bloch vector — a point inside a unit sphere representing the decision state.</p>
+      <p>From that state, NERVA computes density matrix metrics — entropy, purity, coherence — and derives an information-theoretic commitment threshold. The threshold adapts to the decision: higher uncertainty and higher stakes raise the bar for action.</p>
       <div class="code-block">ρ = ½(I + r_x·σ_x + r_y·σ_y + r_z·σ_z)
 
-// v8.3.1: Consistent normalization
-r_x = x_raw / √3,  r_y = y_raw / √3,  r_z = z_raw / √3
-r = √(r_x² + r_y² + r_z²)  // GUARANTEED by construction
+Entropy:    S(ρ) = -λ₊ log₂(λ₊) - λ₋ log₂(λ₋)
+Purity:     Tr(ρ²) = ½(1 + |r|²)  ∈ [0.5, 1]
+Threshold:  τ = 0.25 + 0.35·S(ρ) + 0.25·R − 0.20·reversibility</div>
 
-Von Neumann Entropy:  S(ρ) = -λ₊ log₂(λ₊) - λ₋ log₂(λ₋)
-Purity:               Tr(ρ²) = ½(1 + |r|²) ∈ [0.5, 1]
-Threshold:            τ = 0.25 + 0.35·S(ρ) + 0.25·R - 0.20·rev</div>
+      <h3>Safety Overrides</h3>
+      <p><strong>One-Way Brake:</strong> If a decision is irreversible (low reversibility score) and the integrity foundation is incomplete, NERVA forces ESCALATE regardless of other signals. Irreversible decisions require a higher standard of evidence — this is enforced mathematically, not by policy.</p>
+      <p><strong>EV Block:</strong> If expected value is negative, COMMIT is suppressed. The system won't recommend action when the math says the outcome is likely harmful.</p>
+      <p><strong>TOXIC veto:</strong> Low integrity combined with high urgency and pressure triggers a hard veto. No autonomous action. Human authorization required.</p>
 
-      <h3>Market Timing</h3>
-      <ul>
-        <li><strong>EU AI Act</strong> — Q2 2026 compliance</li>
-        <li><strong>DoD Ethical AI</strong> — autonomous weapons oversight</li>
-        <li><strong>SEC/CFTC</strong> — HFT guardrails</li>
-        <li><strong>AV Liability</strong> — explainable triage</li>
-      </ul>
+      <h3>Where It Applies</h3>
+      <p>Any domain where a wrong autonomous decision has serious consequences and requires explainability after the fact:</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin:1rem 0;">
+        <div style="background:var(--bg-tertiary);border:1px solid var(--border-subtle);border-radius:8px;padding:0.75rem;font-size:0.8rem;"><strong>Defense / Autonomous Weapons</strong><br><span style="color:var(--text-muted);">Rules of engagement enforcement, lethal action gating</span></div>
+        <div style="background:var(--bg-tertiary);border:1px solid var(--border-subtle);border-radius:8px;padding:0.75rem;font-size:0.8rem;"><strong>Financial Systems</strong><br><span style="color:var(--text-muted);">HFT guardrails, position sizing under uncertainty</span></div>
+        <div style="background:var(--bg-tertiary);border:1px solid var(--border-subtle);border-radius:8px;padding:0.75rem;font-size:0.8rem;"><strong>Autonomous Vehicles</strong><br><span style="color:var(--text-muted);">Triage logic, edge case escalation</span></div>
+        <div style="background:var(--bg-tertiary);border:1px solid var(--border-subtle);border-radius:8px;padding:0.75rem;font-size:0.8rem;"><strong>Medical / Surgical</strong><br><span style="color:var(--text-muted);">Anomaly response, procedure deviation handling</span></div>
+      </div>
 
-      <h3>Seeking</h3>
-      <p><span style="color: var(--accent-cyan); font-weight: 600;">$3M seed</span> — validation, engineering team, first pilots.</p>
-      <div style="margin-top: 3rem; padding-top: 2rem; border-top: 1px solid var(--border-subtle); text-align: center;">
-        <p style="color: var(--accent-cyan);">Anthony Migliazzo · <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="d7babeb0bbb6b9a3bfb8b9ae97b0bab6bebbf9b4b8ba">[email&#160;protected]</a></p>
-        <p style="font-size: 0.75rem; color: var(--text-muted);">NERVA · Phasewell Research · AMDG</p>
+      <h3>Mathematical Provenance</h3>
+      <p>NERVA's formalism is grounded in Nielsen & Chuang (2010), Shannon (1948), and Baumgratz et al. (2014). The v8.3.1 normalization correction ensures internal consistency across all metrics — the density matrix, entropy, purity, and coherence all derive from the same normalized Bloch vector by construction.</p>
+
+      <div style="margin-top:3rem;padding-top:2rem;border-top:1px solid var(--border-subtle);text-align:center;">
+        <p style="color:var(--accent-cyan);">Anthony Migliazzo · miglanthony@gmail.com</p>
+        <p style="font-size:0.75rem;color:var(--text-muted);">NERVA · Phasewell Research · AMDG</p>
       </div>
     </div>
   </section>
@@ -875,7 +888,7 @@ Threshold:            τ = 0.25 + 0.35·S(ρ) + 0.25·R - 0.20·rev</div>
     </div>
   </section>
 
-  <div class="version-badge">v8.3.1 — Grok Fix Applied</div>
+  <div class="version-badge">v8.3.1</div>
 
   <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
     // NERVA v8.3.1 — Grok's Normalization Fix Applied
@@ -982,6 +995,7 @@ Threshold:            τ = 0.25 + 0.35·S(ρ) + 0.25·R - 0.20·rev</div>
       display.textContent = parseFloat(slider.value).toFixed(2);
       if (key === 'threshold') manualThreshold = parseFloat(slider.value);
       else inputs[key] = parseFloat(slider.value);
+      evaluate(); // auto-evaluate on every slider change
     }
 
     function setThresholdMode(mode) {
@@ -1043,6 +1057,12 @@ Threshold:            τ = 0.25 + 0.35·S(ρ) + 0.25·R - 0.20·rev</div>
       const uLvl = inputs.E >= 0.7 ? 'hi' : inputs.E >= 0.4 ? 'md' : 'lo';
       const cell = document.getElementById(`cell-${iLvl}-${uLvl}`);
       if (cell) cell.classList.add('current');
+
+      // Update narrative
+      const narr = generateNarrative(r, inputs);
+      document.getElementById('narrative-label').textContent = narr.label;
+      document.getElementById('narrative-trajectory').textContent = narr.trajectory;
+      document.getElementById('narrative-factors').innerHTML = narr.factors.map(f => `<div>${f}</div>`).join('');
     }
 
     function toggleCollapsible(id) { document.getElementById(id).classList.toggle('open'); }
@@ -1053,6 +1073,7 @@ Threshold:            τ = 0.25 + 0.35·S(ρ) + 0.25·R - 0.20·rev</div>
       document.getElementById('pitch-section').style.display = s === 'pitch' ? 'block' : 'none';
       document.getElementById('api-section').style.display = s === 'api' ? 'block' : 'none';
     }
+
 
     async function parseScenario() {
       const scenario = document.getElementById('scenario-text').value.trim();
@@ -1081,22 +1102,18 @@ Threshold:            τ = 0.25 + 0.35·S(ρ) + 0.25·R - 0.20·rev</div>
         const params = await res.json();
         if (params.error) throw new Error(params.error);
 
-        // Animate sliders to new values
-        const keys = ['E', 'S', 'R', 'support', 'stability'];
-        const sliderMap = { E: 'urgency', S: 'strategy', R: 'risk', support: 'support', stability: 'stability' };
-
-        keys.forEach(k => {
-          const sliderId = sliderMap[k];
-          const slider = document.getElementById(`slider-${sliderId}`);
-          const display = document.getElementById(`val-${sliderId}`);
-          if (slider) {
+        // Correct slider ID mapping
+        const sliderMap = { E: 'E', S: 'S', R: 'R', support: 'support', stability: 'stability' };
+        Object.keys(sliderMap).forEach(k => {
+          const slider = document.getElementById(`slider-${sliderMap[k]}`);
+          const display = document.getElementById(`val-${sliderMap[k]}`);
+          if (slider && params[k] !== undefined) {
             slider.value = params[k];
             if (display) display.textContent = params[k].toFixed(2);
-            inputs[k === 'E' ? 'E' : k === 'S' ? 'S' : k === 'R' ? 'R' : k] = params[k];
           }
         });
 
-        // Sync inputs object
+        // Sync inputs object completely
         inputs.E = params.E;
         inputs.S = params.S;
         inputs.R = params.R;
@@ -1108,7 +1125,12 @@ Threshold:            τ = 0.25 + 0.35·S(ρ) + 0.25·R - 0.20·rev</div>
         btn.textContent = '⚡ PARSE WITH AI';
         btn.disabled = false;
 
-        setTimeout(() => evaluate(), 300);
+        evaluate();
+        // Auto-open narrative after parse
+        setTimeout(() => {
+          const nd = document.getElementById('narrative-details');
+          if (nd && !nd.classList.contains('open')) nd.classList.add('open');
+        }, 400);
 
       } catch (err) {
         statusEl.style.color = '#ef4444';
@@ -1116,6 +1138,50 @@ Threshold:            τ = 0.25 + 0.35·S(ρ) + 0.25·R - 0.20·rev</div>
         btn.textContent = '⚡ PARSE WITH AI';
         btn.disabled = false;
       }
+    }
+
+    function generateNarrative(r, inputs) {
+      const d = r.decision;
+      const i = r.metrics.integrity;
+      const ev = r.metrics.EV;
+      const entropy = r.metrics.entropy;
+      const mag = r.bloch.r;
+      const tau = r.threshold.used;
+      const rev = (inputs.support + inputs.stability) / 2;
+
+      const decisionLabels = {
+        COMMIT: 'COMMIT — Proceed',
+        HOLD: 'HOLD — Monitor',
+        WAIT: 'WAIT — Insufficient Signal',
+        ESCALATE: 'ESCALATE — Route to Human',
+        TOXIC: 'TOXIC — Hard Veto'
+      };
+
+      const trajectoryMap = {
+        COMMIT: `The decision state has sufficient integrity and positive expected value. The signal magnitude (|r|=${mag.toFixed(2)}) clears the commitment threshold (τ=${tau.toFixed(2)}), and the evidence foundation is strong enough to proceed autonomously. Monitor for state changes.`,
+        HOLD: `The signal is present but the foundation needs strengthening. Integrity (${i.toFixed(2)}) is in the middle range — there's intent and some evidence, but not enough to commit without further validation. Build more supporting data before acting.`,
+        WAIT: `The signal magnitude (|r|=${mag.toFixed(2)}) does not clear the commitment threshold (τ=${tau.toFixed(2)}). This is not a rejection — it means the state hasn't accumulated enough evidence to warrant action yet. Gather more data and re-evaluate.`,
+        ESCALATE: `The system has detected conditions requiring human judgment. Either the stakes are too high for autonomous action, or the integrity foundation is incomplete given the urgency. A human decision-maker should be briefed and brought into the loop immediately.`,
+        TOXIC: `NERVA has issued a hard veto. The combination of low integrity (${i.toFixed(2)}), negative expected value (EV=${ev.toFixed(2)}), and elevated pressure creates conditions where autonomous action would be dangerous. Do not proceed. This decision requires full human authorization and review.`
+      };
+
+      const factorLines = [];
+      if (i >= 0.6) factorLines.push('✓ Strong evidence foundation');
+      else if (i >= 0.4) factorLines.push('⚠ Moderate foundation — needs strengthening');
+      else factorLines.push('✗ Weak foundation — insufficient support/stability');
+
+      if (ev > 0.2) factorLines.push('✓ Positive expected value');
+      else if (ev > 0) factorLines.push('⚠ Marginally positive expected value');
+      else factorLines.push('✗ Negative expected value — action likely harmful');
+
+      if (entropy < 0.4) factorLines.push('✓ Low uncertainty — clear state');
+      else if (entropy < 0.7) factorLines.push('⚠ Moderate uncertainty in decision state');
+      else factorLines.push('✗ High entropy — significant uncertainty');
+
+      if (rev < 0.4) factorLines.push('⚠ Low reversibility — one-way door decision');
+      else factorLines.push('✓ Reversible — two-way door');
+
+      return { label: decisionLabels[d], trajectory: trajectoryMap[d], factors: factorLines };
     }
 
     // Init
