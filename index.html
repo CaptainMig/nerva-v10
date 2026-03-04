@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NERVA v8.3.1 — Decision Integrity Layer</title>
+  <title>NERVA v8.3.2 — Decision Integrity Layer</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -536,7 +536,7 @@
 </head>
 <body>
   <header>
-    <div class="logo">NERVA <span>v8.3.1</span></div>
+    <div class="logo">NERVA <span>v8.3.2</span></div>
     <nav>
       <button class="active" onclick="showSection('demo')">Demo</button>
       <button onclick="showSection('pitch')">About</button>
@@ -729,26 +729,16 @@
       </div>
 
       <div class="decision-matrix">
-        <div class="matrix-section-title">Decision Surface</div>
-        <div class="matrix-table">
-          <div class="matrix-header"></div>
-          <div class="matrix-header">LOW U</div>
-          <div class="matrix-header">MED U</div>
-          <div class="matrix-header">HIGH U</div>
-          <div class="matrix-row-label">I: HIGH</div>
-          <div class="matrix-cell-decision decision-COMMIT" id="cell-hi-lo">CMT</div>
-          <div class="matrix-cell-decision decision-COMMIT" id="cell-hi-md">CMT</div>
-          <div class="matrix-cell-decision decision-COMMIT" id="cell-hi-hi">CMT</div>
-          <div class="matrix-row-label">I: MED</div>
-          <div class="matrix-cell-decision decision-HOLD" id="cell-md-lo">HLD</div>
-          <div class="matrix-cell-decision decision-HOLD" id="cell-md-md">HLD</div>
-          <div class="matrix-cell-decision decision-ESCALATE" id="cell-md-hi">ESC</div>
-          <div class="matrix-row-label">I: LOW</div>
-          <div class="matrix-cell-decision decision-HOLD" id="cell-lo-lo">HLD</div>
-          <div class="matrix-cell-decision decision-ESCALATE" id="cell-lo-md">ESC</div>
-          <div class="matrix-cell-decision decision-TOXIC" id="cell-lo-hi">TOX</div>
+        <div class="matrix-section-title">Decision Zone Map</div>
+        <div style="position: relative; width: 100%; max-width: 400px; margin: 0 auto;">
+          <canvas id="decision-zone-canvas" width="400" height="300" style="width: 100%; border-radius: 8px;"></canvas>
+          <div id="zone-indicator" style="position: absolute; font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; padding: 4px 8px; border-radius: 4px; pointer-events: none; transition: all 0.3s ease; background: rgba(0,0,0,0.8); color: white; display: none;"></div>
         </div>
-        <div style="text-align: center; margin-top: 0.75rem; font-size: 0.65rem; color: var(--text-muted);">I = Integrity, U = Urgency</div>
+        <div style="display: flex; justify-content: space-between; margin-top: 0.5rem; font-size: 0.65rem; color: var(--text-muted);">
+          <span>← LOW URGENCY</span>
+          <span>HIGH URGENCY →</span>
+        </div>
+        <div style="text-align: center; font-size: 0.6rem; color: var(--text-muted); margin-top: 0.25rem;">↑ HIGH INTEGRITY &nbsp;|&nbsp; ↓ LOW INTEGRITY</div>
       </div>
 
       <div class="collapsible" id="narrative-details">
@@ -771,7 +761,7 @@
   <!-- About Section -->
   <section class="pitch-section" id="pitch-section">
     <div class="api-content">
-      <h2># NERVA v8.3.1</h2>
+      <h2># NERVA v8.3.2</h2>
       <p><strong>Decision Integrity Layer for Autonomous Systems</strong></p>
       <p style="color:var(--text-secondary);">Built by Phasewell Research. Mathematically grounded in quantum information theory.</p>
 
@@ -804,10 +794,10 @@ Threshold:  τ = 0.25 + 0.35·S(ρ) + 0.25·R − 0.20·reversibility</div>
       </div>
 
       <h3>Mathematical Provenance</h3>
-      <p>NERVA's formalism is grounded in Nielsen & Chuang (2010), Shannon (1948), and Baumgratz et al. (2014). The v8.3.1 normalization correction ensures internal consistency across all metrics — the density matrix, entropy, purity, and coherence all derive from the same normalized Bloch vector by construction.</p>
+      <p>NERVA's formalism is grounded in Nielsen & Chuang (2010), Shannon (1948), and Baumgratz et al. (2014). The v8.3.2 normalization correction ensures internal consistency across all metrics — the density matrix, entropy, purity, and coherence all derive from the same normalized Bloch vector by construction.</p>
 
       <div style="margin-top:3rem;padding-top:2rem;border-top:1px solid var(--border-subtle);text-align:center;">
-        <p style="color:var(--accent-cyan);">Anthony Migliazzo · miglanthony@gmail.com</p>
+        <p style="color:var(--accent-cyan);">Anthony Migliazzo · <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="f895919f9499968c90979681b89f95999194d69b9795">[email&#160;protected]</a></p>
         <p style="font-size:0.75rem;color:var(--text-muted);">NERVA · Phasewell Research · AMDG</p>
       </div>
     </div>
@@ -816,7 +806,7 @@ Threshold:  τ = 0.25 + 0.35·S(ρ) + 0.25·R − 0.20·reversibility</div>
   <!-- API Section -->
   <section class="api-section" id="api-section">
     <div class="api-content">
-      <h2>NERVA v8.3.1 API</h2>
+      <h2>NERVA v8.3.2 API</h2>
       <h3>Endpoint</h3>
       <div class="code-block">POST /v1/validate</div>
       <h3>Request</h3>
@@ -828,9 +818,9 @@ Threshold:  τ = 0.25 + 0.35·S(ρ) + 0.25·R − 0.20·reversibility</div>
   "stability": 0.70,
   "threshold": "auto"
 }</div>
-      <h3>Response (v8.3.1)</h3>
+      <h3>Response (v8.3.2)</h3>
       <div class="code-block">{
-  "version": "v8.3.1",
+  "version": "v8.3.2",
   "decision": "HOLD",
   "bloch": {
     "r": 0.496,
@@ -862,7 +852,7 @@ Threshold:  τ = 0.25 + 0.35·S(ρ) + 0.25·R − 0.20·reversibility</div>
 
       <div style="margin-bottom:1.5rem;">
         <div class="matrix-section-title">Density Matrix ρ = ½(I + r·σ)</div>
-        <div class="matrix-label">Pauli decomposition — v8.3.1 guarantees r = √(r_x² + r_y² + r_z²)</div>
+        <div class="matrix-label">Pauli decomposition — v8.3.2 guarantees r = √(r_x² + r_y² + r_z²)</div>
         <div class="matrix-grid">
           <div class="matrix-cell diagonal" id="rho-00">—</div>
           <div class="matrix-cell off-diagonal" id="rho-01">—</div>
@@ -883,10 +873,10 @@ Threshold:  τ = 0.25 + 0.35·S(ρ) + 0.25·R − 0.20·reversibility</div>
     </div>
   </section>
 
-  <div class="version-badge">v8.3.1</div>
+  <div class="version-badge">v8.3.2</div>
 
-  <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
-    // NERVA v8.3.1 — Grok's Normalization Fix Applied
+  <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+    // NERVA v8.3.2 — Grok's Normalization Fix Applied
     let inputs = { E: 0.50, S: 0.60, R: 0.40, support: 0.75, stability: 0.70 };
     let thresholdMode = 'auto';
     let manualThreshold = 0.50;
@@ -912,7 +902,7 @@ Threshold:  τ = 0.25 + 0.35·S(ρ) + 0.25·R − 0.20·reversibility</div>
       const y_raw = R;
       const z_raw = support * stability;
 
-      // v8.3.1 FIX: Consistent normalization (Grok)
+      // v8.3.2 FIX: Consistent normalization (Grok)
       const r_max = Math.sqrt(3);
       const r_x = x_raw / r_max;
       const r_y = y_raw / r_max;
@@ -953,8 +943,14 @@ Threshold:  τ = 0.25 + 0.35·S(ρ) + 0.25·R − 0.20·reversibility</div>
 
       let decision = 'WAIT', reasoning = '';
       if (!signal) {
-        decision = 'WAIT';
-        reasoning = `Insufficient signal (|r|=${r.toFixed(3)} < τ=${tau.toFixed(3)}). Gather more data.`;
+        // EMERGENCY OVERRIDE: High urgency + irreversible cannot sit in WAIT
+        if (urgency >= 0.75 && oneWayDoor) {
+          decision = 'ESCALATE';
+          reasoning = `[EMERGENCY OVERRIDE] High urgency (${urgency.toFixed(2)}) + irreversible. Cannot wait — routing to human.`;
+        } else {
+          decision = 'WAIT';
+          reasoning = `Insufficient signal (|r|=${r.toFixed(3)} < τ=${tau.toFixed(3)}). Gather more data.`;
+        }
       } else if (integrity >= 0.6 && EV > 0) {
         decision = 'COMMIT';
         reasoning = `Strong foundation (I=${integrity.toFixed(2)}), positive EV. Proceed.`;
@@ -970,7 +966,7 @@ Threshold:  τ = 0.25 + 0.35·S(ρ) + 0.25·R − 0.20·reversibility</div>
       }
 
       return {
-        version: 'v8.3.1', decision, reasoning,
+        version: 'v8.3.2', decision, reasoning,
         bloch: { r, theta: theta * 180 / Math.PI, phi: phi * 180 / Math.PI, r_x, r_y, r_z },
         metrics: { integrity, coherence: coherenceVal, purity: purityVal, entropy: entropyVal, EV },
         threshold: { used: tau, mode: manualTau !== null ? 'manual' : 'auto', components: tauComponents },
@@ -1047,17 +1043,137 @@ Threshold:  τ = 0.25 + 0.35·S(ρ) + 0.25·R − 0.20·reversibility</div>
         <div class="validation-item"><span class="validation-icon ${v.entropy_range_valid ? 'valid' : 'invalid'}">${v.entropy_range_valid ? '✓' : '✗'}</span><span>S(ρ) ∈ [0,1]</span></div>
         <div class="validation-item"><span class="validation-icon ${v.components_consistent ? 'valid' : 'invalid'}">${v.components_consistent ? '✓' : '✗'}</span><span>Components consistent</span></div>`;
 
-      document.querySelectorAll('.matrix-cell-decision').forEach(c => c.classList.remove('current'));
-      const iLvl = r.metrics.integrity >= 0.6 ? 'hi' : r.metrics.integrity >= 0.4 ? 'md' : 'lo';
-      const uLvl = inputs.E >= 0.7 ? 'hi' : inputs.E >= 0.4 ? 'md' : 'lo';
-      const cell = document.getElementById(`cell-${iLvl}-${uLvl}`);
-      if (cell) cell.classList.add('current');
+      // Render Decision Zone Map
+      renderDecisionZone(r.metrics.integrity, inputs.E, r.decision);
 
       // Update narrative
       const narr = generateNarrative(r, inputs);
       document.getElementById('narrative-label').textContent = narr.label;
       document.getElementById('narrative-trajectory').textContent = narr.trajectory;
       document.getElementById('narrative-factors').innerHTML = narr.factors.map(f => `<div>${f}</div>`).join('');
+    }
+
+    function renderDecisionZone(integrity, urgency, decision) {
+      const canvas = document.getElementById('decision-zone-canvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width;
+      const h = canvas.height;
+      
+      // Clear with dark background
+      ctx.fillStyle = '#0a0a0f';
+      ctx.fillRect(0, 0, w, h);
+      
+      // Draw gradient zones with vibrant colors
+      const zones = [
+        // COMMIT zone (high integrity) - vibrant green
+        { yMin: 0, yMax: 0.33, xMin: 0, xMax: 1, color: 'rgba(16, 235, 150, 0.35)', border: 'rgba(16, 235, 150, 0.8)' },
+        // HOLD zone (medium integrity, low-mid urgency) - warm amber
+        { yMin: 0.33, yMax: 0.66, xMin: 0, xMax: 0.66, color: 'rgba(255, 180, 30, 0.3)', border: 'rgba(255, 180, 30, 0.7)' },
+        // ESCALATE zones - hot orange
+        { yMin: 0.33, yMax: 0.66, xMin: 0.66, xMax: 1, color: 'rgba(255, 120, 50, 0.4)', border: 'rgba(255, 120, 50, 0.85)' },
+        { yMin: 0.66, yMax: 1, xMin: 0, xMax: 0.66, color: 'rgba(255, 120, 50, 0.35)', border: 'rgba(255, 120, 50, 0.75)' },
+        // TOXIC zone (low integrity + high urgency) - danger red
+        { yMin: 0.66, yMax: 1, xMin: 0.66, xMax: 1, color: 'rgba(255, 60, 80, 0.45)', border: 'rgba(255, 60, 80, 0.9)' }
+      ];
+      
+      zones.forEach(z => {
+        const x1 = z.xMin * w;
+        const x2 = z.xMax * w;
+        const y1 = z.yMin * h;
+        const y2 = z.yMax * h;
+        
+        // Gradient fill for depth
+        const grad = ctx.createLinearGradient(x1, y1, x2, y2);
+        grad.addColorStop(0, z.color);
+        grad.addColorStop(1, z.color.replace('0.', '0.1'));
+        ctx.fillStyle = grad;
+        ctx.fillRect(x1, y1, x2 - x1, y2 - y1);
+        
+        ctx.strokeStyle = z.border;
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(x1 + 0.5, y1 + 0.5, x2 - x1 - 1, y2 - y1 - 1);
+      });
+      
+      // Draw zone labels with glow
+      ctx.font = 'bold 12px JetBrains Mono';
+      ctx.textAlign = 'center';
+      
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = 'rgba(16, 235, 150, 0.8)';
+      ctx.fillStyle = '#10eb96';
+      ctx.fillText('COMMIT', w/2, h * 0.18);
+      
+      ctx.shadowColor = 'rgba(255, 180, 30, 0.8)';
+      ctx.fillStyle = '#ffb41e';
+      ctx.fillText('HOLD', w * 0.33, h * 0.5);
+      
+      ctx.shadowColor = 'rgba(255, 120, 50, 0.8)';
+      ctx.fillStyle = '#ff7832';
+      ctx.fillText('ESCALATE', w * 0.82, h * 0.5);
+      ctx.fillText('ESCALATE', w * 0.33, h * 0.82);
+      
+      ctx.shadowColor = 'rgba(255, 60, 80, 0.9)';
+      ctx.fillStyle = '#ff3c50';
+      ctx.fillText('TOXIC', w * 0.82, h * 0.85);
+      
+      ctx.shadowBlur = 0;
+      
+      // Draw grid lines for reference
+      ctx.strokeStyle = 'rgba(148, 163, 184, 0.15)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]);
+      // Horizontal lines at integrity thresholds
+      ctx.beginPath();
+      ctx.moveTo(0, h * 0.33);
+      ctx.lineTo(w, h * 0.33);
+      ctx.moveTo(0, h * 0.66);
+      ctx.lineTo(w, h * 0.66);
+      // Vertical line at urgency threshold
+      ctx.moveTo(w * 0.66, h * 0.33);
+      ctx.lineTo(w * 0.66, h);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      
+      // Draw current position
+      const posX = urgency * w;
+      const posY = (1 - integrity) * h;
+      
+      // Outer glow ring
+      const decisionColors = {
+        COMMIT: { r: 16, g: 235, b: 150 },
+        HOLD: { r: 255, g: 180, b: 30 },
+        WAIT: { r: 80, g: 160, b: 255 },
+        ESCALATE: { r: 255, g: 120, b: 50 },
+        TOXIC: { r: 255, g: 60, b: 80 }
+      };
+      const c = decisionColors[decision] || decisionColors.WAIT;
+      
+      // Pulsing glow effect
+      const gradient = ctx.createRadialGradient(posX, posY, 0, posX, posY, 35);
+      gradient.addColorStop(0, `rgba(${c.r}, ${c.g}, ${c.b}, 0.9)`);
+      gradient.addColorStop(0.4, `rgba(${c.r}, ${c.g}, ${c.b}, 0.4)`);
+      gradient.addColorStop(0.7, `rgba(${c.r}, ${c.g}, ${c.b}, 0.15)`);
+      gradient.addColorStop(1, `rgba(${c.r}, ${c.g}, ${c.b}, 0)`);
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(posX, posY, 35, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Main dot with bright fill
+      ctx.beginPath();
+      ctx.arc(posX, posY, 10, 0, Math.PI * 2);
+      ctx.fillStyle = `rgb(${c.r}, ${c.g}, ${c.b})`;
+      ctx.fill();
+      ctx.strokeStyle = 'white';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+      
+      // Inner bright core
+      ctx.beginPath();
+      ctx.arc(posX, posY, 4, 0, Math.PI * 2);
+      ctx.fillStyle = 'white';
+      ctx.fill();
     }
 
     function toggleCollapsible(id) { document.getElementById(id).classList.toggle('open'); }
@@ -1175,13 +1291,21 @@ Threshold:  τ = 0.25 + 0.35·S(ρ) + 0.25·R − 0.20·reversibility</div>
       else if (entropy < 0.7) factorLines.push('⚠ Moderate uncertainty in decision state');
       else factorLines.push('✗ High entropy — significant uncertainty');
 
-      if (rev < 0.4) factorLines.push('⚠ Low reversibility — one-way door decision');
-      else factorLines.push('✓ Reversible — two-way door');
+      if (rev < 0.4) factorLines.push('⚠ Low reversibility — one-way door detected');
+      else factorLines.push('✓ Reversible — can adjust course');
 
-      return { label: decisionLabels[d], trajectory: trajectoryMap[d], factors: factorLines };
+      if (inputs.E >= 0.8) factorLines.push('⚠ High urgency — pressure to act quickly');
+      else if (inputs.E >= 0.5) factorLines.push('⚠ Moderate urgency');
+      else factorLines.push('✓ Low urgency — time to deliberate');
+
+      return {
+        label: decisionLabels[d] || d,
+        trajectory: trajectoryMap[d] || 'Unknown decision state.',
+        factors: factorLines
+      };
     }
 
-    // Init
+    // Initialize
     evaluate();
   </script>
 </body>
