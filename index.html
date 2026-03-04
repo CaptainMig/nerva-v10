@@ -741,7 +741,7 @@
         </div>
         
         <div style="position: relative; width: 100%; max-width: 400px; margin: 0 auto;">
-          <canvas id="decision-zone-canvas" width="400" height="300" style="width: 100%; border-radius: 8px;"></canvas>
+          <canvas id="decision-zone-canvas" width="460" height="300" style="width: 100%; border-radius: 8px;"></canvas>
           <div id="zone-indicator" style="position: absolute; font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; padding: 4px 8px; border-radius: 4px; pointer-events: none; transition: all 0.3s ease; background: rgba(0,0,0,0.8); color: white; display: none;"></div>
         </div>
         
@@ -1093,13 +1093,15 @@ Threshold:  τ = 0.25 + 0.35·S(ρ) + 0.25·R − 0.20·reversibility</div>
       
       const signalCleared = r >= tau;
       
-      // Determine which zone the dot is in (for context)
+      // Zone logic must match NERVA decision thresholds: I >= 0.6 (high), I >= 0.4 (med), U >= 0.7 (high)
       let zoneLabel = 'HOLD';
-      if (integrity >= 0.6) zoneLabel = 'COMMIT';
-      else if (integrity >= 0.4 && urgency < 0.66) zoneLabel = 'HOLD';
-      else if (integrity >= 0.4) zoneLabel = 'ESCALATE';
-      else if (urgency >= 0.66) zoneLabel = 'TOXIC';
-      else zoneLabel = 'ESCALATE';
+      if (integrity >= 0.6) {
+        zoneLabel = 'COMMIT';
+      } else if (integrity >= 0.4) {
+        zoneLabel = urgency >= 0.7 ? 'ESCALATE' : 'HOLD';
+      } else {
+        zoneLabel = urgency >= 0.7 ? 'TOXIC' : 'ESCALATE';
+      }
       
       const statusConfig = {
         WAIT: {
@@ -1163,127 +1165,157 @@ Threshold:  τ = 0.25 + 0.35·S(ρ) + 0.25·R − 0.20·reversibility</div>
       const w = canvas.width;
       const h = canvas.height;
       
-      // Clear with dark background
+      // Reserve space for signal meter on right
+      const zoneW = w - 55;
+      
+      // Clear canvas
       ctx.fillStyle = '#0a0a0f';
       ctx.fillRect(0, 0, w, h);
       
-      // Draw gradient zones with vibrant colors
-      const zones = [
-        // COMMIT zone (high integrity) - vibrant green
-        { yMin: 0, yMax: 0.33, xMin: 0, xMax: 1, color: 'rgba(16, 235, 150, 0.35)', border: 'rgba(16, 235, 150, 0.8)' },
-        // HOLD zone (medium integrity, low-mid urgency) - warm amber
-        { yMin: 0.33, yMax: 0.66, xMin: 0, xMax: 0.66, color: 'rgba(255, 180, 30, 0.3)', border: 'rgba(255, 180, 30, 0.7)' },
-        // ESCALATE zones - hot orange
-        { yMin: 0.33, yMax: 0.66, xMin: 0.66, xMax: 1, color: 'rgba(255, 120, 50, 0.4)', border: 'rgba(255, 120, 50, 0.85)' },
-        { yMin: 0.66, yMax: 1, xMin: 0, xMax: 0.66, color: 'rgba(255, 120, 50, 0.35)', border: 'rgba(255, 120, 50, 0.75)' },
-        // TOXIC zone (low integrity + high urgency) - danger red
-        { yMin: 0.66, yMax: 1, xMin: 0.66, xMax: 1, color: 'rgba(255, 60, 80, 0.45)', border: 'rgba(255, 60, 80, 0.9)' }
-      ];
+      // NERVA thresholds: I >= 0.6 = high, I >= 0.4 = med, U >= 0.7 = high urgency
+      const iHigh = 0.6, iMed = 0.4, uHigh = 0.7;
       
-      zones.forEach(z => {
-        const x1 = z.xMin * w;
-        const x2 = z.xMax * w;
-        const y1 = z.yMin * h;
-        const y2 = z.yMax * h;
-        
-        // Gradient fill for depth
-        const grad = ctx.createLinearGradient(x1, y1, x2, y2);
-        grad.addColorStop(0, z.color);
-        grad.addColorStop(1, z.color.replace('0.', '0.1'));
-        ctx.fillStyle = grad;
-        ctx.fillRect(x1, y1, x2 - x1, y2 - y1);
-        
-        ctx.strokeStyle = z.border;
-        ctx.lineWidth = 1.5;
-        ctx.strokeRect(x1 + 0.5, y1 + 0.5, x2 - x1 - 1, y2 - y1 - 1);
-      });
+      // Convert to Y coords (integrity inverted)
+      const y_iHigh = (1 - iHigh) * h;  // top of HOLD zone
+      const y_iMed = (1 - iMed) * h;    // top of ESCALATE/TOXIC zone
+      const x_uHigh = uHigh * zoneW;    // left edge of high urgency column
       
-      // Draw zone labels with glow
-      ctx.font = 'bold 12px JetBrains Mono';
+      // === DRAW ZONES ===
+      // COMMIT (top row: I >= 0.6)
+      ctx.fillStyle = 'rgba(16, 235, 150, 0.28)';
+      ctx.fillRect(0, 0, zoneW, y_iHigh);
+      ctx.strokeStyle = 'rgba(16, 235, 150, 0.6)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(0.5, 0.5, zoneW - 1, y_iHigh - 1);
+      
+      // HOLD (middle-left: 0.4 <= I < 0.6, U < 0.7)
+      ctx.fillStyle = 'rgba(255, 180, 30, 0.22)';
+      ctx.fillRect(0, y_iHigh, x_uHigh, y_iMed - y_iHigh);
+      ctx.strokeStyle = 'rgba(255, 180, 30, 0.5)';
+      ctx.strokeRect(0.5, y_iHigh + 0.5, x_uHigh - 1, y_iMed - y_iHigh - 1);
+      
+      // ESCALATE (middle-right: 0.4 <= I < 0.6, U >= 0.7)
+      ctx.fillStyle = 'rgba(255, 120, 50, 0.28)';
+      ctx.fillRect(x_uHigh, y_iHigh, zoneW - x_uHigh, y_iMed - y_iHigh);
+      ctx.strokeStyle = 'rgba(255, 120, 50, 0.6)';
+      ctx.strokeRect(x_uHigh + 0.5, y_iHigh + 0.5, zoneW - x_uHigh - 1, y_iMed - y_iHigh - 1);
+      
+      // ESCALATE (bottom-left: I < 0.4, U < 0.7)
+      ctx.fillStyle = 'rgba(255, 120, 50, 0.22)';
+      ctx.fillRect(0, y_iMed, x_uHigh, h - y_iMed);
+      ctx.strokeStyle = 'rgba(255, 120, 50, 0.5)';
+      ctx.strokeRect(0.5, y_iMed + 0.5, x_uHigh - 1, h - y_iMed - 1);
+      
+      // TOXIC (bottom-right: I < 0.4, U >= 0.7)
+      ctx.fillStyle = 'rgba(255, 60, 80, 0.32)';
+      ctx.fillRect(x_uHigh, y_iMed, zoneW - x_uHigh, h - y_iMed);
+      ctx.strokeStyle = 'rgba(255, 60, 80, 0.7)';
+      ctx.strokeRect(x_uHigh + 0.5, y_iMed + 0.5, zoneW - x_uHigh - 1, h - y_iMed - 1);
+      
+      // === ZONE LABELS ===
+      ctx.font = 'bold 11px JetBrains Mono';
       ctx.textAlign = 'center';
+      ctx.shadowBlur = 5;
       
-      ctx.shadowBlur = 8;
-      ctx.shadowColor = 'rgba(16, 235, 150, 0.8)';
+      ctx.shadowColor = 'rgba(16, 235, 150, 0.7)';
       ctx.fillStyle = '#10eb96';
-      ctx.fillText('COMMIT', w/2, h * 0.18);
+      ctx.fillText('COMMIT', zoneW / 2, y_iHigh / 2 + 4);
       
-      ctx.shadowColor = 'rgba(255, 180, 30, 0.8)';
+      ctx.shadowColor = 'rgba(255, 180, 30, 0.7)';
       ctx.fillStyle = '#ffb41e';
-      ctx.fillText('HOLD', w * 0.33, h * 0.5);
+      ctx.fillText('HOLD', x_uHigh / 2, y_iHigh + (y_iMed - y_iHigh) / 2 + 4);
       
-      ctx.shadowColor = 'rgba(255, 120, 50, 0.8)';
+      ctx.shadowColor = 'rgba(255, 120, 50, 0.7)';
       ctx.fillStyle = '#ff7832';
-      ctx.fillText('ESCALATE', w * 0.82, h * 0.5);
-      ctx.fillText('ESCALATE', w * 0.33, h * 0.82);
+      ctx.fillText('ESC', x_uHigh + (zoneW - x_uHigh) / 2, y_iHigh + (y_iMed - y_iHigh) / 2 + 4);
+      ctx.fillText('ESC', x_uHigh / 2, y_iMed + (h - y_iMed) / 2 + 4);
       
-      ctx.shadowColor = 'rgba(255, 60, 80, 0.9)';
+      ctx.shadowColor = 'rgba(255, 60, 80, 0.8)';
       ctx.fillStyle = '#ff3c50';
-      ctx.fillText('TOXIC', w * 0.82, h * 0.85);
-      
+      ctx.fillText('TOXIC', x_uHigh + (zoneW - x_uHigh) / 2, y_iMed + (h - y_iMed) / 2 + 4);
       ctx.shadowBlur = 0;
       
-      // Draw grid lines for reference
-      ctx.strokeStyle = 'rgba(148, 163, 184, 0.15)';
+      // === THRESHOLD LINES WITH LABELS ===
+      ctx.strokeStyle = 'rgba(148, 163, 184, 0.35)';
       ctx.lineWidth = 1;
-      ctx.setLineDash([4, 4]);
-      // Horizontal lines at integrity thresholds
+      ctx.setLineDash([5, 4]);
+      
       ctx.beginPath();
-      ctx.moveTo(0, h * 0.33);
-      ctx.lineTo(w, h * 0.33);
-      ctx.moveTo(0, h * 0.66);
-      ctx.lineTo(w, h * 0.66);
-      // Vertical line at urgency threshold
-      ctx.moveTo(w * 0.66, h * 0.33);
-      ctx.lineTo(w * 0.66, h);
+      ctx.moveTo(0, y_iHigh);
+      ctx.lineTo(zoneW, y_iHigh);
+      ctx.stroke();
+      
+      ctx.beginPath();
+      ctx.moveTo(0, y_iMed);
+      ctx.lineTo(zoneW, y_iMed);
+      ctx.stroke();
+      
+      ctx.beginPath();
+      ctx.moveTo(x_uHigh, y_iHigh);
+      ctx.lineTo(x_uHigh, h);
       ctx.stroke();
       ctx.setLineDash([]);
       
-      // Draw signal strength meter on the right edge
-      const meterX = w - 25;
-      const meterH = h - 40;
-      const meterY = 20;
+      // Threshold labels
+      ctx.fillStyle = 'rgba(148, 163, 184, 0.6)';
+      ctx.font = '8px JetBrains Mono';
+      ctx.textAlign = 'left';
+      ctx.fillText('I=0.6', 3, y_iHigh - 3);
+      ctx.fillText('I=0.4', 3, y_iMed - 3);
+      ctx.textAlign = 'center';
+      ctx.fillText('U=0.7', x_uHigh, h - 3);
       
-      // Meter background
-      ctx.fillStyle = 'rgba(30, 41, 59, 0.8)';
-      ctx.fillRect(meterX - 8, meterY, 16, meterH);
+      // === SIGNAL METER ===
+      const meterX = zoneW + 28;
+      const meterTop = 20;
+      const meterH = h - 45;
       
-      // Threshold line on meter
-      const tauY = meterY + meterH * (1 - tau);
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+      // Meter bg
+      ctx.fillStyle = 'rgba(30, 41, 59, 0.85)';
+      ctx.fillRect(meterX - 10, meterTop, 20, meterH);
+      ctx.strokeStyle = 'rgba(148, 163, 184, 0.25)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(meterX - 10, meterTop, 20, meterH);
+      
+      // τ threshold line
+      const tauY = meterTop + meterH * (1 - tau);
+      ctx.strokeStyle = 'white';
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(meterX - 12, tauY);
-      ctx.lineTo(meterX + 12, tauY);
+      ctx.moveTo(meterX - 14, tauY);
+      ctx.lineTo(meterX + 14, tauY);
       ctx.stroke();
       
       // τ label
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-      ctx.font = '9px JetBrains Mono';
-      ctx.textAlign = 'right';
-      ctx.fillText('τ=' + tau.toFixed(2), meterX - 14, tauY + 3);
+      ctx.fillStyle = 'white';
+      ctx.font = 'bold 9px JetBrains Mono';
+      ctx.textAlign = 'left';
+      ctx.fillText('τ=' + tau.toFixed(2), meterX + 14, tauY + 3);
       
       // Signal fill
-      const signalH = meterH * r;
+      const signalH = Math.min(r, 1) * meterH;
       const signalCleared = r >= tau;
-      ctx.fillStyle = signalCleared ? 'rgba(16, 235, 150, 0.8)' : 'rgba(59, 130, 246, 0.6)';
-      ctx.fillRect(meterX - 6, meterY + meterH - signalH, 12, signalH);
+      ctx.fillStyle = signalCleared ? 'rgba(16, 235, 150, 0.85)' : 'rgba(80, 160, 255, 0.75)';
+      ctx.fillRect(meterX - 8, meterTop + meterH - signalH, 16, signalH);
       
       // |r| label
-      ctx.fillStyle = signalCleared ? '#10eb96' : '#3b9eff';
-      ctx.textAlign = 'right';
-      ctx.fillText('|r|=' + r.toFixed(2), meterX - 14, meterY + meterH - signalH - 5);
+      ctx.fillStyle = signalCleared ? '#10eb96' : '#50a0ff';
+      ctx.font = 'bold 9px JetBrains Mono';
+      ctx.fillText('|r|=' + r.toFixed(2), meterX + 14, meterTop + meterH - signalH + 10);
       
-      // Meter label
-      ctx.fillStyle = 'rgba(148, 163, 184, 0.6)';
+      // Meter title and status
+      ctx.fillStyle = 'rgba(148, 163, 184, 0.7)';
       ctx.font = '8px JetBrains Mono';
       ctx.textAlign = 'center';
-      ctx.fillText('SIGNAL', meterX, h - 8);
+      ctx.fillText('SIGNAL', meterX, 12);
+      ctx.fillStyle = signalCleared ? '#10eb96' : '#50a0ff';
+      ctx.font = '7px JetBrains Mono';
+      ctx.fillText(signalCleared ? '✓ CLEARED' : '○ PENDING', meterX, h - 5);
       
-      // Draw current position
-      const posX = urgency * (w - 50); // Account for meter
+      // === POSITION DOT ===
+      const posX = urgency * zoneW;
       const posY = (1 - integrity) * h;
       
-      // Outer glow ring
       const decisionColors = {
         COMMIT: { r: 16, g: 235, b: 150 },
         HOLD: { r: 255, g: 180, b: 30 },
@@ -1293,58 +1325,56 @@ Threshold:  τ = 0.25 + 0.35·S(ρ) + 0.25·R − 0.20·reversibility</div>
       };
       const c = decisionColors[decision] || decisionColors.WAIT;
       
-      // If WAIT, dim the dot and add dashed ring to show "potential" position
       const isWait = decision === 'WAIT';
-      const opacity = isWait ? 0.4 : 1;
+      const opacity = isWait ? 0.5 : 1;
       
-      // Pulsing glow effect (dimmed if WAIT)
-      const gradient = ctx.createRadialGradient(posX, posY, 0, posX, posY, 35);
-      gradient.addColorStop(0, `rgba(${c.r}, ${c.g}, ${c.b}, ${0.9 * opacity})`);
-      gradient.addColorStop(0.4, `rgba(${c.r}, ${c.g}, ${c.b}, ${0.4 * opacity})`);
-      gradient.addColorStop(0.7, `rgba(${c.r}, ${c.g}, ${c.b}, ${0.15 * opacity})`);
-      gradient.addColorStop(1, `rgba(${c.r}, ${c.g}, ${c.b}, 0)`);
-      ctx.fillStyle = gradient;
+      // Glow
+      const grad = ctx.createRadialGradient(posX, posY, 0, posX, posY, 28);
+      grad.addColorStop(0, `rgba(${c.r}, ${c.g}, ${c.b}, ${0.8 * opacity})`);
+      grad.addColorStop(0.5, `rgba(${c.r}, ${c.g}, ${c.b}, ${0.25 * opacity})`);
+      grad.addColorStop(1, `rgba(${c.r}, ${c.g}, ${c.b}, 0)`);
+      ctx.fillStyle = grad;
       ctx.beginPath();
-      ctx.arc(posX, posY, 35, 0, Math.PI * 2);
+      ctx.arc(posX, posY, 28, 0, Math.PI * 2);
       ctx.fill();
       
-      // If WAIT, draw dashed outer ring to indicate "pending" state
+      // Dashed ring if WAIT
       if (isWait) {
-        ctx.setLineDash([4, 4]);
-        ctx.strokeStyle = `rgba(${c.r}, ${c.g}, ${c.b}, 0.6)`;
+        ctx.setLineDash([3, 3]);
+        ctx.strokeStyle = `rgba(${c.r}, ${c.g}, ${c.b}, 0.7)`;
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.arc(posX, posY, 18, 0, Math.PI * 2);
+        ctx.arc(posX, posY, 15, 0, Math.PI * 2);
         ctx.stroke();
         ctx.setLineDash([]);
       }
       
-      // Main dot with bright fill
+      // Dot
       ctx.beginPath();
-      ctx.arc(posX, posY, 10, 0, Math.PI * 2);
+      ctx.arc(posX, posY, 8, 0, Math.PI * 2);
       ctx.fillStyle = `rgba(${c.r}, ${c.g}, ${c.b}, ${opacity})`;
       ctx.fill();
-      ctx.strokeStyle = isWait ? 'rgba(255,255,255,0.5)' : 'white';
-      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = isWait ? 'rgba(255,255,255,0.6)' : 'white';
+      ctx.lineWidth = 2;
       ctx.stroke();
       
-      // Inner bright core
+      // Core
       ctx.beginPath();
-      ctx.arc(posX, posY, 4, 0, Math.PI * 2);
-      ctx.fillStyle = isWait ? 'rgba(255,255,255,0.5)' : 'white';
+      ctx.arc(posX, posY, 3, 0, Math.PI * 2);
+      ctx.fillStyle = isWait ? 'rgba(255,255,255,0.6)' : 'white';
       ctx.fill();
       
-      // Label under dot showing zone position (if WAIT)
+      // Zone label under dot (WAIT only)
       if (isWait) {
-        let zoneLabel = 'HOLD zone';
-        if (integrity >= 0.6) zoneLabel = 'COMMIT zone';
-        else if (integrity < 0.4 && urgency >= 0.66) zoneLabel = 'TOXIC zone';
-        else if (integrity < 0.4 || urgency >= 0.66) zoneLabel = 'ESCALATE zone';
+        let zLabel = 'HOLD';
+        if (integrity >= 0.6) zLabel = 'COMMIT';
+        else if (integrity >= 0.4) zLabel = urgency >= 0.7 ? 'ESCALATE' : 'HOLD';
+        else zLabel = urgency >= 0.7 ? 'TOXIC' : 'ESCALATE';
         
-        ctx.fillStyle = 'rgba(148, 163, 184, 0.8)';
-        ctx.font = '9px JetBrains Mono';
+        ctx.fillStyle = 'rgba(200, 215, 230, 0.85)';
+        ctx.font = '8px JetBrains Mono';
         ctx.textAlign = 'center';
-        ctx.fillText('(in ' + zoneLabel + ')', posX, posY + 28);
+        ctx.fillText('in ' + zLabel + ' zone', posX, posY + 24);
       }
     }
 
