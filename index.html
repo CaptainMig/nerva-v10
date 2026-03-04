@@ -1337,6 +1337,32 @@ Threshold:  τ = 0.25 + 0.35·S(ρ) + 0.25·R − 0.20·reversibility</div>
       const posX = urgency * zoneW;
       const posY = (1 - integrity) * h;
 
+      // Compute where the DECISION zone center actually is (for arrow target)
+      let decisionZoneCenterX, decisionZoneCenterY;
+      if (decision === 'COMMIT') {
+        decisionZoneCenterX = zoneW / 2;
+        decisionZoneCenterY = y_iHigh / 2;
+      } else if (decision === 'HOLD') {
+        decisionZoneCenterX = x_uHigh / 2;
+        decisionZoneCenterY = y_iHigh + (y_iMed - y_iHigh) / 2;
+      } else if (decision === 'WAIT') {
+        decisionZoneCenterX = posX; // stays in place
+        decisionZoneCenterY = posY;
+      } else if (decision === 'ESCALATE') {
+        // Pick the ESC zone the dot is physically closer to
+        const escMidX = x_uHigh + (zoneW - x_uHigh) / 2;
+        const escMidY = y_iHigh + (y_iMed - y_iHigh) / 2;
+        const escBotX = x_uHigh / 2;
+        const escBotY = y_iMed + (h - y_iMed) / 2;
+        const d1 = Math.hypot(posX - escMidX, posY - escMidY);
+        const d2 = Math.hypot(posX - escBotX, posY - escBotY);
+        decisionZoneCenterX = d1 < d2 ? escMidX : escBotX;
+        decisionZoneCenterY = d1 < d2 ? escMidY : escBotY;
+      } else { // TOXIC
+        decisionZoneCenterX = x_uHigh + (zoneW - x_uHigh) / 2;
+        decisionZoneCenterY = y_iMed + (h - y_iMed) / 2;
+      }
+
       const decisionColors = {
         COMMIT:   { r: 16,  g: 235, b: 150 },
         HOLD:     { r: 255, g: 180, b: 30  },
@@ -1347,6 +1373,46 @@ Threshold:  τ = 0.25 + 0.35·S(ρ) + 0.25·R − 0.20·reversibility</div>
       const c = decisionColors[decision] || decisionColors.WAIT;
       const isWait = decision === 'WAIT';
       const opacity = isWait ? 0.55 : 1;
+
+      // Draw arrow from dot to decision zone if they're meaningfully far apart
+      const arrowDist = Math.hypot(posX - decisionZoneCenterX, posY - decisionZoneCenterY);
+      if (arrowDist > 30 && decision !== 'WAIT') {
+        const angle = Math.atan2(decisionZoneCenterY - posY, decisionZoneCenterX - posX);
+        const startX = posX + Math.cos(angle) * 14;
+        const startY = posY + Math.sin(angle) * 14;
+        const endX = decisionZoneCenterX - Math.cos(angle) * 18;
+        const endY = decisionZoneCenterY - Math.sin(angle) * 18;
+
+        // Dashed arrow line
+        ctx.save();
+        ctx.setLineDash([4, 3]);
+        ctx.strokeStyle = `rgba(${c.r}, ${c.g}, ${c.b}, 0.6)`;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        ctx.lineTo(endX, endY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Arrowhead
+        const headLen = 7;
+        ctx.fillStyle = `rgba(${c.r}, ${c.g}, ${c.b}, 0.7)`;
+        ctx.beginPath();
+        ctx.moveTo(endX, endY);
+        ctx.lineTo(endX - headLen * Math.cos(angle - 0.4), endY - headLen * Math.sin(angle - 0.4));
+        ctx.lineTo(endX - headLen * Math.cos(angle + 0.4), endY - headLen * Math.sin(angle + 0.4));
+        ctx.closePath();
+        ctx.fill();
+
+        // "→ DECISION" label near arrowhead
+        ctx.font = 'bold 7px JetBrains Mono';
+        ctx.fillStyle = `rgba(${c.r}, ${c.g}, ${c.b}, 0.85)`;
+        ctx.textAlign = 'center';
+        const labelX = (startX + endX) / 2;
+        const labelY = (startY + endY) / 2 - 6;
+        ctx.fillText('→ ' + decision, labelX, labelY);
+        ctx.restore();
+      }
 
       // Glow
       const grad = ctx.createRadialGradient(posX, posY, 0, posX, posY, 28);
