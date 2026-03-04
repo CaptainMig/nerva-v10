@@ -25,30 +25,6 @@
       --border-medium: rgba(148, 163, 184, 0.2);
       --glow-blue: rgba(59, 130, 246, 0.15);
     }
-    body.light-mode {
-      --bg-primary: #f8fafc;
-      --bg-secondary: #f1f5f9;
-      --bg-tertiary: #e2e8f0;
-      --text-primary: #0f172a;
-      --text-secondary: #475569;
-      --text-muted: #94a3b8;
-      --accent-blue: #2563eb;
-      --accent-cyan: #0891b2;
-      --accent-green: #059669;
-      --accent-yellow: #d97706;
-      --accent-orange: #ea580c;
-      --accent-red: #dc2626;
-      --border-subtle: rgba(15, 23, 42, 0.1);
-      --border-medium: rgba(15, 23, 42, 0.2);
-      --glow-blue: rgba(37, 99, 235, 0.1);
-    }
-    body.light-mode header {
-      background: rgba(248, 250, 252, 0.92);
-    }
-    body.light-mode .code-block {
-      background: #e2e8f0;
-      color: #0f172a;
-    }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       font-family: 'Inter', -apple-system, sans-serif;
@@ -565,7 +541,6 @@
       <button class="active" onclick="showSection('demo')">Demo</button>
       <button onclick="showSection('pitch')">About</button>
       <button onclick="showSection('api')">API</button>
-      <button id="theme-toggle" onclick="toggleTheme()" style="background:rgba(148,163,184,0.1);border:1px solid var(--border-medium);padding:0.4rem 0.75rem;border-radius:6px;color:var(--text-secondary);font-size:0.75rem;cursor:pointer;margin-left:0.5rem;transition:all 0.2s;" title="Toggle light/dark mode">☀️</button>
     </nav>
   </header>
 
@@ -593,7 +568,7 @@
         <button class="preset-btn" onclick="loadPreset('surgical')"><strong>Surgical</strong>Patient anomaly</button>
       </div>
 
-      <div class="section-title" style="display:flex;align-items:center;gap:0.4rem;">Input Parameters <span class="tooltip" style="display:inline-block;cursor:help;"><span class="help-icon">?</span><span class="tooltip-content" style="width:240px;"><div class="tooltip-title">Input Parameters</div><div class="tooltip-desc">Six dimensions that define the decision state. Adjust manually or use Parse with AI to set them from a natural language scenario description.</div></span></span></div>
+      <div class="section-title">Input Parameters</div>
       <div class="slider-group">
         <div class="slider-header">
           <span class="slider-label"><strong>E</strong> — Urgency</span>
@@ -636,7 +611,7 @@
       </div>
 
       <div class="threshold-section">
-        <div class="section-title" style="display:flex;align-items:center;gap:0.4rem;">τ — Commitment Threshold <span class="tooltip" style="display:inline-block;cursor:help;"><span class="help-icon">?</span><span class="tooltip-content" style="width:250px;"><div class="tooltip-title">Commitment Threshold (τ)</div><div class="tooltip-desc">The minimum signal magnitude needed before NERVA can recommend action. In Auto mode, it's derived mathematically from entropy, risk, and reversibility — so uncertain or high-stakes situations automatically raise the bar.</div><span class="tooltip-formula">τ = 0.25 + 0.35·S(ρ) + 0.25·R − 0.20·rev</span></span></span></div>
+        <div class="section-title">τ — Commitment Threshold</div>
         <div class="threshold-modes">
           <button class="threshold-btn active" id="btn-auto" onclick="setThresholdMode('auto')">Auto</button>
           <button class="threshold-btn" id="btn-manual" onclick="setThresholdMode('manual')">Manual</button>
@@ -654,7 +629,7 @@
           <strong>Auto:</strong> τ computed from entropy, risk, and reversibility using information-theoretic derivation.
         </div>
       </div>
-      </div>
+      <button class="evaluate-btn" onclick="evaluate()">EVALUATE</button>
     </aside>
 
     <section class="results" id="results">
@@ -754,21 +729,50 @@
       </div>
 
       <div class="decision-matrix">
-        <div class="matrix-section-title" style="display:flex;align-items:center;gap:0.4rem;">Decision Zone Map <span class="tooltip" style="display:inline-block;cursor:help;"><span class="help-icon">?</span><span class="tooltip-content" style="width:260px;left:0;transform:none;"><div class="tooltip-title">Decision Zone Map</div><div class="tooltip-desc">Shows where your current decision state sits across the Integrity (vertical) and Urgency (horizontal) axes. The glowing dot is your live position. Zones are colored by decision outcome — move sliders to see the dot shift in real time.</div></span></span></div>
+        <div class="matrix-section-title">Decision Zone Map</div>
+        
+        <!-- Signal Status Indicator -->
+        <div id="signal-status" style="background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.4); border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.75rem;">
+          <div id="signal-icon" style="width: 32px; height: 32px; border-radius: 50%; background: var(--accent-blue); display: flex; align-items: center; justify-content: center; font-size: 0.9rem;">⏸</div>
+          <div style="flex: 1;">
+            <div id="signal-title" style="font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; font-weight: 600; color: var(--accent-blue); margin-bottom: 0.25rem;">SIGNAL BELOW THRESHOLD</div>
+            <div id="signal-explanation" style="font-size: 0.7rem; color: var(--text-secondary); line-height: 1.4;">The dot shows where you'd land in the decision space, but |r| hasn't crossed τ yet. The system is waiting for stronger signal before applying zone logic.</div>
+          </div>
+        </div>
+        
         <div style="position: relative; width: 100%; max-width: 400px; margin: 0 auto;">
           <canvas id="decision-zone-canvas" width="400" height="300" style="width: 100%; border-radius: 8px;"></canvas>
           <div id="zone-indicator" style="position: absolute; font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; padding: 4px 8px; border-radius: 4px; pointer-events: none; transition: all 0.3s ease; background: rgba(0,0,0,0.8); color: white; display: none;"></div>
         </div>
+        
         <div style="display: flex; justify-content: space-between; margin-top: 0.5rem; font-size: 0.65rem; color: var(--text-muted);">
           <span>← LOW URGENCY</span>
           <span>HIGH URGENCY →</span>
         </div>
         <div style="text-align: center; font-size: 0.6rem; color: var(--text-muted); margin-top: 0.25rem;">↑ HIGH INTEGRITY &nbsp;|&nbsp; ↓ LOW INTEGRITY</div>
+        
+        <!-- How to Read This Panel -->
+        <div style="background: var(--bg-tertiary); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 1rem; margin-top: 1rem;">
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; color: var(--text-muted); letter-spacing: 0.1em; margin-bottom: 0.75rem;">HOW TO READ THIS</div>
+          <div style="font-size: 0.75rem; color: var(--text-secondary); line-height: 1.6;">
+            <div style="margin-bottom: 0.5rem;"><strong style="color: var(--text-primary);">The Dot</strong> = Your position based on Integrity (Y) and Urgency (X)</div>
+            <div style="margin-bottom: 0.5rem;"><strong style="color: var(--text-primary);">The Zones</strong> = Where you'd be classified IF signal clears threshold</div>
+            <div style="margin-bottom: 0.5rem;"><strong style="color: var(--text-primary);">Signal |r|</strong> = Overall decision strength (must exceed τ to activate zone logic)</div>
+            <div><strong style="color: var(--text-primary);">Threshold τ</strong> = Adapts to entropy + risk. Higher uncertainty = higher bar.</div>
+          </div>
+          <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--border-subtle); font-size: 0.7rem; color: var(--text-muted);">
+            <span style="color: var(--accent-blue);">● WAIT</span> = Signal too weak &nbsp;|&nbsp;
+            <span style="color: var(--accent-green);">● COMMIT</span> = Strong + positive EV &nbsp;|&nbsp;
+            <span style="color: var(--accent-yellow);">● HOLD</span> = Medium foundation &nbsp;|&nbsp;
+            <span style="color: var(--accent-orange);">● ESCALATE</span> = Route to human &nbsp;|&nbsp;
+            <span style="color: var(--accent-red);">● TOXIC</span> = Hard veto
+          </div>
+        </div>
       </div>
 
       <div class="collapsible" id="narrative-details">
         <div class="collapsible-header" onclick="toggleCollapsible('narrative-details')">
-          <span class="collapsible-title" style="display:flex;align-items:center;gap:0.4rem;">Decision Trajectory <span class="tooltip" style="display:inline-block;cursor:help;" onclick="event.stopPropagation()"><span class="help-icon">?</span><span class="tooltip-content" style="width:260px;left:0;transform:none;"><div class="tooltip-title">Decision Trajectory</div><div class="tooltip-desc">A plain-English explanation of why NERVA reached this decision. Shows the key factors that pushed the state toward COMMIT, HOLD, WAIT, ESCALATE, or TOXIC — and what would need to change to shift the outcome.</div></span></span></span>
+          <span class="collapsible-title">Decision Trajectory</span>
           <span class="collapsible-icon">▼</span>
         </div>
         <div class="collapsible-content">
@@ -1069,7 +1073,10 @@ Threshold:  τ = 0.25 + 0.35·S(ρ) + 0.25·R − 0.20·reversibility</div>
         <div class="validation-item"><span class="validation-icon ${v.components_consistent ? 'valid' : 'invalid'}">${v.components_consistent ? '✓' : '✗'}</span><span>Components consistent</span></div>`;
 
       // Render Decision Zone Map
-      renderDecisionZone(r.metrics.integrity, inputs.E, r.decision);
+      renderDecisionZone(r.metrics.integrity, inputs.E, r.decision, r.bloch.r, r.threshold.used);
+      
+      // Update signal status panel
+      updateSignalStatus(r.decision, r.bloch.r, r.threshold.used, r.metrics.integrity, inputs.E);
 
       // Update narrative
       const narr = generateNarrative(r, inputs);
@@ -1077,16 +1084,87 @@ Threshold:  τ = 0.25 + 0.35·S(ρ) + 0.25·R − 0.20·reversibility</div>
       document.getElementById('narrative-trajectory').textContent = narr.trajectory;
       document.getElementById('narrative-factors').innerHTML = narr.factors.map(f => `<div>${f}</div>`).join('');
     }
+    
+    function updateSignalStatus(decision, r, tau, integrity, urgency) {
+      const statusEl = document.getElementById('signal-status');
+      const iconEl = document.getElementById('signal-icon');
+      const titleEl = document.getElementById('signal-title');
+      const explEl = document.getElementById('signal-explanation');
+      
+      const signalCleared = r >= tau;
+      
+      // Determine which zone the dot is in (for context)
+      let zoneLabel = 'HOLD';
+      if (integrity >= 0.6) zoneLabel = 'COMMIT';
+      else if (integrity >= 0.4 && urgency < 0.66) zoneLabel = 'HOLD';
+      else if (integrity >= 0.4) zoneLabel = 'ESCALATE';
+      else if (urgency >= 0.66) zoneLabel = 'TOXIC';
+      else zoneLabel = 'ESCALATE';
+      
+      const statusConfig = {
+        WAIT: {
+          bg: 'rgba(59, 130, 246, 0.15)',
+          border: 'rgba(59, 130, 246, 0.4)',
+          color: 'var(--accent-blue)',
+          icon: '⏸',
+          title: 'SIGNAL BELOW THRESHOLD',
+          explanation: `|r| = ${r.toFixed(3)} has not crossed τ = ${tau.toFixed(3)}. The dot shows you're positioned in the ${zoneLabel} zone, but zone logic only activates when signal clears threshold. Increase Support, Strategy, or reduce Risk to build signal strength.`
+        },
+        COMMIT: {
+          bg: 'rgba(16, 235, 150, 0.15)',
+          border: 'rgba(16, 235, 150, 0.4)',
+          color: 'var(--accent-green)',
+          icon: '✓',
+          title: 'SIGNAL CLEARED → COMMIT',
+          explanation: `|r| = ${r.toFixed(3)} exceeds τ = ${tau.toFixed(3)}. High integrity (${integrity.toFixed(2)}) + positive expected value. The system recommends proceeding with the action.`
+        },
+        HOLD: {
+          bg: 'rgba(255, 180, 30, 0.15)',
+          border: 'rgba(255, 180, 30, 0.4)',
+          color: 'var(--accent-yellow)',
+          icon: '⏳',
+          title: 'SIGNAL CLEARED → HOLD',
+          explanation: `|r| = ${r.toFixed(3)} exceeds τ = ${tau.toFixed(3)}, activating zone logic. Medium integrity (${integrity.toFixed(2)}) means the foundation needs strengthening before committing. Build more evidence.`
+        },
+        ESCALATE: {
+          bg: 'rgba(255, 120, 50, 0.15)',
+          border: 'rgba(255, 120, 50, 0.4)',
+          color: 'var(--accent-orange)',
+          icon: '⚠',
+          title: decision === 'ESCALATE' && !signalCleared ? 'EMERGENCY OVERRIDE → ESCALATE' : 'SIGNAL CLEARED → ESCALATE',
+          explanation: decision === 'ESCALATE' && !signalCleared 
+            ? `High urgency (${urgency.toFixed(2)}) + low reversibility triggered the Emergency Override. Even without clearing τ, NERVA escalates rather than allowing WAIT on an irreversible, time-critical action.`
+            : `|r| = ${r.toFixed(3)} exceeds τ = ${tau.toFixed(3)}. The combination of integrity and urgency requires human review before proceeding. Route to decision-maker.`
+        },
+        TOXIC: {
+          bg: 'rgba(255, 60, 80, 0.15)',
+          border: 'rgba(255, 60, 80, 0.4)',
+          color: 'var(--accent-red)',
+          icon: '✕',
+          title: 'SIGNAL CLEARED → TOXIC VETO',
+          explanation: `|r| = ${r.toFixed(3)} exceeds τ = ${tau.toFixed(3)}, but low integrity (${integrity.toFixed(2)}) combined with high urgency/entropy triggers a hard veto. Do not proceed. Full human authorization required.`
+        }
+      };
+      
+      const config = statusConfig[decision] || statusConfig.WAIT;
+      statusEl.style.background = config.bg;
+      statusEl.style.borderColor = config.border;
+      iconEl.style.background = config.color;
+      iconEl.textContent = config.icon;
+      titleEl.style.color = config.color;
+      titleEl.textContent = config.title;
+      explEl.textContent = config.explanation;
+    }
 
-    function renderDecisionZone(integrity, urgency, decision) {
+    function renderDecisionZone(integrity, urgency, decision, r, tau) {
       const canvas = document.getElementById('decision-zone-canvas');
       if (!canvas) return;
       const ctx = canvas.getContext('2d');
       const w = canvas.width;
       const h = canvas.height;
       
-      // Clear with theme-aware background
-      ctx.fillStyle = document.body.classList.contains('light-mode') ? '#e2e8f0' : '#0a0a0f';
+      // Clear with dark background
+      ctx.fillStyle = '#0a0a0f';
       ctx.fillRect(0, 0, w, h);
       
       // Draw gradient zones with vibrant colors
@@ -1160,8 +1238,49 @@ Threshold:  τ = 0.25 + 0.35·S(ρ) + 0.25·R − 0.20·reversibility</div>
       ctx.stroke();
       ctx.setLineDash([]);
       
+      // Draw signal strength meter on the right edge
+      const meterX = w - 25;
+      const meterH = h - 40;
+      const meterY = 20;
+      
+      // Meter background
+      ctx.fillStyle = 'rgba(30, 41, 59, 0.8)';
+      ctx.fillRect(meterX - 8, meterY, 16, meterH);
+      
+      // Threshold line on meter
+      const tauY = meterY + meterH * (1 - tau);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(meterX - 12, tauY);
+      ctx.lineTo(meterX + 12, tauY);
+      ctx.stroke();
+      
+      // τ label
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+      ctx.font = '9px JetBrains Mono';
+      ctx.textAlign = 'right';
+      ctx.fillText('τ=' + tau.toFixed(2), meterX - 14, tauY + 3);
+      
+      // Signal fill
+      const signalH = meterH * r;
+      const signalCleared = r >= tau;
+      ctx.fillStyle = signalCleared ? 'rgba(16, 235, 150, 0.8)' : 'rgba(59, 130, 246, 0.6)';
+      ctx.fillRect(meterX - 6, meterY + meterH - signalH, 12, signalH);
+      
+      // |r| label
+      ctx.fillStyle = signalCleared ? '#10eb96' : '#3b9eff';
+      ctx.textAlign = 'right';
+      ctx.fillText('|r|=' + r.toFixed(2), meterX - 14, meterY + meterH - signalH - 5);
+      
+      // Meter label
+      ctx.fillStyle = 'rgba(148, 163, 184, 0.6)';
+      ctx.font = '8px JetBrains Mono';
+      ctx.textAlign = 'center';
+      ctx.fillText('SIGNAL', meterX, h - 8);
+      
       // Draw current position
-      const posX = urgency * w;
+      const posX = urgency * (w - 50); // Account for meter
       const posY = (1 - integrity) * h;
       
       // Outer glow ring
@@ -1174,44 +1293,64 @@ Threshold:  τ = 0.25 + 0.35·S(ρ) + 0.25·R − 0.20·reversibility</div>
       };
       const c = decisionColors[decision] || decisionColors.WAIT;
       
-      // Pulsing glow effect
+      // If WAIT, dim the dot and add dashed ring to show "potential" position
+      const isWait = decision === 'WAIT';
+      const opacity = isWait ? 0.4 : 1;
+      
+      // Pulsing glow effect (dimmed if WAIT)
       const gradient = ctx.createRadialGradient(posX, posY, 0, posX, posY, 35);
-      gradient.addColorStop(0, `rgba(${c.r}, ${c.g}, ${c.b}, 0.9)`);
-      gradient.addColorStop(0.4, `rgba(${c.r}, ${c.g}, ${c.b}, 0.4)`);
-      gradient.addColorStop(0.7, `rgba(${c.r}, ${c.g}, ${c.b}, 0.15)`);
+      gradient.addColorStop(0, `rgba(${c.r}, ${c.g}, ${c.b}, ${0.9 * opacity})`);
+      gradient.addColorStop(0.4, `rgba(${c.r}, ${c.g}, ${c.b}, ${0.4 * opacity})`);
+      gradient.addColorStop(0.7, `rgba(${c.r}, ${c.g}, ${c.b}, ${0.15 * opacity})`);
       gradient.addColorStop(1, `rgba(${c.r}, ${c.g}, ${c.b}, 0)`);
       ctx.fillStyle = gradient;
       ctx.beginPath();
       ctx.arc(posX, posY, 35, 0, Math.PI * 2);
       ctx.fill();
       
+      // If WAIT, draw dashed outer ring to indicate "pending" state
+      if (isWait) {
+        ctx.setLineDash([4, 4]);
+        ctx.strokeStyle = `rgba(${c.r}, ${c.g}, ${c.b}, 0.6)`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(posX, posY, 18, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+      
       // Main dot with bright fill
       ctx.beginPath();
       ctx.arc(posX, posY, 10, 0, Math.PI * 2);
-      ctx.fillStyle = `rgb(${c.r}, ${c.g}, ${c.b})`;
+      ctx.fillStyle = `rgba(${c.r}, ${c.g}, ${c.b}, ${opacity})`;
       ctx.fill();
-      ctx.strokeStyle = 'white';
+      ctx.strokeStyle = isWait ? 'rgba(255,255,255,0.5)' : 'white';
       ctx.lineWidth = 2.5;
       ctx.stroke();
       
       // Inner bright core
       ctx.beginPath();
       ctx.arc(posX, posY, 4, 0, Math.PI * 2);
-      ctx.fillStyle = 'white';
+      ctx.fillStyle = isWait ? 'rgba(255,255,255,0.5)' : 'white';
       ctx.fill();
+      
+      // Label under dot showing zone position (if WAIT)
+      if (isWait) {
+        let zoneLabel = 'HOLD zone';
+        if (integrity >= 0.6) zoneLabel = 'COMMIT zone';
+        else if (integrity < 0.4 && urgency >= 0.66) zoneLabel = 'TOXIC zone';
+        else if (integrity < 0.4 || urgency >= 0.66) zoneLabel = 'ESCALATE zone';
+        
+        ctx.fillStyle = 'rgba(148, 163, 184, 0.8)';
+        ctx.font = '9px JetBrains Mono';
+        ctx.textAlign = 'center';
+        ctx.fillText('(in ' + zoneLabel + ')', posX, posY + 28);
+      }
     }
 
     function toggleCollapsible(id) { document.getElementById(id).classList.toggle('open'); }
-    
-    function toggleTheme() {
-      const isLight = document.body.classList.toggle('light-mode');
-      document.getElementById('theme-toggle').textContent = isLight ? '🌙' : '☀️';
-      // Redraw canvas with correct bg color
-      evaluate();
-    }
-
     function showSection(s) {
-      document.querySelectorAll('nav button:not(#theme-toggle)').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
       event.target.classList.add('active');
       document.getElementById('demo-section').style.display = s === 'demo' ? 'flex' : 'none';
       document.getElementById('pitch-section').style.display = s === 'pitch' ? 'block' : 'none';
