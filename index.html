@@ -1188,8 +1188,8 @@ Threshold:  τ = 0.25 + 0.35·S(ρ) + 0.25·R − 0.20·reversibility</div>
       ctx.fillStyle = document.body.classList.contains('light-mode') ? '#e8edf4' : '#0a0a0f';
       ctx.fillRect(0, 0, w, h);
 
-      // Reserve right 60px for signal meter
-      const meterW = 60;
+      // Reserve right 75px for signal meter
+      const meterW = 75;
       const zoneW = w - meterW;
 
       // NERVA thresholds — must match nervaValidate logic exactly
@@ -1275,8 +1275,8 @@ Threshold:  τ = 0.25 + 0.35·S(ρ) + 0.25·R − 0.20·reversibility</div>
       const meterX = zoneW + meterW / 2;
       const meterTop = 22;
       const meterBarH = h - 50;
-      const meterBarX = zoneW + 20;
-      const meterBarW = 18;
+      const meterBarX = zoneW + 18;
+      const meterBarW = 28;
 
       // Meter background panel
       ctx.fillStyle = document.body.classList.contains('light-mode') ? 'rgba(200,210,225,0.5)' : 'rgba(20, 30, 48, 0.8)';
