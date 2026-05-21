@@ -56,6 +56,18 @@ button{cursor:pointer;font-family:inherit}
 .val-box{background:#0f1419;border:1px solid rgba(255,255,255,0.06);border-radius:6px;padding:12px;text-align:center}
 .val-box-label{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.16em;color:rgba(216,221,230,0.35);margin-bottom:4px}
 .val-box-value{font-family:'JetBrains Mono',monospace;font-size:18px;color:#4cc9f0}
+
+/* ── MOBILE RESPONSIVE ─────────────────────────────────── */
+@media (max-width: 768px) {
+  #shell { grid-template-rows: 48px 1fr; }
+  #nav { padding: 0 8px; gap: 0; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  #nav::-webkit-scrollbar { display: none; }
+  .nav-brand { font-size: 11px; letter-spacing: 0.2em; margin-right: 8px; }
+  .nav-ver { display: none; }
+  .nav-tab { font-size: 9.5px; padding: 0 9px; letter-spacing: 0.06em; }
+  .nav-right { gap: 8px; font-size: 8.5px; }
+  #view-root { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+}
 </style>
 </head>
 <body>
@@ -845,7 +857,7 @@ function PhaseSpaceView(){
                 <text x={M.l+pw/2} y={H-5} textAnchor="middle" style={{font:`italic 11px ${psx.serif}`,fill:psx.ink}}>Urgency  E</text>
                 <text x={12} y={M.t+ph/2} textAnchor="middle" transform={`rotate(-90 12 ${M.t+ph/2})`} style={{font:`italic 11px ${psx.serif}`,fill:psx.ink}}>Integrity</text>
                 {history.map((h,i)=><circle key={i} cx={xp(h.E)} cy={yp(h.integrity)} r="2.5" fill={psvc[h.verdict]?.fg||psx.faint} opacity={0.2+i*0.09}/>)}
-                {history.length>0&&<polyline points={history.map(h=>`${xp(h.E)},${yp(h.integrity)}`).concat([`${px_},${py_}`]).join(' ')} fill="none" stroke={psx.faint} strokeWidth="0.8" strokeDasharray="3 3"/>}
+                {/* history trail removed — dots only */}
                 <ellipse cx={px_} cy={py_} rx={rx} ry={ry} fill="none" stroke={c.fg} strokeWidth="0.8" strokeDasharray="2 2" opacity="0.7"/>
                 <ellipse cx={px_} cy={py_} rx={rx*0.5} ry={ry*0.5} fill={c.fg} opacity="0.10"/>
                 <circle cx={px_} cy={py_} r="7" fill="none" stroke={c.fg} strokeWidth="1.5"/>
@@ -1002,7 +1014,7 @@ function BrutalistView(){
               <line x1="190" y1="87" x2="190" y2="250" stroke={brx.ink} strokeWidth="1"/>
               <line x1="0" y1={(1-metrics.tau)*250} x2="380" y2={(1-metrics.tau)*250} stroke={isVeto?brx.signal:brx.ink} strokeDasharray="4 3" strokeWidth="1.2"/>
               {history.map((h,i)=><circle key={i} cx={h.E*380} cy={(1-h.integrity)*250} r="2" fill={brx.ink} opacity={0.25+i*0.08}/>)}
-              <polyline points={history.map(h=>`${h.E*380},${(1-h.integrity)*250}`).concat([`${state.E*380},${(1-metrics.integrity)*250}`]).join(' ')} fill="none" stroke={brx.ink} strokeWidth="0.7" strokeDasharray="3 2" opacity="0.5"/>
+              {/* history trail removed */}
               {(()=>{const px=state.E*380,py=(1-metrics.integrity)*250,col=isVeto?brx.signal:brx.ink;return<><line x1="0" y1={py} x2="380" y2={py} stroke={col} strokeDasharray="2 3"/><line x1={px} y1="0" x2={px} y2="250" stroke={col} strokeDasharray="2 3"/><rect x={px-7} y={py-7} width="14" height="14" fill="none" stroke={col} strokeWidth="1.5"/><circle cx={px} cy={py} r="3" fill={col}/><text x={px+11} y={py-9} style={{font:`700 10px ${brx.mono}`,fill:col}}>({fmt(state.E,2)},{fmt(metrics.integrity,2)})</text></>})()}
               {[0,0.5,1].map(t=><g key={t}><text x={t*380} y="264" textAnchor="middle" style={{font:`8.5px ${brx.mono}`,fill:brx.dim}}>{t.toFixed(1)}</text><text x="-3" y={(1-t)*250+3} textAnchor="end" style={{font:`8.5px ${brx.mono}`,fill:brx.dim}}>{t.toFixed(1)}</text></g>)}
             </svg>
@@ -1053,8 +1065,117 @@ function BrutalistView(){
 // ── ROOT ──────────────────────────────────────────────────
 const VIEWS={cockpit:CockpitView,bloomberg:BloombergView,phase:PhaseSpaceView,brutalist:BrutalistView,about:AboutView,api:ApiView};
 
+// Mobile Phase Space view — clean single-column for small screens
+function MobileView() {
+  const {state,update,applyPreset,metrics,forecast,history,presets} = useNerva();
+  const c = VC[metrics.verdict];
+  const mono = "'JetBrains Mono',monospace", sans = "'IBM Plex Sans',sans-serif";
+  const W=320,H=220;
+  const x=state.E*W, y=(1-metrics.integrity)*H;
+  const zones=[{n:'COMMIT',x0:0,y0:0,w:W,h:H*0.35,c:VC.COMMIT.fg},{n:'HOLD',x0:0,y0:H*0.35,w:W*0.5,h:H*0.30,c:VC.HOLD.fg},{n:'ESC',x0:W*0.5,y0:H*0.35,w:W*0.5,h:H*0.30,c:VC.ESCALATE.fg},{n:'ESC',x0:0,y0:H*0.65,w:W*0.5,h:H*0.35,c:VC.ESCALATE.fg},{n:'TOXIC',x0:W*0.5,y0:H*0.65,w:W*0.5,h:H*0.35,c:VC.TOXIC.fg}];
+
+  const sliders = [
+    {sym:'E',label:'Urgency',    val:state.E,  set:v=>update({E:v})},
+    {sym:'S',label:'Strategy',   val:state.S,  set:v=>update({S:v})},
+    {sym:'R',label:'Risk',       val:state.R,  set:v=>update({R:v})},
+    {sym:'Sp',label:'Support',   val:state.Sp, set:v=>update({Sp:v})},
+    {sym:'St',label:'Stability', val:state.St, set:v=>update({St:v})},
+  ];
+
+  return (
+    <div style={{width:'100%',minHeight:'100%',background:'#0a0d12',color:'#d8dde6',fontFamily:sans,padding:'12px 14px',boxSizing:'border-box'}}>
+      {/* Verdict hero */}
+      <div style={{background:c.bg,border:`1.5px solid ${c.fg}`,borderRadius:6,padding:'12px 14px',marginBottom:12}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+          <div>
+            <div style={{font:`700 28px/1 ${mono}`,color:c.fg,letterSpacing:'0.06em'}}>{metrics.verdict}</div>
+            <div style={{font:`11px/1.4 ${sans}`,color:'#d8dde6',marginTop:4,maxWidth:220}}>{metrics.reason}</div>
+          </div>
+          <div style={{textAlign:'right'}}>
+            <div style={{font:`9px/1 ${mono}`,color:'rgba(216,221,230,0.4)',letterSpacing:'0.12em'}}>|r|</div>
+            <div style={{font:`600 24px/1 ${mono}`,color:c.fg}}>{fmt(metrics.r,3)}</div>
+            <div style={{font:`9px/1 ${mono}`,color:'rgba(216,221,230,0.4)',marginTop:3}}>τ {fmt(metrics.tau,3)}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Phase map */}
+      <div style={{borderRadius:4,overflow:'hidden',marginBottom:12,position:'relative'}}>
+        <svg viewBox={`0 0 ${W} ${H}`} style={{width:'100%',display:'block',background:'#070a0e'}}>
+          {zones.map((z,i)=><g key={i}><rect x={z.x0} y={z.y0} width={z.w} height={z.h} fill={z.c} opacity={0.10}/><text x={z.x0+z.w/2} y={z.y0+z.h/2+4} textAnchor="middle" style={{font:`600 8px ${mono}`,fill:z.c,letterSpacing:'0.18em',opacity:0.6}}>{z.n}</text></g>)}
+          {[0.25,0.5,0.75].map(t=><g key={t}><line x1={t*W} y1="0" x2={t*W} y2={H} stroke="rgba(255,255,255,0.05)" strokeDasharray="2 3"/><line x1="0" y1={t*H} x2={W} y2={t*H} stroke="rgba(255,255,255,0.05)" strokeDasharray="2 3"/></g>)}
+          <line x1="0" y1={H*0.35} x2={W} y2={H*0.35} stroke="rgba(255,255,255,0.1)"/>
+          <line x1="0" y1={H*0.65} x2={W} y2={H*0.65} stroke="rgba(255,255,255,0.1)"/>
+          <line x1={W*0.5} y1={H*0.35} x2={W*0.5} y2={H} stroke="rgba(255,255,255,0.1)"/>
+          <line x1="0" y1={(1-metrics.tau)*H} x2={W} y2={(1-metrics.tau)*H} stroke={c.fg} strokeDasharray="4 3" strokeWidth="1" opacity="0.5"/>
+          {history.map((h,i)=><circle key={i} cx={h.E*W} cy={(1-h.integrity)*H} r="2.5" fill={VC[h.verdict]?.fg||'#888'} opacity={0.15+i*0.08}/>)}
+          <ellipse cx={x} cy={y} rx={18} ry={13} fill={c.fg} opacity={0.10}/>
+          <circle cx={x} cy={y} r={metrics.signal?7:6} fill={metrics.signal?c.fg:'none'} opacity={metrics.signal?1:0.4}/>
+          <circle cx={x} cy={y} r="11" fill="none" stroke={c.fg} strokeWidth="1.2" opacity={metrics.signal?0.5:0.2}/>
+          {!metrics.signal&&<circle cx={x} cy={y} r="5" fill={c.fg} opacity="0.3"/>}
+        </svg>
+        {!metrics.signal&&<div style={{position:'absolute',bottom:4,left:4,right:4,background:'rgba(0,0,0,0.75)',padding:'4px 8px',font:`9.5px ${mono}`,color:c.fg,borderRadius:3}}>⏸ SIGNAL BELOW τ</div>}
+      </div>
+
+      {/* Quick presets */}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:5,marginBottom:12}}>
+        {presets.map(p=>(
+          <button key={p.id} onClick={()=>applyPreset(p.id)} style={{background:state.activePreset===p.id?'rgba(76,201,240,0.15)':'rgba(255,255,255,0.04)',border:`1px solid ${state.activePreset===p.id?'#4cc9f0':'rgba(255,255,255,0.08)'}`,color:state.activePreset===p.id?'#4cc9f0':'#d8dde6',font:`500 10px/1.3 ${sans}`,padding:'7px 5px',borderRadius:4,cursor:'pointer',textAlign:'center'}}>
+            {p.name}
+          </button>
+        ))}
+      </div>
+
+      {/* Sliders */}
+      <div style={{background:'#0f1419',border:'1px solid rgba(255,255,255,0.06)',borderRadius:6,padding:'12px 14px',marginBottom:12}}>
+        <div style={{font:`500 9px/1 ${mono}`,letterSpacing:'0.14em',color:'rgba(216,221,230,0.4)',marginBottom:10}}>PARAMETERS</div>
+        {sliders.map(s=>(
+          <div key={s.sym} style={{marginBottom:10}}>
+            <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}>
+              <span style={{font:`500 12px/1 ${sans}`}}><span style={{color:'#4cc9f0',font:`500 12px/1 ${mono}`,marginRight:6}}>{s.sym}</span>{s.label}</span>
+              <span style={{font:`600 12px/1 ${mono}`,color:'#d8dde6'}}>{fmt(s.val,2)}</span>
+            </div>
+            <input type="range" min="0" max="1" step="0.01" value={s.val}
+              onChange={e=>s.set(parseFloat(e.target.value))}
+              style={{accentColor:'#4cc9f0',color:'#4cc9f0',width:'100%',height:20}}/>
+          </div>
+        ))}
+      </div>
+
+      {/* Key metrics */}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,marginBottom:12}}>
+        {[['Integrity',metrics.integrity,'#3ddc97'],['Entropy',metrics.entropy,'#f5b942'],['EV',metrics.EV,metrics.EV>0?'#3ddc97':'#ff5c6c']].map(([l,v,col])=>(
+          <div key={l} style={{background:'#0f1419',border:'1px solid rgba(255,255,255,0.06)',borderRadius:6,padding:'10px',textAlign:'center'}}>
+            <div style={{font:`9px/1 ${mono}`,color:'rgba(216,221,230,0.4)',letterSpacing:'0.12em',marginBottom:4}}>{l.toUpperCase()}</div>
+            <div style={{font:`600 20px/1 ${mono}`,color:col}}>{fmt(v,3)}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Forecast window */}
+      <div style={{background:'#0f1419',border:'1px solid rgba(255,255,255,0.06)',borderRadius:6,padding:'10px 12px',marginBottom:12}}>
+        <div style={{font:`500 9px/1 ${mono}`,letterSpacing:'0.14em',color:'rgba(216,221,230,0.4)',marginBottom:6}}>FORECAST</div>
+        <div style={{font:`11.5px/1.5 ${sans}`,color:c.fg}}>{forecast.window}</div>
+      </div>
+
+      {/* Plumb link */}
+      <a href="/plumb.html" style={{display:'block',background:'rgba(61,220,151,0.08)',border:'1px solid rgba(61,220,151,0.3)',borderRadius:6,padding:'12px',textAlign:'center',textDecoration:'none',color:'#3ddc97',font:`600 11px/1 ${mono}`,letterSpacing:'0.14em'}}>
+        PLUMB · BUYSIDE AUDIT ↗
+      </a>
+    </div>
+  );
+}
+
 function App(){
   const[view,setView]=useState('cockpit');
+  const[isMobile,setIsMobile]=useState(window.innerWidth<=768);
+
+  useEffect(()=>{
+    const check=()=>setIsMobile(window.innerWidth<=768);
+    window.addEventListener('resize',check);
+    return()=>window.removeEventListener('resize',check);
+  },[]);
+
   useEffect(()=>{
     document.querySelectorAll('.nav-tab').forEach(t=>{
       t.addEventListener('click',()=>{
@@ -1064,8 +1185,12 @@ function App(){
       });
     });
   },[]);
+
+  if(isMobile){
+    return <NervaProvider><MobileView/></NervaProvider>;
+  }
+
   const View=VIEWS[view];
-  const needsProvider=!['about'].includes(view);
   if(view==='about')return <AboutView/>;
   return <NervaProvider><View/></NervaProvider>;
 }
