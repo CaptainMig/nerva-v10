@@ -1,1610 +1,1366 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NERVA v8.3.2 — Decision Integrity Layer</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --bg-primary: #0a0a0f;
-      --bg-secondary: #0f1419;
-      --bg-tertiary: #1a1f2e;
-      --text-primary: #f0f4f8;
-      --text-secondary: #94a3b8;
-      --text-muted: #64748b;
-      --accent-blue: #3b82f6;
-      --accent-cyan: #06b6d4;
-      --accent-green: #10b981;
-      --accent-yellow: #f59e0b;
-      --accent-orange: #f97316;
-      --accent-red: #ef4444;
-      --border-subtle: rgba(148, 163, 184, 0.1);
-      --border-medium: rgba(148, 163, 184, 0.2);
-      --glow-blue: rgba(59, 130, 246, 0.15);
-    }
-    body.light-mode {
-      --bg-primary: #f8fafc;
-      --bg-secondary: #f1f5f9;
-      --bg-tertiary: #e2e8f0;
-      --text-primary: #0f172a;
-      --text-secondary: #475569;
-      --text-muted: #94a3b8;
-      --accent-blue: #2563eb;
-      --accent-cyan: #0891b2;
-      --accent-green: #059669;
-      --accent-yellow: #d97706;
-      --accent-orange: #ea580c;
-      --accent-red: #dc2626;
-      --border-subtle: rgba(15, 23, 42, 0.1);
-      --border-medium: rgba(15, 23, 42, 0.2);
-      --glow-blue: rgba(37, 99, 235, 0.1);
-    }
-    body.light-mode header { background: rgba(248, 250, 252, 0.92); }
-    body.light-mode .code-block { background: #e2e8f0; color: #0f172a; }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: 'Inter', -apple-system, sans-serif;
-      background: var(--bg-primary);
-      color: var(--text-primary);
-      min-height: 100vh;
-      line-height: 1.6;
-    }
-    .mono { font-family: 'JetBrains Mono', monospace; }
-    header {
-      position: fixed;
-      top: 0; left: 0; right: 0;
-      z-index: 100;
-      background: rgba(10, 10, 15, 0.9);
-      backdrop-filter: blur(20px);
-      border-bottom: 1px solid var(--border-subtle);
-      padding: 1rem 2rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .logo {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 1.25rem;
-      font-weight: 600;
-      letter-spacing: 0.2em;
-    }
-    .logo span { color: var(--accent-cyan); font-weight: 300; font-size: 0.75rem; margin-left: 0.5rem; }
-    nav { display: flex; gap: 0.5rem; }
-    nav button {
-      background: transparent;
-      border: 1px solid var(--border-medium);
-      color: var(--text-secondary);
-      padding: 0.5rem 1rem;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 0.8rem;
-      transition: all 0.2s;
-    }
-    nav button:hover, nav button.active {
-      background: var(--accent-blue);
-      border-color: var(--accent-blue);
-      color: white;
-    }
-    main {
-      padding-top: 80px;
-      display: flex;
-      min-height: 100vh;
-    }
-    .sidebar {
-      width: 380px;
-      min-width: 380px;
-      background: var(--bg-secondary);
-      border-right: 1px solid var(--border-subtle);
-      padding: 1.5rem;
-      overflow-y: auto;
-      height: calc(100vh - 80px);
-      position: sticky;
-      top: 80px;
-    }
-    .section-title {
-      font-size: 0.7rem;
-      font-weight: 500;
-      color: var(--text-muted);
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      margin-bottom: 1rem;
-      padding-bottom: 0.5rem;
-      border-bottom: 1px solid var(--border-subtle);
-    }
-    .scenario-textarea {
-      width: 100%;
-      background: var(--bg-tertiary);
-      border: 1px solid var(--border-medium);
-      border-radius: 8px;
-      padding: 1rem;
-      color: var(--text-primary);
-      font-size: 0.875rem;
-      resize: vertical;
-      min-height: 80px;
-      font-family: inherit;
-      margin-bottom: 1.5rem;
-    }
-    .scenario-textarea::placeholder { color: var(--text-muted); }
-    .scenario-textarea:focus {
-      outline: none;
-      border-color: var(--accent-blue);
-      box-shadow: 0 0 0 3px var(--glow-blue);
-    }
-    .presets {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 0.5rem;
-      margin-bottom: 1.5rem;
-    }
-    .preset-btn {
-      background: var(--bg-tertiary);
-      border: 1px solid var(--border-subtle);
-      border-radius: 6px;
-      padding: 0.6rem 0.8rem;
-      color: var(--text-secondary);
-      font-size: 0.75rem;
-      cursor: pointer;
-      transition: all 0.2s;
-      text-align: left;
-    }
-    .preset-btn:hover { border-color: var(--accent-blue); color: var(--text-primary); }
-    .preset-btn strong { display: block; color: var(--text-primary); margin-bottom: 2px; }
-    .slider-group { margin-bottom: 1rem; }
-    .slider-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-      margin-bottom: 0.5rem;
-    }
-    .slider-label { font-size: 0.8rem; color: var(--text-secondary); }
-    .slider-label strong { color: var(--accent-cyan); font-family: 'JetBrains Mono', monospace; }
-    .slider-value {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.85rem;
-      color: var(--accent-blue);
-      font-weight: 500;
-    }
-    .slider-desc { font-size: 0.65rem; color: var(--text-muted); margin-bottom: 0.5rem; }
-    input[type="range"] {
-      width: 100%;
-      height: 6px;
-      -webkit-appearance: none;
-      background: var(--bg-tertiary);
-      border-radius: 3px;
-      outline: none;
-    }
-    input[type="range"]::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      width: 16px; height: 16px;
-      background: var(--accent-blue);
-      border-radius: 50%;
-      cursor: pointer;
-      box-shadow: 0 2px 6px rgba(59, 130, 246, 0.4);
-    }
-    .threshold-section {
-      margin-top: 1.5rem;
-      padding-top: 1rem;
-      border-top: 1px solid var(--border-subtle);
-    }
-    .threshold-modes { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
-    .threshold-btn {
-      flex: 1;
-      padding: 0.5rem;
-      background: var(--bg-tertiary);
-      border: 1px solid var(--border-subtle);
-      border-radius: 6px;
-      color: var(--text-secondary);
-      font-size: 0.75rem;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .threshold-btn.active {
-      background: var(--accent-blue);
-      border-color: var(--accent-blue);
-      color: white;
-    }
-    .threshold-info {
-      font-size: 0.7rem;
-      color: var(--text-muted);
-      background: var(--bg-tertiary);
-      padding: 0.75rem;
-      border-radius: 6px;
-      margin-top: 0.5rem;
-    }
-    .evaluate-btn {
-      width: 100%;
-      padding: 1rem;
-      background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
-      border: none;
-      border-radius: 8px;
-      color: white;
-      font-size: 1rem;
-      font-weight: 600;
-      cursor: pointer;
-      margin-top: 1.5rem;
-      transition: all 0.3s;
-      letter-spacing: 0.05em;
-    }
-    .evaluate-btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
-    }
-    .results { flex: 1; padding: 2rem; overflow-y: auto; }
-    .decision-display {
-      background: var(--bg-secondary);
-      border: 1px solid var(--border-subtle);
-      border-radius: 12px;
-      padding: 2rem;
-      margin-bottom: 2rem;
-      text-align: center;
-    }
-    .decision-badge {
-      display: inline-block;
-      padding: 1rem 3rem;
-      border-radius: 8px;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 2rem;
-      font-weight: 600;
-      letter-spacing: 0.1em;
-      margin-bottom: 1rem;
-    }
-    .decision-COMMIT { background: rgba(16, 185, 129, 0.15); border: 2px solid var(--accent-green); color: var(--accent-green); }
-    .decision-HOLD { background: rgba(245, 158, 11, 0.15); border: 2px solid var(--accent-yellow); color: var(--accent-yellow); }
-    .decision-WAIT { background: rgba(59, 130, 246, 0.15); border: 2px solid var(--accent-blue); color: var(--accent-blue); }
-    .decision-ESCALATE { background: rgba(249, 115, 22, 0.15); border: 2px solid var(--accent-orange); color: var(--accent-orange); }
-    .decision-TOXIC { background: rgba(239, 68, 68, 0.15); border: 2px solid var(--accent-red); color: var(--accent-red); }
-    .decision-reasoning { color: var(--text-secondary); font-size: 0.9rem; max-width: 600px; margin: 0 auto; }
-    .bloch-display {
-      display: flex;
-      justify-content: center;
-      gap: 2rem;
-      margin-top: 1.5rem;
-      padding-top: 1.5rem;
-      border-top: 1px solid var(--border-subtle);
-      flex-wrap: wrap;
-    }
-    .bloch-coord { text-align: center; position: relative; cursor: help; }
-    .bloch-label {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 4px;
-    }
-    .help-icon {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 14px; height: 14px;
-      border-radius: 50%;
-      background: var(--bg-tertiary);
-      border: 1px solid var(--border-medium);
-      font-size: 0.6rem;
-      color: var(--text-muted);
-    }
-    .bloch-value {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 1.5rem;
-      color: var(--accent-cyan);
-    }
-    .tooltip { position: relative; }
-    .tooltip .tooltip-content {
-      visibility: hidden;
-      opacity: 0;
-      position: absolute;
-      bottom: 100%;
-      left: 50%;
-      transform: translateX(-50%);
-      background: var(--bg-tertiary);
-      border: 1px solid var(--border-medium);
-      border-radius: 8px;
-      padding: 0.75rem 1rem;
-      width: 240px;
-      text-align: left;
-      z-index: 1000;
-      transition: opacity 0.2s, visibility 0.2s;
-      margin-bottom: 8px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-    }
-    .tooltip .tooltip-content::after {
-      content: '';
-      position: absolute;
-      top: 100%;
-      left: 50%;
-      transform: translateX(-50%);
-      border: 6px solid transparent;
-      border-top-color: var(--bg-tertiary);
-    }
-    .tooltip:hover .tooltip-content { visibility: visible; opacity: 1; }
-    .tooltip-title { font-weight: 600; color: var(--accent-cyan); font-size: 0.8rem; margin-bottom: 0.25rem; }
-    .tooltip-desc { font-size: 0.7rem; color: var(--text-secondary); line-height: 1.4; }
-    .tooltip-formula {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.65rem;
-      color: var(--text-muted);
-      background: var(--bg-primary);
-      padding: 0.35rem 0.5rem;
-      border-radius: 4px;
-      margin-top: 0.5rem;
-      display: block;
-    }
-    .metrics-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 1rem;
-      margin-bottom: 2rem;
-    }
-    .metric-card {
-      background: var(--bg-secondary);
-      border: 1px solid var(--border-subtle);
-      border-radius: 10px;
-      padding: 1.25rem;
-      position: relative;
-    }
-    .metric-card.tooltip .tooltip-content { width: 280px; }
-    .metric-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-      margin-bottom: 0.75rem;
-    }
-    .metric-name {
-      font-size: 0.8rem;
-      color: var(--text-secondary);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .metric-value {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 1.75rem;
-      font-weight: 500;
-    }
-    .metric-bar {
-      height: 4px;
-      background: var(--bg-tertiary);
-      border-radius: 2px;
-      overflow: hidden;
-    }
-    .metric-bar-fill {
-      height: 100%;
-      border-radius: 2px;
-      transition: width 0.5s ease;
-    }
-    .metric-integrity .metric-value, .metric-integrity .metric-bar-fill { color: var(--accent-green); background: var(--accent-green); }
-    .metric-coherence .metric-value, .metric-coherence .metric-bar-fill { color: var(--accent-cyan); background: var(--accent-cyan); }
-    .metric-purity .metric-value, .metric-purity .metric-bar-fill { color: var(--accent-blue); background: var(--accent-blue); }
-    .metric-entropy .metric-value, .metric-entropy .metric-bar-fill { color: var(--accent-yellow); background: var(--accent-yellow); }
-    .collapsible {
-      background: var(--bg-secondary);
-      border: 1px solid var(--border-subtle);
-      border-radius: 10px;
-      margin-bottom: 2rem;
-      overflow: hidden;
-    }
-    .collapsible-header {
-      padding: 1rem 1.25rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-    .collapsible-header:hover { background: var(--bg-tertiary); }
-    .collapsible-title {
-      font-size: 0.75rem;
-      font-weight: 500;
-      color: var(--text-secondary);
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-    }
-    .collapsible-icon {
-      color: var(--text-muted);
-      font-size: 0.8rem;
-      transition: transform 0.3s;
-    }
-    .collapsible.open .collapsible-icon { transform: rotate(180deg); }
-    .collapsible-content {
-      max-height: 0;
-      overflow: hidden;
-      transition: max-height 0.3s ease;
-    }
-    .collapsible.open .collapsible-content { max-height: 1000px; }
-    .collapsible-inner { padding: 0 1.25rem 1.25rem; }
-    .derivation-formula {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.85rem;
-      color: var(--text-primary);
-      background: var(--bg-tertiary);
-      padding: 1rem;
-      border-radius: 6px;
-      overflow-x: auto;
-      margin-bottom: 1rem;
-    }
-    .derivation-component { display: inline-block; margin: 0 0.25rem; }
-    .derivation-component.base { color: var(--text-secondary); }
-    .derivation-component.entropy { color: var(--accent-yellow); }
-    .derivation-component.risk { color: var(--accent-orange); }
-    .derivation-component.reversibility { color: var(--accent-green); }
-    .matrix-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0.5rem;
-      max-width: 300px;
-      margin: 1rem auto;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.85rem;
-    }
-    .matrix-cell {
-      background: var(--bg-tertiary);
-      padding: 0.75rem;
-      border-radius: 4px;
-      text-align: center;
-    }
-    .matrix-cell.diagonal { color: var(--text-primary); }
-    .matrix-cell.off-diagonal { color: var(--accent-cyan); }
-    .matrix-label { font-size: 0.65rem; color: var(--text-muted); text-align: center; margin-bottom: 0.5rem; }
-    .validation-grid { display: flex; flex-wrap: wrap; gap: 0.75rem; }
-    .validation-item {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-size: 0.75rem;
-      color: var(--text-secondary);
-    }
-    .validation-icon {
-      width: 18px; height: 18px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.7rem;
-    }
-    .validation-icon.valid { background: rgba(16, 185, 129, 0.2); color: var(--accent-green); }
-    .validation-icon.invalid { background: rgba(239, 68, 68, 0.2); color: var(--accent-red); }
-    .decision-matrix {
-      background: var(--bg-secondary);
-      border: 1px solid var(--border-subtle);
-      border-radius: 10px;
-      padding: 1.5rem;
-      margin-bottom: 2rem;
-    }
-    .matrix-section-title {
-      font-size: 0.7rem;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      margin-bottom: 1rem;
-    }
-    .matrix-table {
-      display: grid;
-      grid-template-columns: auto repeat(3, 1fr);
-      gap: 4px;
-      font-size: 0.75rem;
-    }
-    .matrix-header {
-      background: var(--bg-tertiary);
-      padding: 0.5rem;
-      text-align: center;
-      color: var(--text-muted);
-      font-weight: 500;
-    }
-    .matrix-row-label {
-      background: var(--bg-tertiary);
-      padding: 0.5rem;
-      color: var(--text-muted);
-      display: flex;
-      align-items: center;
-    }
-    .matrix-cell-decision {
-      padding: 0.75rem 0.5rem;
-      text-align: center;
-      border-radius: 4px;
-      font-family: 'JetBrains Mono', monospace;
-      font-weight: 500;
-      font-size: 0.7rem;
-    }
-    .matrix-cell-decision.current {
-      box-shadow: 0 0 0 2px white, 0 0 15px rgba(255, 255, 255, 0.3);
-    }
-    .version-badge {
-      position: fixed;
-      bottom: 1rem;
-      right: 1rem;
-      background: var(--bg-secondary);
-      border: 1px solid var(--accent-green);
-      border-radius: 6px;
-      padding: 0.5rem 1rem;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.7rem;
-      color: var(--accent-green);
-    }
-    @media (max-width: 900px) {
-      main { flex-direction: column; }
-      .sidebar { width: 100%; min-width: auto; height: auto; position: relative; top: 0; }
-      .bloch-display { gap: 1rem; }
-      .tooltip .tooltip-content { width: 200px; }
-    }
-    .api-section, .pitch-section { display: none; padding: 2rem; }
-    .api-section.active, .pitch-section.active { display: block; }
-    .api-content { max-width: 800px; margin: 0 auto; }
-    .api-content h2 { color: var(--accent-cyan); font-size: 1.5rem; margin-bottom: 1rem; }
-    .api-content h3 { color: var(--text-primary); font-size: 1.1rem; margin: 2rem 0 1rem; }
-    .api-content p { color: var(--text-secondary); margin-bottom: 1rem; }
-    .api-content ul { color: var(--text-secondary); margin-left: 1.5rem; margin-bottom: 1rem; }
-    .code-block {
-      background: var(--bg-tertiary);
-      border: 1px solid var(--border-subtle);
-      border-radius: 8px;
-      padding: 1rem;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.8rem;
-      overflow-x: auto;
-      margin: 1rem 0;
-      white-space: pre;
-    }
-  </style>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>NERVA v10.0 · Decision Integrity Engine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700;800&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=Newsreader:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&display=swap"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:#000;color:#d8dde6;font-family:'IBM Plex Sans',system-ui,sans-serif}
+#shell{display:grid;grid-template-rows:38px 1fr;height:100vh}
+#nav{background:#040608;border-bottom:1px solid rgba(255,255,255,0.07);display:flex;align-items:center;padding:0 14px;gap:2px;z-index:100;flex-shrink:0}
+.nav-brand{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:800;letter-spacing:0.3em;color:#4cc9f0;margin-right:14px;flex-shrink:0}
+.nav-ver{font-family:'JetBrains Mono',monospace;font-size:9px;color:rgba(255,255,255,0.2);letter-spacing:0.1em;margin-right:14px;flex-shrink:0}
+.nav-sep{width:1px;height:16px;background:rgba(255,255,255,0.08);margin:0 6px;flex-shrink:0}
+.nav-tab{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.1em;padding:0 14px;height:38px;display:flex;align-items:center;cursor:pointer;border:none;background:transparent;color:rgba(255,255,255,0.3);border-bottom:2px solid transparent;transition:all 0.15s;flex-shrink:0;white-space:nowrap}
+.nav-tab:hover{color:rgba(255,255,255,0.65)}
+.nav-tab.active{color:#4cc9f0;border-bottom-color:#4cc9f0}
+.nav-right{margin-left:auto;display:flex;align-items:center;gap:16px;font-family:'JetBrains Mono',monospace;font-size:9.5px;color:rgba(255,255,255,0.22);letter-spacing:0.08em;flex-shrink:0}
+.nav-live{color:#3ddc97;display:flex;align-items:center;gap:5px}
+.nav-live::before{content:'';width:5px;height:5px;border-radius:50%;background:#3ddc97;animation:pulse-dot 2s infinite}
+@keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:0.3}}
+#view-root{min-height:0;height:100%;width:100%;overflow:hidden}
+input[type=range]{-webkit-appearance:none;appearance:none;background:transparent;cursor:pointer;width:100%}
+input[type=range]::-webkit-slider-runnable-track{height:2px;background:rgba(255,255,255,0.1);border-radius:0}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;height:15px;border-radius:0;background:currentColor;margin-top:-6.5px}
+input[type=range]::-moz-range-track{height:2px;background:rgba(255,255,255,0.1)}
+input[type=range]::-moz-range-thumb{width:11px;height:15px;border:none;border-radius:0;background:currentColor}
+textarea{resize:none;outline:none;border:none}
+button{cursor:pointer;font-family:inherit}
+::selection{background:#4cc9f0;color:#000}
+</style>
 </head>
 <body>
-  <header>
-    <div class="logo">NERVA <span>v8.3.2</span></div>
-    <nav>
-      <button class="active" onclick="showSection('demo')">Demo</button>
-      <button onclick="showSection('pitch')">About</button>
-      <button onclick="showSection('api')">API</button>
-      <button id="theme-toggle" onclick="toggleTheme()" style="background:rgba(148,163,184,0.1);border:1px solid var(--border-medium);padding:0.4rem 0.75rem;border-radius:6px;color:var(--text-secondary);font-size:0.75rem;cursor:pointer;margin-left:0.5rem;transition:all 0.2s;" title="Toggle light/dark mode">☀️</button>
-    </nav>
-  </header>
-
-  <main id="demo-section">
-    <aside class="sidebar">
-      <div style="background:rgba(59,130,246,0.07);border:1px solid rgba(59,130,246,0.2);border-radius:10px;padding:1rem;margin-bottom:1.25rem;">
-        <div style="font-family:'JetBrains Mono',monospace;font-size:0.7rem;color:var(--accent-cyan);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.6rem;">What is NERVA?</div>
-        <p style="font-size:0.78rem;color:var(--text-secondary);line-height:1.65;margin-bottom:0.75rem;">NERVA is a <strong style="color:var(--text-primary);">decision integrity engine</strong>. It takes a situation — any high-stakes decision — and evaluates whether the conditions are right to act, wait, escalate to a human, or veto entirely.</p>
-        <p style="font-size:0.78rem;color:var(--text-secondary);line-height:1.65;margin-bottom:0.75rem;">It does this by mapping the decision into a mathematical state space borrowed from quantum information theory. The result is a single, auditable signal: <strong style="color:var(--text-primary);">COMMIT, HOLD, WAIT, ESCALATE, or TOXIC</strong>.</p>
-        <div style="border-top:1px solid rgba(59,130,246,0.15);padding-top:0.75rem;margin-top:0.25rem;">
-          <div style="font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--accent-yellow);margin-bottom:0.4rem;">⚠ One-Way Brake</div>
-          <p style="font-size:0.75rem;color:var(--text-secondary);line-height:1.6;">Some decisions can't be undone. When NERVA detects a low-reversibility situation with an incomplete foundation, it automatically escalates — even if all other signals say go. This is the One-Way Brake: a hard override that routes irreversible decisions to human review, no matter what.</p>
-        </div>
-      </div>
-      <div class="section-title">Describe Scenario</div>
-      <textarea class="scenario-textarea" id="scenario-text" placeholder="Describe the decision context in natural language...&#10;&#10;e.g. &quot;High urgency drone strike with weak intel and degraded comms&quot;"></textarea>
-      <button id="parse-btn" onclick="parseScenario()" style="width:100%;margin-top:0.75rem;padding:0.75rem;background:linear-gradient(135deg,rgba(59,130,246,0.2),rgba(6,182,212,0.2));border:1px solid rgba(59,130,246,0.4);border-radius:8px;color:#60a5fa;font-family:'JetBrains Mono',monospace;font-size:0.8rem;font-weight:600;cursor:pointer;letter-spacing:0.05em;transition:all 0.2s;">⚡ PARSE WITH AI</button>
-      <div id="parse-status" style="font-size:0.7rem;margin-top:0.4rem;min-height:1rem;font-family:'JetBrains Mono',monospace;"></div>
-
-      <div class="section-title">Quick Presets</div>
-      <div class="presets">
-        <button class="preset-btn" onclick="loadPreset('drone')"><strong>Drone ROE</strong>Uncertain intel</button>
-        <button class="preset-btn" onclick="loadPreset('hft')"><strong>HFT Trade</strong>Volatile market</button>
-        <button class="preset-btn" onclick="loadPreset('av')"><strong>AV Lane</strong>Pedestrian near</button>
-        <button class="preset-btn" onclick="loadPreset('surgical')"><strong>Surgical</strong>Patient anomaly</button>
-      </div>
-
-      <div class="section-title">Input Parameters</div>
-      <div class="slider-group">
-        <div class="slider-header">
-          <span class="slider-label"><strong>E</strong> — Urgency</span>
-          <span class="slider-value" id="val-E">0.50</span>
-        </div>
-        <div class="slider-desc">Priority / emotional weight</div>
-        <input type="range" id="slider-E" min="0" max="1" step="0.01" value="0.50" oninput="updateSlider('E')">
-      </div>
-      <div class="slider-group">
-        <div class="slider-header">
-          <span class="slider-label"><strong>S</strong> — Strategy</span>
-          <span class="slider-value" id="val-S">0.60</span>
-        </div>
-        <div class="slider-desc">Plan quality / coherence</div>
-        <input type="range" id="slider-S" min="0" max="1" step="0.01" value="0.60" oninput="updateSlider('S')">
-      </div>
-      <div class="slider-group">
-        <div class="slider-header">
-          <span class="slider-label"><strong>R</strong> — Risk</span>
-          <span class="slider-value" id="val-R">0.40</span>
-        </div>
-        <div class="slider-desc">Exposure to negative outcomes</div>
-        <input type="range" id="slider-R" min="0" max="1" step="0.01" value="0.40" oninput="updateSlider('R')">
-      </div>
-      <div class="slider-group">
-        <div class="slider-header">
-          <span class="slider-label"><strong>Support</strong></span>
-          <span class="slider-value" id="val-support">0.75</span>
-        </div>
-        <div class="slider-desc">Data confidence / evidence</div>
-        <input type="range" id="slider-support" min="0" max="1" step="0.01" value="0.75" oninput="updateSlider('support')">
-      </div>
-      <div class="slider-group">
-        <div class="slider-header">
-          <span class="slider-label"><strong>Stability</strong></span>
-          <span class="slider-value" id="val-stability">0.70</span>
-        </div>
-        <div class="slider-desc">System health / environment</div>
-        <input type="range" id="slider-stability" min="0" max="1" step="0.01" value="0.70" oninput="updateSlider('stability')">
-      </div>
-
-      <div class="threshold-section">
-        <div class="section-title">τ — Commitment Threshold</div>
-        <div class="threshold-modes">
-          <button class="threshold-btn active" id="btn-auto" onclick="setThresholdMode('auto')">Auto</button>
-          <button class="threshold-btn" id="btn-manual" onclick="setThresholdMode('manual')">Manual</button>
-        </div>
-        <div id="manual-threshold" style="display: none;">
-          <div class="slider-group">
-            <div class="slider-header">
-              <span class="slider-label">Manual τ</span>
-              <span class="slider-value" id="val-threshold">0.50</span>
-            </div>
-            <input type="range" id="slider-threshold" min="0.15" max="0.85" step="0.01" value="0.50" oninput="updateSlider('threshold')">
-          </div>
-        </div>
-        <div class="threshold-info" id="threshold-info">
-          <strong>Auto:</strong> τ computed from entropy, risk, and reversibility using information-theoretic derivation.
-        </div>
-      </div>
-    </aside>
-
-    <section class="results" id="results">
-      <div class="decision-display">
-        <div class="decision-badge decision-COMMIT" id="decision-badge">COMMIT</div>
-        <p class="decision-reasoning" id="decision-reasoning">Strong foundation, positive EV. Proceed with monitoring.</p>
-        <div class="bloch-display">
-          <div class="bloch-coord tooltip">
-            <div class="bloch-label">|r| <span class="help-icon">?</span></div>
-            <div class="bloch-value" id="bloch-r">0.50</div>
-            <div class="tooltip-content">
-              <div class="tooltip-title">Signal Magnitude</div>
-              <div class="tooltip-desc">Length of Bloch vector. Higher = stronger case for action.</div>
-              <span class="tooltip-formula">|r| = √(r_x² + r_y² + r_z²)</span>
-            </div>
-          </div>
-          <div class="bloch-coord tooltip">
-            <div class="bloch-label">θ <span class="help-icon">?</span></div>
-            <div class="bloch-value" id="bloch-theta">42°</div>
-            <div class="tooltip-content">
-              <div class="tooltip-title">Theta (Polar Angle)</div>
-              <div class="tooltip-desc">Angle from north pole. 0° = integrity-dominated, 90° = intent/risk dominated.</div>
-              <span class="tooltip-formula">θ = arccos(r_z / |r|)</span>
-            </div>
-          </div>
-          <div class="bloch-coord tooltip">
-            <div class="bloch-label">φ <span class="help-icon">?</span></div>
-            <div class="bloch-value" id="bloch-phi">36°</div>
-            <div class="tooltip-content">
-              <div class="tooltip-title">Phi (Azimuthal Angle)</div>
-              <div class="tooltip-desc">Angle in x-y plane. Balance of intent vs risk.</div>
-              <span class="tooltip-formula">φ = arctan2(r_y, r_x)</span>
-            </div>
-          </div>
-          <div class="bloch-coord tooltip">
-            <div class="bloch-label">τ <span class="help-icon">?</span></div>
-            <div class="bloch-value" id="bloch-tau">0.45</div>
-            <div class="tooltip-content">
-              <div class="tooltip-title">Tau (Threshold)</div>
-              <div class="tooltip-desc">Minimum signal needed to act. Auto-derived from entropy + risk.</div>
-              <span class="tooltip-formula">τ = 0.25 + 0.35·S(ρ) + 0.25·R − 0.20·rev</span>
-            </div>
-          </div>
-          <div class="bloch-coord tooltip">
-            <div class="bloch-label">EV <span class="help-icon">?</span></div>
-            <div class="bloch-value" id="bloch-ev">0.35</div>
-            <div class="tooltip-content">
-              <div class="tooltip-title">Expected Value</div>
-              <div class="tooltip-desc">Net expected outcome. Positive = beneficial.</div>
-              <span class="tooltip-formula">EV = Support − Risk</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="metrics-grid">
-        <div class="metric-card metric-integrity tooltip">
-          <div class="metric-header"><span class="metric-name">Integrity <span class="help-icon">?</span></span></div>
-          <div class="metric-value" id="metric-integrity">0.53</div>
-          <div class="metric-bar"><div class="metric-bar-fill" id="bar-integrity" style="width: 53%"></div></div>
-          <div class="tooltip-content">
-            <div class="tooltip-title">Decision Integrity</div>
-            <div class="tooltip-desc">Foundation strength. High = safe to act autonomously.</div>
-            <span class="tooltip-formula">I = Support × Stability</span>
-          </div>
-        </div>
-        <div class="metric-card metric-coherence tooltip">
-          <div class="metric-header"><span class="metric-name">Coherence <span class="help-icon">?</span></span></div>
-          <div class="metric-value" id="metric-coherence">0.39</div>
-          <div class="metric-bar"><div class="metric-bar-fill" id="bar-coherence" style="width: 39%"></div></div>
-          <div class="tooltip-content">
-            <div class="tooltip-title">Quantum Coherence</div>
-            <div class="tooltip-desc">Transverse Bloch component. Intent/risk signal strength.</div>
-            <span class="tooltip-formula">C = √(r_x² + r_y²)</span>
-          </div>
-        </div>
-        <div class="metric-card metric-purity tooltip">
-          <div class="metric-header"><span class="metric-name">Purity <span class="help-icon">?</span></span></div>
-          <div class="metric-value" id="metric-purity">0.62</div>
-          <div class="metric-bar"><div class="metric-bar-fill" id="bar-purity" style="width: 62%"></div></div>
-          <div class="tooltip-content">
-            <div class="tooltip-title">State Purity</div>
-            <div class="tooltip-desc">How definite the state is. 1 = pure, 0.5 = max uncertainty.</div>
-            <span class="tooltip-formula">Tr(ρ²) = ½(1 + |r|²) ∈ [0.5, 1]</span>
-          </div>
-        </div>
-        <div class="metric-card metric-entropy tooltip">
-          <div class="metric-header"><span class="metric-name">Entropy <span class="help-icon">?</span></span></div>
-          <div class="metric-value" id="metric-entropy">0.81</div>
-          <div class="metric-bar"><div class="metric-bar-fill" id="bar-entropy" style="width: 81%"></div></div>
-          <div class="tooltip-content">
-            <div class="tooltip-title">Von Neumann Entropy</div>
-            <div class="tooltip-desc">Information-theoretic uncertainty. 0 = certain, 1 = max.</div>
-            <span class="tooltip-formula">S(ρ) = −λ₊ log₂(λ₊) − λ₋ log₂(λ₋)</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="decision-matrix">
-        <div class="matrix-section-title">Decision Zone Map</div>
-        
-        <!-- Signal Status Indicator -->
-        <div id="signal-status" style="background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.4); border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.75rem;">
-          <div id="signal-icon" style="width: 32px; height: 32px; border-radius: 50%; background: var(--accent-blue); display: flex; align-items: center; justify-content: center; font-size: 0.9rem;">⏸</div>
-          <div style="flex: 1;">
-            <div id="signal-title" style="font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; font-weight: 600; color: var(--accent-blue); margin-bottom: 0.25rem;">SIGNAL BELOW THRESHOLD</div>
-            <div id="signal-explanation" style="font-size: 0.7rem; color: var(--text-secondary); line-height: 1.4;">The dot shows where you'd land in the decision space, but |r| hasn't crossed τ yet. The system is waiting for stronger signal before applying zone logic.</div>
-          </div>
-        </div>
-        
-        <div style="position: relative; width: 100%; max-width: 400px; margin: 0 auto;">
-          <canvas id="decision-zone-canvas" width="480" height="300" style="width: 100%; border-radius: 8px;"></canvas>
-          <div id="zone-indicator" style="position: absolute; font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; padding: 4px 8px; border-radius: 4px; pointer-events: none; transition: all 0.3s ease; background: rgba(0,0,0,0.8); color: white; display: none;"></div>
-        </div>
-        
-        <div style="display: flex; justify-content: space-between; margin-top: 0.5rem; font-size: 0.65rem; color: var(--text-muted);">
-          <span>← LOW URGENCY</span>
-          <span>HIGH URGENCY →</span>
-        </div>
-        <div style="text-align: center; font-size: 0.6rem; color: var(--text-muted); margin-top: 0.25rem;">↑ HIGH INTEGRITY &nbsp;|&nbsp; ↓ LOW INTEGRITY</div>
-        
-        <!-- How to Read This Panel -->
-        <div style="background: var(--bg-tertiary); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 1rem; margin-top: 1rem;">
-          <div style="font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; color: var(--text-muted); letter-spacing: 0.1em; margin-bottom: 0.75rem;">HOW TO READ THIS</div>
-          <div style="font-size: 0.75rem; color: var(--text-secondary); line-height: 1.6;">
-            <div style="margin-bottom: 0.5rem;"><strong style="color: var(--text-primary);">The Dot</strong> = Your position based on Integrity (Y) and Urgency (X)</div>
-            <div style="margin-bottom: 0.5rem;"><strong style="color: var(--text-primary);">The Zones</strong> = Where you'd be classified IF signal clears threshold</div>
-            <div style="margin-bottom: 0.5rem;"><strong style="color: var(--text-primary);">Signal |r|</strong> = Overall decision strength (must exceed τ to activate zone logic)</div>
-            <div><strong style="color: var(--text-primary);">Threshold τ</strong> = Adapts to entropy + risk. Higher uncertainty = higher bar.</div>
-          </div>
-          <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--border-subtle); font-size: 0.7rem; color: var(--text-muted);">
-            <span style="color: var(--accent-blue);">● WAIT</span> = Signal too weak &nbsp;|&nbsp;
-            <span style="color: var(--accent-green);">● COMMIT</span> = Strong + positive EV &nbsp;|&nbsp;
-            <span style="color: var(--accent-yellow);">● HOLD</span> = Medium foundation &nbsp;|&nbsp;
-            <span style="color: var(--accent-orange);">● ESCALATE</span> = Route to human &nbsp;|&nbsp;
-            <span style="color: var(--accent-red);">● TOXIC</span> = Hard veto
-          </div>
-        </div>
-      </div>
-
-      <div class="collapsible" id="narrative-details">
-        <div class="collapsible-header" onclick="toggleCollapsible('narrative-details')">
-          <span class="collapsible-title">Decision Trajectory</span>
-          <span class="collapsible-icon">▼</span>
-        </div>
-        <div class="collapsible-content">
-          <div class="collapsible-inner">
-            <div id="narrative-label" style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:var(--accent-cyan);margin-bottom:0.75rem;"></div>
-            <div id="narrative-trajectory" style="font-size:0.85rem;color:var(--text-primary);line-height:1.7;margin-bottom:1rem;"></div>
-            <div class="matrix-section-title" style="margin-bottom:0.5rem;">Key Factors</div>
-            <div id="narrative-factors" style="font-size:0.8rem;color:var(--text-secondary);line-height:1.8;"></div>
-          </div>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <!-- About Section -->
-  <section class="pitch-section" id="pitch-section">
-    <div class="api-content">
-      <h2># NERVA v8.3.2</h2>
-      <p><strong>Decision Integrity Layer for Autonomous Systems</strong></p>
-      <p style="color:var(--text-secondary);">Built by Phasewell Research. Mathematically grounded in quantum information theory.</p>
-
-      <h3>What It Does</h3>
-      <p>Autonomous systems — drones, trading algorithms, surgical robots, self-driving vehicles — make decisions at machine speed. Most guardrails either slow things down too much or can't explain themselves after the fact.</p>
-      <p>NERVA sits between a proposed action and its execution. It evaluates the decision state and returns one of five verdicts — with full mathematical provenance for every call.</p>
-      <div class="code-block" style="text-align:center;">Proposed action → 6D state vector → Bloch sphere projection → COMMIT | HOLD | WAIT | ESCALATE | TOXIC</div>
-
-      <h3>How It Works</h3>
-      <p>Each decision is mapped to six input dimensions: urgency, strategy quality, risk exposure, evidence support, environmental stability. These collapse into a Bloch vector — a point inside a unit sphere representing the decision state.</p>
-      <p>From that state, NERVA computes density matrix metrics — entropy, purity, coherence — and derives an information-theoretic commitment threshold. The threshold adapts to the decision: higher uncertainty and higher stakes raise the bar for action.</p>
-      <div class="code-block">ρ = ½(I + r_x·σ_x + r_y·σ_y + r_z·σ_z)
-
-Entropy:    S(ρ) = -λ₊ log₂(λ₊) - λ₋ log₂(λ₋)
-Purity:     Tr(ρ²) = ½(1 + |r|²)  ∈ [0.5, 1]
-Threshold:  τ = 0.25 + 0.35·S(ρ) + 0.25·R − 0.20·reversibility</div>
-
-      <h3>Safety Overrides</h3>
-      <p><strong>One-Way Brake:</strong> If a decision is irreversible (low reversibility score) and the integrity foundation is incomplete, NERVA forces ESCALATE regardless of other signals. Irreversible decisions require a higher standard of evidence — this is enforced mathematically, not by policy.</p>
-      <p><strong>EV Block:</strong> If expected value is negative, COMMIT is suppressed. The system won't recommend action when the math says the outcome is likely harmful.</p>
-      <p><strong>TOXIC veto:</strong> Low integrity combined with high urgency and pressure triggers a hard veto. No autonomous action. Human authorization required.</p>
-
-      <h3>Where It Applies</h3>
-      <p>Any domain where a wrong autonomous decision has serious consequences and requires explainability after the fact:</p>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin:1rem 0;">
-        <div style="background:var(--bg-tertiary);border:1px solid var(--border-subtle);border-radius:8px;padding:0.75rem;font-size:0.8rem;"><strong>Defense / Autonomous Weapons</strong><br><span style="color:var(--text-muted);">Rules of engagement enforcement, lethal action gating</span></div>
-        <div style="background:var(--bg-tertiary);border:1px solid var(--border-subtle);border-radius:8px;padding:0.75rem;font-size:0.8rem;"><strong>Financial Systems</strong><br><span style="color:var(--text-muted);">HFT guardrails, position sizing under uncertainty</span></div>
-        <div style="background:var(--bg-tertiary);border:1px solid var(--border-subtle);border-radius:8px;padding:0.75rem;font-size:0.8rem;"><strong>Autonomous Vehicles</strong><br><span style="color:var(--text-muted);">Triage logic, edge case escalation</span></div>
-        <div style="background:var(--bg-tertiary);border:1px solid var(--border-subtle);border-radius:8px;padding:0.75rem;font-size:0.8rem;"><strong>Medical / Surgical</strong><br><span style="color:var(--text-muted);">Anomaly response, procedure deviation handling</span></div>
-      </div>
-
-      <h3>Mathematical Provenance</h3>
-      <p>NERVA's formalism is grounded in Nielsen & Chuang (2010), Shannon (1948), and Baumgratz et al. (2014). The v8.3.2 normalization correction ensures internal consistency across all metrics — the density matrix, entropy, purity, and coherence all derive from the same normalized Bloch vector by construction.</p>
-
-      <div style="margin-top:3rem;padding-top:2rem;border-top:1px solid var(--border-subtle);text-align:center;">
-        <p style="color:var(--accent-cyan);">Anthony Migliazzo · <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="f895919f9499968c90979681b89f95999194d69b9795">[email&#160;protected]</a></p>
-        <p style="font-size:0.75rem;color:var(--text-muted);">NERVA · Phasewell Research · AMDG</p>
-      </div>
+<div id="shell">
+  <div id="nav">
+    <div class="nav-brand">NERVA</div>
+    <div class="nav-ver">v10.0</div>
+    <div class="nav-sep"></div>
+    <button class="nav-tab active" data-view="cockpit">A · COCKPIT</button>
+    <button class="nav-tab" data-view="bloomberg">B · TERMINAL</button>
+    <button class="nav-tab" data-view="phase">C · PHASE SPACE</button>
+    <button class="nav-tab" data-view="brutalist">D · BRUTALIST</button>
+    <div class="nav-right">
+      <span id="nav-verdict" style="letter-spacing:0.14em;font-weight:600">—</span>
+      <span id="nav-r">|r|=—</span>
+      <span id="nav-tau">τ=—</span>
+      <div class="nav-live">LIVE</div>
     </div>
-  </section>
+  </div>
+  <div id="view-root"></div>
+</div>
 
-  <!-- API Section -->
-  <section class="api-section" id="api-section">
-    <div class="api-content">
-      <h2>NERVA v8.3.2 API</h2>
-      <h3>Endpoint</h3>
-      <div class="code-block">POST /v1/validate</div>
-      <h3>Request</h3>
-      <div class="code-block">{
-  "emotion": 0.50,
-  "strategy": 0.60,
-  "risk": 0.40,
-  "support": 0.75,
-  "stability": 0.70,
-  "threshold": "auto"
-}</div>
-      <h3>Response (v8.3.2)</h3>
-      <div class="code-block">{
-  "version": "v8.3.2",
-  "decision": "HOLD",
-  "bloch": {
-    "r": 0.496,
-    "r_x": 0.318, "r_y": 0.231, "r_z": 0.303
-  },
-  "metrics": {
-    "integrity": 0.525,
-    "coherence": 0.393,
-    "purity": 0.623,
-    "entropy": 0.814,
-    "EV": 0.35
-  },
-  "validation": {
-    "bloch_magnitude_valid": true,
-    "purity_range_valid": true,
-    "entropy_range_valid": true,
-    "components_consistent": true
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin></script>
+<script type="text/babel" data-presets="env,react">
+// ═══════════════════════════════════════════════════════════
+// NERVA v10.0 — REAL BLOCH SPHERE KERNEL (v8.3.2 math)
+// ═══════════════════════════════════════════════════════════
+
+const {
+  createContext, useContext, useState, useMemo,
+  useCallback, useEffect, useRef, useReducer
+} = React;
+
+// ── MATH CORE (v8.3.2 rigor) ──────────────────────────────
+const clamp = (v, lo=0, hi=1) => Math.max(lo, Math.min(hi, v));
+const fmt = (n, d=2) => (n==null||isNaN(n)) ? '—' : Number(n).toFixed(d);
+
+function vonNeumannEntropy(r) {
+  if (r >= 0.9999) return 0;
+  if (r <= 0.0001) return 1;
+  const lp = (1+r)/2, lm = (1-r)/2;
+  return -lp*Math.log2(lp) - lm*Math.log2(lm);
+}
+
+function computeMetrics(state) {
+  const { E, S, R, Sp, St, tauMode, tauManual } = state;
+
+  // v8.3.1 normalized Bloch components — ALL use same √3 denominator
+  const r_max = Math.sqrt(3);
+  const x_raw = (E + S) / 2;   // intent
+  const y_raw = R;               // risk
+  const z_raw = Sp * St;        // integrity foundation
+
+  const r_x = x_raw / r_max;
+  const r_y = y_raw / r_max;
+  const r_z = z_raw / r_max;
+
+  // Signal magnitude — computed FROM components (Grok fix: guaranteed consistent)
+  const r = Math.sqrt(r_x*r_x + r_y*r_y + r_z*r_z);
+
+  // Spherical coordinates
+  const theta = r > 0 ? Math.acos(clamp(r_z/r,-1,1)) * (180/Math.PI) : 0;
+  const phi   = Math.atan2(r_y, r_x) * (180/Math.PI);
+
+  // Density matrix metrics (closed-form from eigenvalues)
+  const entropy    = vonNeumannEntropy(r);
+  const purity     = 0.5 * (1 + r*r);                    // Tr(ρ²) ∈ [0.5,1]
+  const coherence  = Math.sqrt(r_x*r_x + r_y*r_y);       // ℓ₁-norm transverse
+  const integrity  = z_raw;                                // = Sp × St
+  const reversibility = clamp((Sp + St) / 2);
+  const EV         = Sp - R;
+
+  // Information-theoretic threshold (v8.3.2)
+  const tauAuto = clamp(0.25 + 0.35*entropy + 0.25*R - 0.15*reversibility, 0.15, 0.85);
+  const tau = tauMode === 'manual' ? clamp(tauManual, 0.15, 0.85) : tauAuto;
+
+  // Validation (for API/pitch display)
+  const validation = {
+    bloch_magnitude_valid: r <= 1.0001,
+    purity_range_valid: purity >= 0.4999 && purity <= 1.0001,
+    entropy_range_valid: entropy >= 0 && entropy <= 1.0001,
+    components_consistent: Math.abs(r - Math.sqrt(r_x*r_x+r_y*r_y+r_z*r_z)) < 0.0001
+  };
+
+  // Signal gate
+  const signal = r >= tau;
+  const oneWayDoor = reversibility < 0.4;
+
+  // Decision logic (v8.3.2 with Emergency Override + One-Way Brake + EV Block)
+  let verdict, reason;
+
+  if (!signal) {
+    // Emergency Override: high urgency + irreversible cannot sit in WAIT
+    if (E >= 0.75 && oneWayDoor) {
+      verdict = 'ESCALATE';
+      reason = '[EMERGENCY OVERRIDE] High urgency + irreversible action. Cannot wait — routing to human immediately.';
+    } else {
+      verdict = 'WAIT';
+      reason = `Insufficient signal. |r|=${fmt(r,3)} < τ=${fmt(tau,3)}. Gather more data before acting.`;
+    }
+  } else if (integrity < 0.22 || (R > 0.75 && integrity < 0.35)) {
+    verdict = 'TOXIC';
+    reason = `Hard veto. Low integrity (${fmt(integrity,2)}) with high risk (R=${fmt(R,2)}). Autonomous action prohibited.`;
+  } else if (oneWayDoor && integrity < 0.55) {
+    // One-Way Brake
+    verdict = 'ESCALATE';
+    reason = `One-Way Brake engaged. Irreversible action (rev=${fmt(reversibility,2)}) requires stronger foundation (I=${fmt(integrity,2)}).`;
+  } else if (EV < 0) {
+    // EV Block — suppress COMMIT when expected value is negative
+    verdict = integrity >= 0.4 ? 'HOLD' : 'ESCALATE';
+    reason = `EV Block. Negative expected value (EV=${fmt(EV,2)}) suppresses commit. ${verdict === 'HOLD' ? 'Recheck conditions.' : 'Route to human.'}`;
+  } else if (integrity >= 0.6 && EV > 0.1) {
+    verdict = 'COMMIT';
+    reason = `Strong foundation (I=${fmt(integrity,2)}), positive EV (${fmt(EV,2)}), signal cleared. Proceed with monitoring.`;
+  } else if (integrity >= 0.4) {
+    verdict = 'HOLD';
+    reason = `Medium foundation (I=${fmt(integrity,2)}). EV=${fmt(EV,2)}. Recheck in next window.`;
+  } else {
+    verdict = 'ESCALATE';
+    reason = `Signal cleared but integrity (${fmt(integrity,2)}) below autonomous-act floor. Route to human review.`;
   }
-}</div>
-      <p style="margin-top: 2rem; font-size: 0.8rem; color: var(--text-muted);">Nielsen & Chuang (2010), Ch. 2 & 11</p>
 
-      <h3>Technical Verification</h3>
-      <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:1.5rem;">For technical due diligence. The live values below update whenever you run the Demo — they reflect the actual computed state of the last evaluation.</p>
+  // Coherence seed (for fractal/viz use) — density matrix off-diagonal
+  const c_re = r_x / 2;
+  const c_im = -r_y / 2;
 
-      <div style="margin-bottom:1.5rem;">
-        <div class="matrix-section-title">Information-Theoretic Threshold (live)</div>
-        <div class="derivation-formula" id="threshold-formula">Run a demo evaluation to see live threshold decomposition</div>
-      </div>
+  return {
+    r, r_x, r_y, r_z, theta, phi,
+    entropy, purity, coherence, integrity, reversibility, EV,
+    tau, tauAuto, signal, oneWayDoor,
+    verdict, reason, validation,
+    c_re, c_im,
+  };
+}
 
-      <div style="margin-bottom:1.5rem;">
-        <div class="matrix-section-title">Density Matrix ρ = ½(I + r·σ)</div>
-        <div class="matrix-label">Pauli decomposition — v8.3.2 guarantees r = √(r_x² + r_y² + r_z²)</div>
-        <div class="matrix-grid">
-          <div class="matrix-cell diagonal" id="rho-00">—</div>
-          <div class="matrix-cell off-diagonal" id="rho-01">—</div>
-          <div class="matrix-cell off-diagonal" id="rho-10">—</div>
-          <div class="matrix-cell diagonal" id="rho-11">—</div>
+// ── PRESETS ───────────────────────────────────────────────
+const PRESETS = [
+  {
+    id:'drone', name:'Drone ROE', subtitle:'Uncertain intel · civilian zone',
+    desc:'Autonomous strike drone identifies target matching ROE profile at 91% confidence. Two civilians within 30m radius. Intel age: 4 minutes. Comms with ground partially degraded.',
+    state:{E:0.74,S:0.61,R:0.78,Sp:0.42,St:0.46}
+  },
+  {
+    id:'hft', name:'HFT Trade', subtitle:'Volatile market',
+    desc:'Strategy detects 47bp dislocation in cross-listed equity pair. Volume regime shifted in last 8s. Risk budget 62% consumed today. Reversibility window: 90 seconds.',
+    state:{E:0.81,S:0.92,R:0.39,Sp:0.78,St:0.61}
+  },
+  {
+    id:'av', name:'AV Lane', subtitle:'Pedestrian near',
+    desc:'L4 vehicle, 38mph, lane-change opportunity to bypass stalled truck. Pedestrian on adjacent sidewalk, no indication of crossing. Sensor confidence 0.94.',
+    state:{E:0.52,S:0.83,R:0.31,Sp:0.86,St:0.74}
+  },
+  {
+    id:'surgical', name:'Surgical', subtitle:'Patient anomaly',
+    desc:'Robotic surgical assist detects unexpected vascular structure 4mm off planned trajectory. Continuing as planned has 0.12 estimated complication risk. Pause adds 90s.',
+    state:{E:0.68,S:0.71,R:0.66,Sp:0.58,St:0.55}
+  },
+  {
+    id:'ad', name:'Ad Buy', subtitle:'AI-owned process',
+    desc:'Agency partner has automated the ad-buy validity step. New offering only dictates buy validity; rest of process is AI-owned. Reversibility limited by 24h commitment window.',
+    state:{E:0.59,S:0.98,R:0.42,Sp:0.51,St:0.52}
+  },
+  {
+    id:'launch', name:'Launch Hold', subtitle:'Pad anomaly · T-90s',
+    desc:'Sensor 4B reading 2.1σ outside nominal on LOX temp. Other sensors nominal. Weather window closes in 9 minutes. Scrub cost: $4.2M and 11-day delay.',
+    state:{E:0.88,S:0.79,R:0.62,Sp:0.55,St:0.49}
+  },
+];
+
+// ── VERDICT COLORS ────────────────────────────────────────
+const VC = {
+  COMMIT:   {fg:'#3ddc97', bg:'rgba(61,220,151,0.10)', dim:'#1d8a5a'},
+  HOLD:     {fg:'#f5b942', bg:'rgba(245,185,66,0.10)',  dim:'#a37a1f'},
+  WAIT:     {fg:'#7aa7ff', bg:'rgba(122,167,255,0.10)', dim:'#3d5fb0'},
+  ESCALATE: {fg:'#ff8c42', bg:'rgba(255,140,66,0.12)',  dim:'#b35a18'},
+  TOXIC:    {fg:'#ff5c6c', bg:'rgba(255,92,108,0.12)',  dim:'#a02a36'},
+};
+
+// ── CONTEXT ───────────────────────────────────────────────
+const NervaCtx = createContext(null);
+
+function seedHistory() {
+  const seeds = [
+    {E:0.32,S:0.71,R:0.22,Sp:0.78,St:0.84,label:'DRN-04412'},
+    {E:0.81,S:0.92,R:0.39,Sp:0.78,St:0.61,label:'HFT-09921'},
+    {E:0.68,S:0.55,R:0.71,Sp:0.41,St:0.38,label:'DRN-04413'},
+    {E:0.52,S:0.83,R:0.31,Sp:0.86,St:0.74,label:'AVL-77108'},
+    {E:0.59,S:0.98,R:0.42,Sp:0.51,St:0.52,label:'ADV-30022'},
+  ];
+  const base = Date.now();
+  return seeds.map((s,i) => {
+    const m = computeMetrics({...s, tauMode:'auto', tauManual:0.25});
+    return {...s,...m, t: base - (5-i)*240000};
+  });
+}
+
+function NervaProvider({children}) {
+  const [state, setState] = useState({
+    E:0.59, S:0.98, R:0.42, Sp:0.51, St:0.52,
+    tauMode:'auto', tauManual:0.25,
+    scenario: PRESETS[4].desc,
+    activePreset:'ad',
+  });
+  const [history] = useState(seedHistory);
+  const [parsing, setParsing] = useState(false);
+  const [api, setApi] = useState({latency:84, region:'us-west-2', model:'nerva-bloch-v10', status:'nominal', uptime:99.982});
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setApi(a => ({...a, latency: clamp(a.latency + (Math.random()-0.5)*14, 55, 190)}));
+    }, 2400);
+    return () => clearInterval(id);
+  }, []);
+
+  const metrics = useMemo(() => computeMetrics(state), [state]);
+
+  // Update nav bar
+  useEffect(() => {
+    const vEl = document.getElementById('nav-verdict');
+    const rEl = document.getElementById('nav-r');
+    const tEl = document.getElementById('nav-tau');
+    if (vEl) { vEl.textContent = metrics.verdict; vEl.style.color = VC[metrics.verdict]?.fg || '#fff'; }
+    if (rEl) rEl.textContent = `|r|=${fmt(metrics.r,3)}`;
+    if (tEl) tEl.textContent = `τ=${fmt(metrics.tau,3)}`;
+  }, [metrics]);
+
+  const update = useCallback(patch => setState(s => ({...s,...patch})), []);
+  const applyPreset = useCallback(id => {
+    const p = PRESETS.find(x=>x.id===id);
+    if (p) setState(s=>({...s,...p.state, scenario:p.desc, activePreset:id}));
+  }, []);
+
+  // AI scenario parser (Claude API via artifact)
+  const parseScenario = useCallback(async (text) => {
+    if (!text.trim()) return;
+    setParsing(true);
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          model:'claude-sonnet-4-20250514',
+          max_tokens:300,
+          messages:[{role:'user', content:`You are NERVA's scenario parser. Extract 5 numeric parameters (0.0–1.0) from this scenario. Reply with ONLY valid JSON, no markdown, no explanation.
+
+Scenario: "${text}"
+
+Parameters:
+- E (urgency/emotional pressure): how time-critical or emotionally driven is this? 0=no urgency, 1=maximum urgency
+- S (strategy quality): how well-planned/coherent is the approach? 0=no plan, 1=excellent plan
+- R (risk exposure): how severe is the downside? 0=no risk, 1=catastrophic/irreversible risk
+- Sp (support/evidence): how strong is the data/evidence/confidence? 0=no evidence, 1=certain
+- St (stability): how stable is the environment/system? 0=chaotic, 1=very stable
+
+Special calibration:
+- Medical emergencies/arterial bleeds/life-threat: E=0.90-0.95, R=0.85-0.95, St=0.15-0.35
+- Lethal/weapons/surgical: R ≥ 0.70
+- High-frequency trading: E=0.75-0.90, S=0.80-0.95
+- Autonomous vehicles normal: R=0.20-0.45, St=0.65-0.85
+- Personnel unavailable/comms degraded: St=0.15-0.40
+- AI-owned/automated processes: Sp=0.45-0.65
+
+Reply format (JSON only): {"E":0.00,"S":0.00,"R":0.00,"Sp":0.00,"St":0.00}`}]
+        })
+      });
+      const data = await res.json();
+      const raw = data.content?.[0]?.text || '';
+      const clean = raw.replace(/```json|```/g,'').trim();
+      const parsed = JSON.parse(clean);
+      const patch = {};
+      ['E','S','R','Sp','St'].forEach(k => {
+        if (parsed[k] !== undefined) patch[k] = clamp(parseFloat(parsed[k]));
+      });
+      setState(s => ({...s,...patch, activePreset:''}));
+    } catch(e) {
+      console.warn('Parse error:', e);
+    } finally {
+      setParsing(false);
+    }
+  }, []);
+
+  // Sensitivity analysis
+  const sensitivity = useMemo(() => {
+    const keys = ['E','S','R','Sp','St'];
+    return keys.map(k => {
+      const up = computeMetrics({...state,[k]:clamp(state[k]+0.1)});
+      const dn = computeMetrics({...state,[k]:clamp(state[k]-0.1)});
+      const base = metrics;
+      const dUp = (up.r-up.tau) - (base.r-base.tau);
+      const dDn = (dn.r-dn.tau) - (base.r-base.tau);
+      return {
+        key: k,
+        dUp, dDn,
+        flipUp: up.verdict !== base.verdict ? up.verdict : null,
+        flipDn: dn.verdict !== base.verdict ? dn.verdict : null,
+      };
+    });
+  }, [state, metrics]);
+
+  // Factor contributions (signed to |r|)
+  const factors = useMemo(() => {
+    const {E,S,R,Sp,St} = state;
+    return [
+      {key:'S',  label:'Strategy',  weight: 0.40*S  - 0.20, raw:S,  good:S>0.5},
+      {key:'Sp', label:'Support',   weight: 0.35*Sp - 0.175,raw:Sp, good:Sp>0.5},
+      {key:'St', label:'Stability', weight: 0.25*St - 0.125,raw:St, good:St>0.5},
+      {key:'R',  label:'Risk',      weight:-0.25*R,          raw:R,  good:R<0.4},
+      {key:'E',  label:'Urgency',   weight:-0.12*E*(1-S),    raw:E,  good:E<0.6},
+    ];
+  }, [state]);
+
+  // Forecast (damped linear on |r| history)
+  const forecast = useMemo(() => {
+    const horizons = [{label:'T+1m',minutes:1},{label:'T+5m',minutes:5},{label:'T+15m',minutes:15},{label:'T+1h',minutes:60}];
+    const all = [...history.map(h=>({t:h.t,r:h.r})), {t:Date.now(),r:metrics.r}];
+    const t0 = all[0].t;
+    const xs = all.map(p=>(p.t-t0)/60000);
+    const ys = all.map(p=>p.r);
+    const n = xs.length;
+    const mX = xs.reduce((a,b)=>a+b,0)/n, mY = ys.reduce((a,b)=>a+b,0)/n;
+    let num=0,den=0;
+    xs.forEach((x,i)=>{num+=(x-mX)*(ys[i]-mY);den+=(x-mX)**2;});
+    const slope = den===0?0:num/den;
+    const HL = 25;
+    const points = horizons.map(h=>{
+      const damp = Math.exp(-h.minutes/HL);
+      const r = clamp(metrics.r + slope*h.minutes*damp);
+      const sigma = clamp(0.035+0.022*Math.sqrt(h.minutes)+0.12*metrics.entropy*Math.sqrt(h.minutes/30),0,0.5);
+      const lo=clamp(r-sigma), hi=clamp(r+sigma);
+      const z=(metrics.tau-r)/Math.max(0.01,sigma);
+      const cdf=0.5*(1+Math.sign(-z)*Math.sqrt(1-Math.exp(-2*z*z/Math.PI)));
+      const pAbove=clamp(1-cdf);
+      let predVerdict;
+      if(r<metrics.tau) predVerdict='WAIT';
+      else if(metrics.integrity<0.4) predVerdict='ESCALATE';
+      else if(metrics.EV>0.1&&metrics.integrity>0.6) predVerdict='COMMIT';
+      else predVerdict='HOLD';
+      return {...h,r,sigma,lo,hi,pAbove,predVerdict};
+    });
+    let window;
+    if(Math.abs(slope)<0.002) window=metrics.r>=metrics.tau?'ACT NOW — signal stable above τ':'HOLD — signal stable below τ';
+    else if(slope>0){
+      if(metrics.r>=metrics.tau) window='ACT NOW — signal strengthening';
+      else{const need=(metrics.tau-metrics.r)/slope; window=need>60?'WAIT — unlikely to clear τ within 1h':`WAIT — likely to clear τ in ~${Math.max(1,Math.round(need))}m`;}
+    } else {
+      if(metrics.r>=metrics.tau){const fade=(metrics.r-metrics.tau)/Math.abs(slope); window=fade>60?'ACT THIS HOUR — stable for now':`ACT WITHIN ~${Math.max(1,Math.round(fade))}m — signal decaying`;}
+      else window='HOLD — signal decaying below τ';
+    }
+    return {slope,points,window,histR:ys};
+  }, [history, metrics, state]);
+
+  const logs = useMemo(() => [
+    {t:'',sev:'I',src:'parse',   msg:`scenario tokens=${Math.floor(state.scenario.length/4)} model=nerva-bloch-v10`},
+    {t:'',sev:'I',src:'extract', msg:`E=${fmt(state.E,2)} S=${fmt(state.S,2)} R=${fmt(state.R,2)} Sp=${fmt(state.Sp,2)} St=${fmt(state.St,2)}`},
+    {t:'',sev:metrics.oneWayDoor?'W':'I',src:'brake',   msg:`reversibility=${fmt(metrics.reversibility,2)} ${metrics.oneWayDoor?'ONE-WAY ARMED':'disarmed'}`},
+    {t:'',sev:'I',src:'bloch',   msg:`r_x=${fmt(metrics.r_x,4)} r_y=${fmt(metrics.r_y,4)} r_z=${fmt(metrics.r_z,4)}`},
+    {t:'',sev:'I',src:'compute', msg:`|r|=${fmt(metrics.r,4)} τ=${fmt(metrics.tau,4)} S(ρ)=${fmt(metrics.entropy,4)}`},
+    {t:'',sev:metrics.verdict==='TOXIC'||metrics.verdict==='ESCALATE'?'E':'I',src:'verdict',msg:`${metrics.verdict} · purity=${fmt(metrics.purity,4)} ∈ [0.5,1]`},
+    {t:'',sev:'I',src:'audit',   msg:`components_consistent=${metrics.validation.components_consistent} hash=ok`},
+    {t:'',sev:'I',src:'route',   msg:metrics.verdict==='ESCALATE'||metrics.verdict==='TOXIC'?'human #decision-review-p0':'auto-dispatch ok'},
+  ], [state, metrics]);
+
+  const value = {state,update,applyPreset,parseScenario,parsing,metrics,sensitivity,factors,forecast,history,logs,api,presets:PRESETS,VC};
+  return React.createElement(NervaCtx.Provider, {value}, children);
+}
+
+function useNerva() {
+  const v = useContext(NervaCtx);
+  if (!v) throw new Error('useNerva outside NervaProvider');
+  return v;
+}
+
+// ── SHARED COMPONENTS ─────────────────────────────────────
+function Spark({values, w=80, h=18, stroke='currentColor'}) {
+  if (!values?.length) return null;
+  const max=Math.max(...values,0.01), min=Math.min(...values,0);
+  const rng=max-min||1;
+  const pts=values.map((v,i)=>{
+    const x=(i/(values.length-1))*w;
+    const y=h-((v-min)/rng)*h;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+  return <svg width={w} height={h} style={{display:'block',overflow:'visible'}}><polyline points={pts} fill="none" stroke={stroke} strokeWidth="1.3" strokeLinejoin="round" strokeLinecap="round"/></svg>;
+}
+
+// Phase map SVG (shared across views)
+function PhaseMap({metrics, state, W=320, H=220, mono="'JetBrains Mono',monospace"}) {
+  const x = state.E * W;
+  const y = (1 - metrics.integrity) * H;
+  const c = VC[metrics.verdict];
+  const zones=[
+    {name:'COMMIT', x0:0,y0:0,w:W,h:H*0.35, c:VC.COMMIT.fg},
+    {name:'HOLD',   x0:0,y0:H*0.35,w:W*0.5,h:H*0.30, c:VC.HOLD.fg},
+    {name:'ESC',    x0:W*0.5,y0:H*0.35,w:W*0.5,h:H*0.30, c:VC.ESCALATE.fg},
+    {name:'ESC',    x0:0,y0:H*0.65,w:W*0.5,h:H*0.35, c:VC.ESCALATE.fg},
+    {name:'TOXIC',  x0:W*0.5,y0:H*0.65,w:W*0.5,h:H*0.35, c:VC.TOXIC.fg},
+  ];
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{width:'100%',height:'100%',display:'block',background:'#070a0e'}}>
+      {zones.map((z,i)=>(
+        <g key={i}>
+          <rect x={z.x0} y={z.y0} width={z.w} height={z.h} fill={z.c} opacity={0.10}/>
+          <text x={z.x0+z.w/2} y={z.y0+z.h/2+4} textAnchor="middle" style={{font:`600 9px ${mono}`,fill:z.c,letterSpacing:'0.18em',opacity:0.6}}>{z.name}</text>
+        </g>
+      ))}
+      {[0.25,0.5,0.75].map(t=>(
+        <g key={t}>
+          <line x1={t*W} y1="0" x2={t*W} y2={H} stroke="rgba(255,255,255,0.05)" strokeDasharray="2 3"/>
+          <line x1="0" y1={t*H} x2={W} y2={t*H} stroke="rgba(255,255,255,0.05)" strokeDasharray="2 3"/>
+        </g>
+      ))}
+      <line x1="0" y1={H*0.35} x2={W} y2={H*0.35} stroke="rgba(255,255,255,0.1)"/>
+      <line x1="0" y1={H*0.65} x2={W} y2={H*0.65} stroke="rgba(255,255,255,0.1)"/>
+      <line x1={W*0.5} y1={H*0.35} x2={W*0.5} y2={H} stroke="rgba(255,255,255,0.1)"/>
+      {/* τ threshold line on integrity axis */}
+      <line x1="0" y1={(1-metrics.tau)*H} x2={W} y2={(1-metrics.tau)*H} stroke={c.fg} strokeDasharray="4 3" strokeWidth="1" opacity="0.5"/>
+      <text x={W-4} y={(1-metrics.tau)*H-4} textAnchor="end" style={{font:`9px ${mono}`,fill:c.fg,opacity:0.7}}>τ</text>
+      {/* ellipse */}
+      <ellipse cx={x} cy={y} rx={22} ry={16} fill={c.fg} opacity={0.10}/>
+      <line x1="0" y1={y} x2={W} y2={y} stroke={c.fg} strokeDasharray="3 4" strokeWidth="0.7" opacity="0.35"/>
+      <line x1={x} y1="0" x2={x} y2={H} stroke={c.fg} strokeDasharray="3 4" strokeWidth="0.7" opacity="0.35"/>
+      <circle cx={x} cy={y} r={metrics.signal?6:5} fill={metrics.signal?c.fg:'none'} opacity={metrics.signal?1:0.4}/>
+      <circle cx={x} cy={y} r="10" fill="none" stroke={c.fg} strokeWidth="1" opacity={metrics.signal?0.5:0.2}/>
+      {!metrics.signal && <circle cx={x} cy={y} r="5" fill={c.fg} opacity="0.3"/>}
+    </svg>
+  );
+}
+
+// Slider component
+function Slider({label, sub, value, onChange, color='#4cc9f0', sym}) {
+  const mono = "'JetBrains Mono',monospace";
+  const sans = "'IBM Plex Sans',sans-serif";
+  return (
+    <div style={{display:'flex',flexDirection:'column',gap:4}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline'}}>
+        <div style={{font:`500 11px/1 ${sans}`,color:'#d8dde6'}}>
+          <span style={{color:'#4cc9f0',font:`500 11px/1 ${mono}`,marginRight:6}}>{sym}</span>{label}
         </div>
+        <div style={{font:`500 12px/1 ${mono}`,color:'#d8dde6'}}>{fmt(value,2)}</div>
       </div>
+      {sub && <div style={{font:`10.5px/1.3 ${sans}`,color:'rgba(216,221,230,0.45)'}}>{sub}</div>}
+      <input type="range" min="0" max="1" step="0.01" value={value}
+        onChange={e=>onChange(parseFloat(e.target.value))}
+        style={{accentColor:color,color,width:'100%'}}/>
+    </div>
+  );
+}
 
-      <div>
-        <div class="matrix-section-title">Mathematical Validation</div>
-        <div class="validation-grid" id="validation-grid">
-          <div class="validation-item"><span class="validation-icon valid">✓</span><span>|r| ≤ 1</span></div>
-          <div class="validation-item"><span class="validation-icon valid">✓</span><span>Purity ∈ [0.5, 1]</span></div>
-          <div class="validation-item"><span class="validation-icon valid">✓</span><span>S(ρ) ∈ [0, 1]</span></div>
-          <div class="validation-item"><span class="validation-icon valid">✓</span><span>Components consistent</span></div>
-        </div>
+// ═══════════════════════════════════════════════════════════
+// VIEW A — COCKPIT
+// ═══════════════════════════════════════════════════════════
+function CPGauge({value, tau, verdict}) {
+  const c = VC[verdict];
+  const sz=220, cx=110, cy=110, rO=96, rI=72;
+  const a0=-135, a1=135;
+  const ticks=[];
+  for(let i=0;i<=30;i++){
+    const t=i/30, ang=(a0+(a1-a0)*t)*Math.PI/180;
+    const major=i%5===0, active=t<=value;
+    ticks.push(<line key={i}
+      x1={cx+Math.cos(ang)*(rO+2)} y1={cy+Math.sin(ang)*(rO+2)}
+      x2={cx+Math.cos(ang)*(rO+(major?10:5))} y2={cy+Math.sin(ang)*(rO+(major?10:5))}
+      stroke={active?c.fg:'rgba(255,255,255,0.15)'} strokeWidth={major?1.5:0.7}/>);
+  }
+  const vAng=(a0+(a1-a0)*value)*Math.PI/180;
+  const tAng=(a0+(a1-a0)*tau)*Math.PI/180;
+  const arcEnd=a0+(a1-a0)*value, large=Math.abs(arcEnd-a0)>180?1:0;
+  const arcPath=`M ${cx+Math.cos(a0*Math.PI/180)*rI} ${cy+Math.sin(a0*Math.PI/180)*rI} A ${rI} ${rI} 0 ${large} 1 ${cx+Math.cos(arcEnd*Math.PI/180)*rI} ${cy+Math.sin(arcEnd*Math.PI/180)*rI}`;
+  const mono="'JetBrains Mono',monospace";
+  return (
+    <div style={{position:'relative',width:sz,height:sz,alignSelf:'center'}}>
+      <svg width={sz} height={sz} style={{position:'absolute',inset:0}}>
+        <circle cx={cx} cy={cy} r={rO} fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="1"/>
+        {ticks}
+        <path d={arcPath} fill="none" stroke={c.fg} strokeWidth="3" opacity="0.9"/>
+        <line x1={cx+Math.cos(tAng)*(rO-4)} y1={cy+Math.sin(tAng)*(rO-4)} x2={cx+Math.cos(tAng)*(rO+14)} y2={cy+Math.sin(tAng)*(rO+14)} stroke="#fff" strokeWidth="1.5" strokeDasharray="2 2"/>
+        <line x1={cx} y1={cy} x2={cx+Math.cos(vAng)*(rI-6)} y2={cy+Math.sin(vAng)*(rI-6)} stroke={c.fg} strokeWidth="2.5" strokeLinecap="round"/>
+        <circle cx={cx} cy={cy} r="5" fill="#0a0d12" stroke={c.fg} strokeWidth="2"/>
+      </svg>
+      <div style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',pointerEvents:'none'}}>
+        <div style={{font:`600 11px/1 ${mono}`,color:c.fg,letterSpacing:'0.22em',marginBottom:6}}>{verdict}</div>
+        <div style={{font:`300 36px/1 ${mono}`,color:'#d8dde6'}}>{fmt(value,3)}</div>
+        <div style={{font:`9.5px/1 ${mono}`,color:'rgba(216,221,230,0.5)',marginTop:6}}>|r| · τ {fmt(tau,3)}</div>
       </div>
     </div>
-  </section>
-
-  <div class="version-badge">v8.3.2</div>
-
-  <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
-    // NERVA v8.3.2 — Grok's Normalization Fix Applied
-    let inputs = { E: 0.50, S: 0.60, R: 0.40, support: 0.75, stability: 0.70 };
-    let thresholdMode = 'auto';
-    let manualThreshold = 0.50;
-
-    const presets = {
-      drone: { E: 0.85, S: 0.40, R: 0.90, support: 0.35, stability: 0.45 },
-      hft: { E: 0.95, S: 0.75, R: 0.60, support: 0.80, stability: 0.55 },
-      av: { E: 0.70, S: 0.65, R: 0.75, support: 0.60, stability: 0.70 },
-      surgical: { E: 0.50, S: 0.80, R: 0.85, support: 0.70, stability: 0.60 }
-    };
-
-    function vonNeumannEntropy(r) {
-      if (r >= 0.9999) return 0;
-      if (r <= 0.0001) return 1;
-      const lp = (1 + r) / 2, lm = (1 - r) / 2;
-      return -lp * Math.log2(lp) - lm * Math.log2(lm);
-    }
-
-    function purity(r) { return 0.5 * (1 + r * r); }
-
-    function nervaValidate(E, S, R, support, stability, manualTau = null) {
-      const x_raw = (E + S) / 2;
-      const y_raw = R;
-      const z_raw = support * stability;
-
-      // v8.3.2 FIX: Consistent normalization (Grok)
-      const r_max = Math.sqrt(3);
-      const r_x = x_raw / r_max;
-      const r_y = y_raw / r_max;
-      const r_z = z_raw / r_max;
-      const r = Math.sqrt(r_x * r_x + r_y * r_y + r_z * r_z);
-
-      const theta = r > 0 ? Math.acos(r_z / r) : 0;
-      const phi = Math.atan2(r_y, r_x);
-
-      const rho = {
-        rho_00: (1 + r_z) / 2, rho_11: (1 - r_z) / 2,
-        rho_01_real: r_x / 2, rho_01_imag: -r_y / 2,
-        rho_10_real: r_x / 2, rho_10_imag: r_y / 2
-      };
-
-      const entropyVal = vonNeumannEntropy(r);
-      const purityVal = purity(r);
-      const coherenceVal = Math.sqrt(r_x * r_x + r_y * r_y);
-      const integrity = z_raw;
-
-      const reversibility = (support + stability) / 2;
-      let tau, tauComponents = null;
-      if (manualTau !== null) {
-        tau = manualTau;
-      } else {
-        const tau_base = 0.25;
-        const entropy_contrib = 0.35 * entropyVal;
-        const risk_contrib = 0.25 * R;
-        const rev_discount = 0.20 * reversibility;
-        tau = Math.max(0.15, Math.min(0.85, tau_base + entropy_contrib + risk_contrib - rev_discount));
-        tauComponents = { base: tau_base, entropy: entropy_contrib, risk: risk_contrib, reversibility: rev_discount };
-      }
-
-      const EV = support - R;
-      const signal = r >= tau;
-      const urgency = E;
-      const oneWayDoor = reversibility < 0.4;
-
-      let decision = 'WAIT', reasoning = '';
-      if (!signal) {
-        // EMERGENCY OVERRIDE: High urgency + irreversible cannot sit in WAIT
-        if (urgency >= 0.75 && oneWayDoor) {
-          decision = 'ESCALATE';
-          reasoning = `[EMERGENCY OVERRIDE] High urgency (${urgency.toFixed(2)}) + irreversible. Cannot wait — routing to human.`;
-        } else {
-          decision = 'WAIT';
-          reasoning = `Insufficient signal (|r|=${r.toFixed(3)} < τ=${tau.toFixed(3)}). Gather more data.`;
-        }
-      } else if (integrity >= 0.6 && EV > 0) {
-        decision = 'COMMIT';
-        reasoning = `Strong foundation (I=${integrity.toFixed(2)}), positive EV. Proceed.`;
-      } else if (integrity >= 0.4) {
-        if (urgency >= 0.8 && oneWayDoor) { decision = 'ESCALATE'; reasoning = 'High urgency + irreversible. Human review.'; }
-        else { decision = 'HOLD'; reasoning = 'Medium integrity. Build stronger foundation.'; }
-      } else {
-        if (urgency >= 0.7 || entropyVal > 0.7) { decision = 'TOXIC'; reasoning = `VETO: Low integrity (${integrity.toFixed(2)}) + pressure.`; }
-        else { decision = 'ESCALATE'; reasoning = 'Insufficient foundation. Route to human.'; }
-      }
-      if (oneWayDoor && integrity < 0.6 && decision === 'COMMIT') {
-        decision = 'ESCALATE'; reasoning = '[ONE-WAY BRAKE] Irreversible requires I ≥ 0.60';
-      }
-
-      return {
-        version: 'v8.3.2', decision, reasoning,
-        bloch: { r, theta: theta * 180 / Math.PI, phi: phi * 180 / Math.PI, r_x, r_y, r_z },
-        metrics: { integrity, coherence: coherenceVal, purity: purityVal, entropy: entropyVal, EV },
-        threshold: { used: tau, mode: manualTau !== null ? 'manual' : 'auto', components: tauComponents },
-        densityMatrix: rho,
-        validation: {
-          bloch_magnitude_valid: r <= 1,
-          purity_range_valid: purityVal >= 0.5 && purityVal <= 1,
-          entropy_range_valid: entropyVal >= 0 && entropyVal <= 1,
-          components_consistent: Math.abs(r - Math.sqrt(r_x*r_x + r_y*r_y + r_z*r_z)) < 0.0001
-        }
-      };
-    }
-
-    function updateSlider(key) {
-      const slider = document.getElementById(`slider-${key}`);
-      const display = document.getElementById(`val-${key}`);
-      display.textContent = parseFloat(slider.value).toFixed(2);
-      if (key === 'threshold') manualThreshold = parseFloat(slider.value);
-      else inputs[key] = parseFloat(slider.value);
-      evaluate(); // auto-evaluate on every slider change
-    }
-
-    function setThresholdMode(mode) {
-      thresholdMode = mode;
-      document.getElementById('btn-auto').classList.toggle('active', mode === 'auto');
-      document.getElementById('btn-manual').classList.toggle('active', mode === 'manual');
-      document.getElementById('manual-threshold').style.display = mode === 'manual' ? 'block' : 'none';
-    }
-
-    function loadPreset(name) {
-      const p = presets[name];
-      for (const k in p) { inputs[k] = p[k]; document.getElementById(`slider-${k}`).value = p[k]; document.getElementById(`val-${k}`).textContent = p[k].toFixed(2); }
-      evaluate();
-    }
-
-    function evaluate() {
-      const result = nervaValidate(inputs.E, inputs.S, inputs.R, inputs.support, inputs.stability, thresholdMode === 'manual' ? manualThreshold : null);
-      updateDisplay(result);
-    }
-
-    function updateDisplay(r) {
-      document.getElementById('decision-badge').textContent = r.decision;
-      document.getElementById('decision-badge').className = `decision-badge decision-${r.decision}`;
-      document.getElementById('decision-reasoning').textContent = r.reasoning;
-      document.getElementById('bloch-r').textContent = r.bloch.r.toFixed(2);
-      document.getElementById('bloch-theta').textContent = r.bloch.theta.toFixed(0) + '°';
-      document.getElementById('bloch-phi').textContent = r.bloch.phi.toFixed(0) + '°';
-      document.getElementById('bloch-tau').textContent = r.threshold.used.toFixed(2);
-      document.getElementById('bloch-ev').textContent = r.metrics.EV.toFixed(2);
-      document.getElementById('metric-integrity').textContent = r.metrics.integrity.toFixed(2);
-      document.getElementById('bar-integrity').style.width = (r.metrics.integrity * 100) + '%';
-      document.getElementById('metric-coherence').textContent = r.metrics.coherence.toFixed(2);
-      document.getElementById('bar-coherence').style.width = (r.metrics.coherence * 100) + '%';
-      document.getElementById('metric-purity').textContent = r.metrics.purity.toFixed(2);
-      document.getElementById('bar-purity').style.width = ((r.metrics.purity - 0.5) * 200) + '%';
-      document.getElementById('metric-entropy').textContent = r.metrics.entropy.toFixed(2);
-      document.getElementById('bar-entropy').style.width = (r.metrics.entropy * 100) + '%';
-
-      if (r.threshold.components) {
-        const c = r.threshold.components;
-        document.getElementById('threshold-formula').innerHTML = `τ = <span class="derivation-component base">${c.base.toFixed(3)}</span> + <span class="derivation-component entropy">${c.entropy.toFixed(3)}</span> (S) + <span class="derivation-component risk">${c.risk.toFixed(3)}</span> (R) − <span class="derivation-component reversibility">${c.reversibility.toFixed(3)}</span> (rev) = <strong>${r.threshold.used.toFixed(3)}</strong>`;
-      }
-
-      const rho = r.densityMatrix;
-      document.getElementById('rho-00').textContent = rho.rho_00.toFixed(3);
-      document.getElementById('rho-11').textContent = rho.rho_11.toFixed(3);
-      document.getElementById('rho-01').textContent = `${rho.rho_01_real.toFixed(3)} ${rho.rho_01_imag >= 0 ? '+' : '−'} ${Math.abs(rho.rho_01_imag).toFixed(3)}i`;
-      document.getElementById('rho-10').textContent = `${rho.rho_10_real.toFixed(3)} ${rho.rho_10_imag >= 0 ? '+' : '−'} ${Math.abs(rho.rho_10_imag).toFixed(3)}i`;
-
-      const v = r.validation;
-      document.getElementById('validation-grid').innerHTML = `
-        <div class="validation-item"><span class="validation-icon ${v.bloch_magnitude_valid ? 'valid' : 'invalid'}">${v.bloch_magnitude_valid ? '✓' : '✗'}</span><span>|r| ≤ 1</span></div>
-        <div class="validation-item"><span class="validation-icon ${v.purity_range_valid ? 'valid' : 'invalid'}">${v.purity_range_valid ? '✓' : '✗'}</span><span>Purity ∈ [0.5,1]</span></div>
-        <div class="validation-item"><span class="validation-icon ${v.entropy_range_valid ? 'valid' : 'invalid'}">${v.entropy_range_valid ? '✓' : '✗'}</span><span>S(ρ) ∈ [0,1]</span></div>
-        <div class="validation-item"><span class="validation-icon ${v.components_consistent ? 'valid' : 'invalid'}">${v.components_consistent ? '✓' : '✗'}</span><span>Components consistent</span></div>`;
-
-      // Render Decision Zone Map
-      renderDecisionZone(r.metrics.integrity, inputs.E, r.decision, r.bloch.r, r.threshold.used);
-      
-      // Update signal status panel
-      updateSignalStatus(r.decision, r.bloch.r, r.threshold.used, r.metrics.integrity, inputs.E);
-
-      // Update narrative
-      const narr = generateNarrative(r, inputs);
-      document.getElementById('narrative-label').textContent = narr.label;
-      document.getElementById('narrative-trajectory').textContent = narr.trajectory;
-      document.getElementById('narrative-factors').innerHTML = narr.factors.map(f => `<div>${f}</div>`).join('');
-    }
-    
-    function updateSignalStatus(decision, r, tau, integrity, urgency) {
-      const statusEl = document.getElementById('signal-status');
-      const iconEl = document.getElementById('signal-icon');
-      const titleEl = document.getElementById('signal-title');
-      const explEl = document.getElementById('signal-explanation');
-      
-      const signalCleared = r >= tau;
-      
-      // Zone logic must match NERVA decision thresholds: I >= 0.6 (high), I >= 0.4 (med), U >= 0.7 (high)
-      let zoneLabel = 'HOLD';
-      if (integrity >= 0.6) {
-        zoneLabel = 'COMMIT';
-      } else if (integrity >= 0.4) {
-        zoneLabel = urgency >= 0.7 ? 'ESCALATE' : 'HOLD';
-      } else {
-        zoneLabel = urgency >= 0.7 ? 'TOXIC' : 'ESCALATE';
-      }
-      
-      const statusConfig = {
-        WAIT: {
-          bg: 'rgba(59, 130, 246, 0.15)',
-          border: 'rgba(59, 130, 246, 0.4)',
-          color: 'var(--accent-blue)',
-          icon: '⏸',
-          title: 'SIGNAL BELOW THRESHOLD',
-          explanation: `|r| = ${r.toFixed(3)} has not crossed τ = ${tau.toFixed(3)}. The dot shows you're positioned in the ${zoneLabel} zone, but zone logic only activates when signal clears threshold. Increase Support, Strategy, or reduce Risk to build signal strength.`
-        },
-        COMMIT: {
-          bg: 'rgba(16, 235, 150, 0.15)',
-          border: 'rgba(16, 235, 150, 0.4)',
-          color: 'var(--accent-green)',
-          icon: '✓',
-          title: 'SIGNAL CLEARED → COMMIT',
-          explanation: `|r| = ${r.toFixed(3)} exceeds τ = ${tau.toFixed(3)}. High integrity (${integrity.toFixed(2)}) + positive expected value. The system recommends proceeding with the action.`
-        },
-        HOLD: {
-          bg: 'rgba(255, 180, 30, 0.15)',
-          border: 'rgba(255, 180, 30, 0.4)',
-          color: 'var(--accent-yellow)',
-          icon: '⏳',
-          title: 'SIGNAL CLEARED → HOLD',
-          explanation: `|r| = ${r.toFixed(3)} exceeds τ = ${tau.toFixed(3)}, activating zone logic. Medium integrity (${integrity.toFixed(2)}) means the foundation needs strengthening before committing. Build more evidence.`
-        },
-        ESCALATE: {
-          bg: 'rgba(255, 120, 50, 0.15)',
-          border: 'rgba(255, 120, 50, 0.4)',
-          color: 'var(--accent-orange)',
-          icon: '⚠',
-          title: decision === 'ESCALATE' && !signalCleared ? 'EMERGENCY OVERRIDE → ESCALATE' : 'SIGNAL CLEARED → ESCALATE',
-          explanation: decision === 'ESCALATE' && !signalCleared 
-            ? `High urgency (${urgency.toFixed(2)}) + low reversibility triggered the Emergency Override. Even without clearing τ, NERVA escalates rather than allowing WAIT on an irreversible, time-critical action.`
-            : `|r| = ${r.toFixed(3)} exceeds τ = ${tau.toFixed(3)}. The combination of integrity and urgency requires human review before proceeding. Route to decision-maker.`
-        },
-        TOXIC: {
-          bg: 'rgba(255, 60, 80, 0.15)',
-          border: 'rgba(255, 60, 80, 0.4)',
-          color: 'var(--accent-red)',
-          icon: '✕',
-          title: 'SIGNAL CLEARED → TOXIC VETO',
-          explanation: `|r| = ${r.toFixed(3)} exceeds τ = ${tau.toFixed(3)}, but low integrity (${integrity.toFixed(2)}) combined with high urgency/entropy triggers a hard veto. Do not proceed. Full human authorization required.`
-        }
-      };
-      
-      const config = statusConfig[decision] || statusConfig.WAIT;
-      statusEl.style.background = config.bg;
-      statusEl.style.borderColor = config.border;
-      iconEl.style.background = config.color;
-      iconEl.textContent = config.icon;
-      titleEl.style.color = config.color;
-      titleEl.textContent = config.title;
-      explEl.textContent = config.explanation;
-    }
-
-    function renderDecisionZone(integrity, urgency, decision, r, tau) {
-      const canvas = document.getElementById('decision-zone-canvas');
-      if (!canvas) return;
-      const ctx = canvas.getContext('2d');
-      const w = canvas.width;
-      const h = canvas.height;
-
-      // Theme-aware background
-      ctx.fillStyle = document.body.classList.contains('light-mode') ? '#e8edf4' : '#0a0a0f';
-      ctx.fillRect(0, 0, w, h);
-
-      // Reserve right 75px for signal meter
-      const meterW = 75;
-      const zoneW = w - meterW;
-
-      // NERVA thresholds — must match nervaValidate logic exactly
-      const iHigh = 0.6, iMed = 0.4, uHigh = 0.7;
-      const y_iHigh = (1 - iHigh) * h;
-      const y_iMed  = (1 - iMed) * h;
-      const x_uHigh = uHigh * zoneW;
-
-      // === DRAW ZONES ===
-      // COMMIT: I >= 0.6 (full row)
-      ctx.fillStyle = 'rgba(16, 235, 150, 0.28)';
-      ctx.fillRect(0, 0, zoneW, y_iHigh);
-      ctx.strokeStyle = 'rgba(16, 235, 150, 0.6)';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(0.5, 0.5, zoneW - 1, y_iHigh - 1);
-
-      // HOLD: 0.4 <= I < 0.6, U < 0.7
-      ctx.fillStyle = 'rgba(255, 180, 30, 0.22)';
-      ctx.fillRect(0, y_iHigh, x_uHigh, y_iMed - y_iHigh);
-      ctx.strokeStyle = 'rgba(255, 180, 30, 0.5)';
-      ctx.strokeRect(0.5, y_iHigh + 0.5, x_uHigh - 1, y_iMed - y_iHigh - 1);
-
-      // ESCALATE: 0.4 <= I < 0.6, U >= 0.7
-      ctx.fillStyle = 'rgba(255, 120, 50, 0.28)';
-      ctx.fillRect(x_uHigh, y_iHigh, zoneW - x_uHigh, y_iMed - y_iHigh);
-      ctx.strokeStyle = 'rgba(255, 120, 50, 0.6)';
-      ctx.strokeRect(x_uHigh + 0.5, y_iHigh + 0.5, zoneW - x_uHigh - 1, y_iMed - y_iHigh - 1);
-
-      // ESCALATE: I < 0.4, U < 0.7
-      ctx.fillStyle = 'rgba(255, 120, 50, 0.22)';
-      ctx.fillRect(0, y_iMed, x_uHigh, h - y_iMed);
-      ctx.strokeStyle = 'rgba(255, 120, 50, 0.5)';
-      ctx.strokeRect(0.5, y_iMed + 0.5, x_uHigh - 1, h - y_iMed - 1);
-
-      // TOXIC: I < 0.4, U >= 0.7
-      ctx.fillStyle = 'rgba(255, 60, 80, 0.32)';
-      ctx.fillRect(x_uHigh, y_iMed, zoneW - x_uHigh, h - y_iMed);
-      ctx.strokeStyle = 'rgba(255, 60, 80, 0.7)';
-      ctx.strokeRect(x_uHigh + 0.5, y_iMed + 0.5, zoneW - x_uHigh - 1, h - y_iMed - 1);
-
-      // === ZONE LABELS ===
-      ctx.font = 'bold 11px JetBrains Mono';
-      ctx.textAlign = 'center';
-      ctx.shadowBlur = 5;
-
-      ctx.shadowColor = 'rgba(16, 235, 150, 0.7)';
-      ctx.fillStyle = '#10eb96';
-      ctx.fillText('COMMIT', zoneW / 2, y_iHigh / 2 + 4);
-
-      ctx.shadowColor = 'rgba(255, 180, 30, 0.7)';
-      ctx.fillStyle = '#ffb41e';
-      ctx.fillText('HOLD', x_uHigh / 2, y_iHigh + (y_iMed - y_iHigh) / 2 + 4);
-
-      ctx.shadowColor = 'rgba(255, 120, 50, 0.7)';
-      ctx.fillStyle = '#ff7832';
-      ctx.fillText('ESC', x_uHigh + (zoneW - x_uHigh) / 2, y_iHigh + (y_iMed - y_iHigh) / 2 + 4);
-      ctx.fillText('ESC', x_uHigh / 2, y_iMed + (h - y_iMed) / 2 + 4);
-
-      ctx.shadowColor = 'rgba(255, 60, 80, 0.8)';
-      ctx.fillStyle = '#ff3c50';
-      ctx.fillText('TOXIC', x_uHigh + (zoneW - x_uHigh) / 2, y_iMed + (h - y_iMed) / 2 + 4);
-      ctx.shadowBlur = 0;
-
-      // === THRESHOLD DASHED LINES ===
-      ctx.strokeStyle = 'rgba(148, 163, 184, 0.35)';
-      ctx.lineWidth = 1;
-      ctx.setLineDash([5, 4]);
-      ctx.beginPath(); ctx.moveTo(0, y_iHigh); ctx.lineTo(zoneW, y_iHigh); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(0, y_iMed);  ctx.lineTo(zoneW, y_iMed);  ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(x_uHigh, y_iHigh); ctx.lineTo(x_uHigh, h); ctx.stroke();
-      ctx.setLineDash([]);
-
-      // Threshold labels
-      ctx.fillStyle = 'rgba(148, 163, 184, 0.6)';
-      ctx.font = '8px JetBrains Mono';
-      ctx.textAlign = 'left';
-      ctx.fillText('I=0.6', 3, y_iHigh - 3);
-      ctx.fillText('I=0.4', 3, y_iMed - 3);
-      ctx.textAlign = 'center';
-      ctx.fillText('U=0.7', x_uHigh, h - 3);
-
-      // === SIGNAL METER (right panel) ===
-      const meterX = zoneW + meterW / 2;
-      const meterTop = 22;
-      const meterBarH = h - 50;
-      const meterBarX = zoneW + 18;
-      const meterBarW = 28;
-
-      // Meter background panel
-      ctx.fillStyle = document.body.classList.contains('light-mode') ? 'rgba(200,210,225,0.5)' : 'rgba(20, 30, 48, 0.8)';
-      ctx.fillRect(zoneW, 0, meterW, h);
-      ctx.strokeStyle = 'rgba(148, 163, 184, 0.2)';
-      ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(zoneW, 0); ctx.lineTo(zoneW, h); ctx.stroke();
-
-      // SIGNAL label at top
-      ctx.fillStyle = 'rgba(148, 163, 184, 0.8)';
-      ctx.font = 'bold 7px JetBrains Mono';
-      ctx.textAlign = 'center';
-      ctx.fillText('SIGNAL', meterX, 13);
-
-      // Meter bar background
-      ctx.fillStyle = 'rgba(148, 163, 184, 0.12)';
-      ctx.fillRect(meterBarX, meterTop, meterBarW, meterBarH);
-      ctx.strokeStyle = 'rgba(148, 163, 184, 0.25)';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(meterBarX, meterTop, meterBarW, meterBarH);
-
-      // τ threshold line
-      const tauY = meterTop + meterBarH * (1 - tau);
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(meterBarX - 4, tauY);
-      ctx.lineTo(meterBarX + meterBarW + 4, tauY);
-      ctx.stroke();
-
-      // τ value label
-      ctx.fillStyle = 'rgba(255,255,255,0.85)';
-      ctx.font = 'bold 7px JetBrains Mono';
-      ctx.textAlign = 'center';
-      ctx.fillText('τ=' + tau.toFixed(2), meterX, tauY - 3);
-
-      // Signal fill bar
-      const signalCleared = r >= tau;
-      const signalFillH = Math.min(r, 1) * meterBarH;
-      const fillColor = signalCleared ? 'rgba(16, 235, 150, 0.85)' : 'rgba(80, 160, 255, 0.75)';
-      ctx.fillStyle = fillColor;
-      ctx.fillRect(meterBarX + 1, meterTop + meterBarH - signalFillH, meterBarW - 2, signalFillH);
-
-      // |r| value label
-      const rLabelY = meterTop + meterBarH - signalFillH - 4;
-      ctx.fillStyle = signalCleared ? '#10eb96' : '#50a0ff';
-      ctx.font = 'bold 7px JetBrains Mono';
-      ctx.textAlign = 'center';
-      ctx.fillText('|r|=' + r.toFixed(2), meterX, Math.max(meterTop + 8, Math.min(rLabelY, meterTop + meterBarH - 4)));
-
-      // Status at bottom
-      ctx.fillStyle = signalCleared ? '#10eb96' : '#50a0ff';
-      ctx.font = 'bold 7px JetBrains Mono';
-      ctx.textAlign = 'center';
-      ctx.fillText(signalCleared ? '✓ GO' : '○ WAIT', meterX, h - 5);
-
-      // === POSITION DOT ===
-      const posX = urgency * zoneW;
-      const posY = (1 - integrity) * h;
-
-      // Compute where the DECISION zone center actually is (for arrow target)
-      let decisionZoneCenterX, decisionZoneCenterY;
-      if (decision === 'COMMIT') {
-        decisionZoneCenterX = zoneW / 2;
-        decisionZoneCenterY = y_iHigh / 2;
-      } else if (decision === 'HOLD') {
-        decisionZoneCenterX = x_uHigh / 2;
-        decisionZoneCenterY = y_iHigh + (y_iMed - y_iHigh) / 2;
-      } else if (decision === 'WAIT') {
-        decisionZoneCenterX = posX; // stays in place
-        decisionZoneCenterY = posY;
-      } else if (decision === 'ESCALATE') {
-        // Pick the ESC zone the dot is physically closer to
-        const escMidX = x_uHigh + (zoneW - x_uHigh) / 2;
-        const escMidY = y_iHigh + (y_iMed - y_iHigh) / 2;
-        const escBotX = x_uHigh / 2;
-        const escBotY = y_iMed + (h - y_iMed) / 2;
-        const d1 = Math.hypot(posX - escMidX, posY - escMidY);
-        const d2 = Math.hypot(posX - escBotX, posY - escBotY);
-        decisionZoneCenterX = d1 < d2 ? escMidX : escBotX;
-        decisionZoneCenterY = d1 < d2 ? escMidY : escBotY;
-      } else { // TOXIC
-        decisionZoneCenterX = x_uHigh + (zoneW - x_uHigh) / 2;
-        decisionZoneCenterY = y_iMed + (h - y_iMed) / 2;
-      }
-
-      const decisionColors = {
-        COMMIT:   { r: 16,  g: 235, b: 150 },
-        HOLD:     { r: 255, g: 180, b: 30  },
-        WAIT:     { r: 80,  g: 160, b: 255 },
-        ESCALATE: { r: 255, g: 120, b: 50  },
-        TOXIC:    { r: 255, g: 60,  b: 80  }
-      };
-      const c = decisionColors[decision] || decisionColors.WAIT;
-      const isWait = decision === 'WAIT';
-      const opacity = isWait ? 0.55 : 1;
-
-      // Draw arrow from dot to decision zone if they're meaningfully far apart
-      const arrowDist = Math.hypot(posX - decisionZoneCenterX, posY - decisionZoneCenterY);
-      if (arrowDist > 30 && decision !== 'WAIT') {
-        const angle = Math.atan2(decisionZoneCenterY - posY, decisionZoneCenterX - posX);
-        const startX = posX + Math.cos(angle) * 14;
-        const startY = posY + Math.sin(angle) * 14;
-        const endX = decisionZoneCenterX - Math.cos(angle) * 18;
-        const endY = decisionZoneCenterY - Math.sin(angle) * 18;
-
-        // Dashed arrow line
-        ctx.save();
-        ctx.setLineDash([4, 3]);
-        ctx.strokeStyle = `rgba(${c.r}, ${c.g}, ${c.b}, 0.6)`;
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.moveTo(startX, startY);
-        ctx.lineTo(endX, endY);
-        ctx.stroke();
-        ctx.setLineDash([]);
-
-        // Arrowhead
-        const headLen = 7;
-        ctx.fillStyle = `rgba(${c.r}, ${c.g}, ${c.b}, 0.7)`;
-        ctx.beginPath();
-        ctx.moveTo(endX, endY);
-        ctx.lineTo(endX - headLen * Math.cos(angle - 0.4), endY - headLen * Math.sin(angle - 0.4));
-        ctx.lineTo(endX - headLen * Math.cos(angle + 0.4), endY - headLen * Math.sin(angle + 0.4));
-        ctx.closePath();
-        ctx.fill();
-
-        // "→ DECISION" label near arrowhead
-        ctx.font = 'bold 7px JetBrains Mono';
-        ctx.fillStyle = `rgba(${c.r}, ${c.g}, ${c.b}, 0.85)`;
-        ctx.textAlign = 'center';
-        const labelX = (startX + endX) / 2;
-        const labelY = (startY + endY) / 2 - 6;
-        ctx.fillText('→ ' + decision, labelX, labelY);
-        ctx.restore();
-      }
-
-      // Glow
-      const grad = ctx.createRadialGradient(posX, posY, 0, posX, posY, 28);
-      grad.addColorStop(0, `rgba(${c.r}, ${c.g}, ${c.b}, ${0.8 * opacity})`);
-      grad.addColorStop(0.5, `rgba(${c.r}, ${c.g}, ${c.b}, ${0.25 * opacity})`);
-      grad.addColorStop(1, `rgba(${c.r}, ${c.g}, ${c.b}, 0)`);
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.arc(posX, posY, 28, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Dashed ring if WAIT
-      if (isWait) {
-        ctx.setLineDash([3, 3]);
-        ctx.strokeStyle = `rgba(${c.r}, ${c.g}, ${c.b}, 0.7)`;
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(posX, posY, 15, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.setLineDash([]);
-      }
-
-      // Dot
-      ctx.beginPath();
-      ctx.arc(posX, posY, 8, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(${c.r}, ${c.g}, ${c.b}, ${opacity})`;
-      ctx.fill();
-      ctx.strokeStyle = isWait ? 'rgba(255,255,255,0.6)' : 'white';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
-      // Core
-      ctx.beginPath();
-      ctx.arc(posX, posY, 3, 0, Math.PI * 2);
-      ctx.fillStyle = isWait ? 'rgba(255,255,255,0.6)' : 'white';
-      ctx.fill();
-
-      // "in ZONE zone" label under dot when WAIT
-      if (isWait) {
-        let zLabel;
-        if (integrity >= iHigh) zLabel = 'COMMIT';
-        else if (integrity >= iMed && urgency < uHigh) zLabel = 'HOLD';
-        else if (integrity >= iMed && urgency >= uHigh) zLabel = 'ESCALATE';
-        else if (integrity < iMed && urgency >= uHigh) zLabel = 'TOXIC';
-        else zLabel = 'ESCALATE';
-
-        ctx.fillStyle = 'rgba(200, 215, 230, 0.85)';
-        ctx.font = '8px JetBrains Mono';
-        ctx.textAlign = 'center';
-        ctx.fillText('in ' + zLabel + ' zone', posX, posY + 24);
-      }
-    }
-
-
-    function toggleCollapsible(id) { document.getElementById(id).classList.toggle('open'); }
-
-    function toggleTheme() {
-      const isLight = document.body.classList.toggle('light-mode');
-      document.getElementById('theme-toggle').textContent = isLight ? '🌙' : '☀️';
-      evaluate(); // redraw canvas with new theme
-    }
-
-    function showSection(s) {
-      document.querySelectorAll('nav button:not(#theme-toggle)').forEach(b => b.classList.remove('active'));
-      event.target.classList.add('active');
-      document.getElementById('demo-section').style.display = s === 'demo' ? 'flex' : 'none';
-      document.getElementById('pitch-section').style.display = s === 'pitch' ? 'block' : 'none';
-      document.getElementById('api-section').style.display = s === 'api' ? 'block' : 'none';
-    }
-
-
-    async function parseScenario() {
-      const scenario = document.getElementById('scenario-text').value.trim();
-      const statusEl = document.getElementById('parse-status');
-      const btn = document.getElementById('parse-btn');
-
-      if (!scenario) {
-        statusEl.style.color = '#f59e0b';
-        statusEl.textContent = '⚠ Please describe a scenario first.';
-        return;
-      }
-
-      btn.textContent = '⏳ Parsing...';
-      btn.disabled = true;
-      statusEl.style.color = '#94a3b8';
-      statusEl.textContent = 'Analyzing scenario...';
-
-      try {
-        const res = await fetch('/api/parse', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ scenario })
-        });
-
-        if (!res.ok) throw new Error(`Server error: ${res.status}`);
-        const params = await res.json();
-        if (params.error) throw new Error(params.error);
-
-        // Correct slider ID mapping
-        const sliderMap = { E: 'E', S: 'S', R: 'R', support: 'support', stability: 'stability' };
-        Object.keys(sliderMap).forEach(k => {
-          const slider = document.getElementById(`slider-${sliderMap[k]}`);
-          const display = document.getElementById(`val-${sliderMap[k]}`);
-          if (slider && params[k] !== undefined) {
-            slider.value = params[k];
-            if (display) display.textContent = params[k].toFixed(2);
+  );
+}
+
+function CockpitView() {
+  const {state,update,applyPreset,parseScenario,parsing,metrics,sensitivity,factors,forecast,history,logs,api,presets} = useNerva();
+  const c = VC[metrics.verdict];
+  const mono="'JetBrains Mono',monospace", sans="'IBM Plex Sans',sans-serif";
+  const rHist = history.map(h=>h.r).concat([metrics.r]);
+
+  const tile = (title, hint, children, style={}) => (
+    <div style={{background:'#0f1419',border:'1px solid rgba(255,255,255,0.06)',borderRadius:4,padding:'10px 12px',display:'flex',flexDirection:'column',...style}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',marginBottom:8}}>
+        <div style={{font:`500 9.5px/1 ${mono}`,letterSpacing:'0.14em',color:'rgba(216,221,230,0.5)',textTransform:'uppercase'}}>{title}</div>
+        {hint&&<div style={{font:`9.5px/1 ${mono}`,color:'rgba(216,221,230,0.3)',letterSpacing:'0.06em'}}>{hint}</div>}
+      </div>
+      <div style={{flex:1,minHeight:0,display:'flex',flexDirection:'column'}}>{children}</div>
+    </div>
+  );
+
+  return (
+    <div style={{width:'100%',height:'100%',background:'#0a0d12',color:'#d8dde6',fontFamily:sans,display:'grid',gridTemplateColumns:'280px 1fr 300px',gap:8,padding:8,overflow:'hidden'}}>
+      {/* LEFT */}
+      <div style={{display:'flex',flexDirection:'column',gap:8,overflow:'hidden'}}>
+        {tile('Scenario', presets.find(p=>p.id===state.activePreset)?.name||'custom',
+          <>
+            <textarea value={state.scenario} onChange={e=>update({scenario:e.target.value})}
+              style={{background:'transparent',color:'#d8dde6',font:`12px/1.45 ${sans}`,height:70,padding:0,marginBottom:8}}/>
+            <button onClick={()=>parseScenario(state.scenario)} disabled={parsing} style={{
+              background:parsing?'rgba(76,201,240,0.05)':'rgba(76,201,240,0.1)',
+              border:`1px solid ${parsing?'rgba(76,201,240,0.2)':'rgba(76,201,240,0.4)'}`,
+              color:parsing?'rgba(76,201,240,0.4)':'#4cc9f0',
+              font:`600 10px/1 ${mono}`,letterSpacing:'0.12em',padding:'7px 0',marginBottom:8,
+            }}>
+              {parsing?'⟳ PARSING...':'⚡ PARSE WITH AI'}
+            </button>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:4}}>
+              {presets.map(p=>(
+                <button key={p.id} onClick={()=>applyPreset(p.id)} style={{
+                  background:state.activePreset===p.id?'rgba(76,201,240,0.12)':'rgba(255,255,255,0.025)',
+                  border:`1px solid ${state.activePreset===p.id?'#4cc9f0':'rgba(255,255,255,0.06)'}`,
+                  color:'#d8dde6',font:`500 10px/1.2 ${sans}`,padding:'5px 7px',textAlign:'left',borderRadius:3,
+                }}>
+                  <div style={{color:state.activePreset===p.id?'#4cc9f0':'#d8dde6',fontSize:10.5}}>{p.name}</div>
+                  <div style={{font:`9px/1 ${mono}`,color:'rgba(216,221,230,0.35)',marginTop:2}}>{p.subtitle}</div>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+        {tile('Parameters','LIVE',
+          <div style={{display:'flex',flexDirection:'column',gap:11}}>
+            <Slider sym="E"  label="Urgency"   sub="priority / pressure"        value={state.E}  onChange={v=>update({E:v})}/>
+            <Slider sym="S"  label="Strategy"  sub="plan quality / coherence"   value={state.S}  onChange={v=>update({S:v})}/>
+            <Slider sym="R"  label="Risk"       sub="exposure to neg. outcomes"  value={state.R}  onChange={v=>update({R:v})}/>
+            <Slider sym="Sp" label="Support"    sub="data confidence / evidence" value={state.Sp} onChange={v=>update({Sp:v})}/>
+            <Slider sym="St" label="Stability"  sub="system health / environment" value={state.St} onChange={v=>update({St:v})}/>
+          </div>
+        )}
+        {tile('Threshold τ', state.tauMode==='auto'?'AUTO':'MANUAL', <>
+          <div style={{display:'flex',gap:4,marginBottom:8}}>
+            {['auto','manual'].map(m=>(
+              <button key={m} onClick={()=>update({tauMode:m})} style={{
+                flex:1,background:state.tauMode===m?'#4cc9f0':'transparent',
+                color:state.tauMode===m?'#000':'#d8dde6',
+                border:`1px solid ${state.tauMode===m?'#4cc9f0':'rgba(255,255,255,0.1)'}`,
+                font:`500 10px/1 ${mono}`,letterSpacing:'0.12em',padding:'6px 0',borderRadius:3,
+              }}>{m.toUpperCase()}</button>
+            ))}
+          </div>
+          {state.tauMode==='manual'
+            ? <Slider sym="τ" label="Manual" value={state.tauManual} onChange={v=>update({tauManual:v})}/>
+            : <div style={{font:`10px/1.4 ${mono}`,color:'rgba(216,221,230,0.4)'}}>τ = 0.25 + 0.35·S(ρ) + 0.25·R − 0.15·rev<br/>current: {fmt(metrics.tauAuto,4)}</div>
           }
-        });
+        </>)}
+      </div>
 
-        // Sync inputs object completely
-        inputs.E = params.E;
-        inputs.S = params.S;
-        inputs.R = params.R;
-        inputs.support = params.support;
-        inputs.stability = params.stability;
+      {/* CENTER */}
+      <div style={{display:'grid',gridTemplateRows:'260px 1fr',gap:8,overflow:'hidden'}}>
+        <div style={{display:'grid',gridTemplateColumns:'260px 1fr',gap:8}}>
+          {tile('Verdict','|r| vs τ', <CPGauge value={metrics.r} tau={metrics.tau} verdict={metrics.verdict}/>)}
+          {tile('Foundation','quality',
+            <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:10,height:'100%'}}>
+              {[['INT',metrics.integrity,'#3ddc97'],['COH',metrics.coherence,'#4cc9f0'],['PUR',metrics.purity,'#7aa7ff'],['REV',metrics.reversibility,'#c084fc'],['ENT',metrics.entropy,'#f5b942']].map(([l,v,col])=>(
+                <div key={l} style={{display:'flex',flexDirection:'column',gap:5}}>
+                  <div style={{font:`9px/1 ${mono}`,color:'rgba(216,221,230,0.4)',letterSpacing:'0.14em'}}>{l}</div>
+                  <div style={{flex:1,position:'relative',background:'rgba(255,255,255,0.025)'}}>
+                    <div style={{position:'absolute',left:0,right:0,bottom:0,height:`${v*100}%`,background:`linear-gradient(0deg,${col}66,${col})`,transition:'height 0.25s'}}/>
+                  </div>
+                  <div style={{font:`500 12px/1 ${mono}`,color:'#d8dde6'}}>{fmt(v,2)}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        {tile('Decision Zone Map',`E:${fmt(state.E,2)} · I:${fmt(metrics.integrity,2)} · |r|=${fmt(metrics.r,3)}`,
+          <div style={{display:'grid',gridTemplateColumns:'1fr 260px',gap:12,flex:1,minHeight:0}}>
+            <div style={{position:'relative',flex:1,minHeight:0}}>
+              <PhaseMap metrics={metrics} state={state}/>
+              {!metrics.signal&&<div style={{position:'absolute',bottom:6,left:6,right:6,background:'rgba(0,0,0,0.7)',border:`1px solid ${VC[metrics.verdict].fg}44`,borderRadius:3,padding:'5px 8px',font:`10px/1.3 ${mono}`,color:VC[metrics.verdict].fg}}>⏸ SIGNAL BELOW τ — dot shows zone position only</div>}
+            </div>
+            <div style={{display:'flex',flexDirection:'column',gap:8}}>
+              <div style={{background:c.bg,border:`1px solid ${c.fg}55`,padding:10,borderRadius:3}}>
+                <div style={{font:`600 10px/1 ${mono}`,color:c.fg,letterSpacing:'0.18em',marginBottom:5}}>{metrics.verdict}</div>
+                <div style={{font:`11px/1.45 ${sans}`,color:'#d8dde6'}}>{metrics.reason}</div>
+              </div>
+              <div style={{font:`9.5px/1 ${mono}`,color:'rgba(216,221,230,0.4)',letterSpacing:'0.14em'}}>FACTORS</div>
+              {factors.map(f=>{
+                const pos=f.weight>=0;
+                const W=Math.min(1,Math.abs(f.weight)/0.3);
+                return (
+                  <div key={f.key} style={{display:'flex',alignItems:'center',gap:6,font:`11px/1 ${mono}`}}>
+                    <div style={{width:62,color:'#d8dde6'}}>{f.label}</div>
+                    <div style={{flex:1,position:'relative',height:11,background:'rgba(255,255,255,0.03)'}}>
+                      <div style={{position:'absolute',top:0,bottom:0,left:'50%',width:1,background:'rgba(255,255,255,0.1)'}}/>
+                      <div style={{position:'absolute',top:1,bottom:1,left:pos?'50%':`${50-W*50}%`,width:`${W*50}%`,background:pos?VC.COMMIT.fg:VC.TOXIC.fg,opacity:0.85}}/>
+                    </div>
+                    <div style={{width:46,textAlign:'right',color:pos?VC.COMMIT.fg:VC.TOXIC.fg}}>{pos?'+':''}{fmt(f.weight,3)}</div>
+                  </div>
+                );
+              })}
+              <div style={{display:'flex',alignItems:'center',gap:8,marginTop:4}}>
+                <span style={{color:'#4cc9f0'}}><Spark values={rHist} w={160} h={24} stroke="#4cc9f0"/></span>
+                <span style={{font:`12px/1 ${mono}`,color:'#d8dde6'}}>{fmt(metrics.r,3)}</span>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
-        statusEl.style.color = '#10b981';
-        statusEl.textContent = '✓ Parameters set — running NERVA...';
-        btn.textContent = '⚡ PARSE WITH AI';
-        btn.disabled = false;
+      {/* RIGHT */}
+      <div style={{display:'flex',flexDirection:'column',gap:8,overflow:'hidden'}}>
+        {tile('Sensitivity ±0.1','what flips',
+          <div style={{display:'flex',flexDirection:'column',gap:5,font:`10.5px/1.3 ${mono}`}}>
+            {sensitivity.map(s=>(
+              <div key={s.key} style={{display:'grid',gridTemplateColumns:'28px 1fr 1fr',gap:5,alignItems:'center'}}>
+                <span style={{color:'#4cc9f0'}}>{s.key}</span>
+                <span style={{color:s.flipDn?VC[s.flipDn].fg:'rgba(216,221,230,0.3)'}}>{s.flipDn?`−0.1→${s.flipDn}`:'stable −'}</span>
+                <span style={{color:s.flipUp?VC[s.flipUp].fg:'rgba(216,221,230,0.3)',textAlign:'right'}}>{s.flipUp?`+0.1→${s.flipUp}`:'stable +'}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        {tile('Forecast',`slope ${forecast.slope>=0?'+':''}${fmt(forecast.slope*1000,1)}·10⁻³/m`,
+          <div style={{display:'flex',flexDirection:'column',gap:4,font:`10.5px/1.35 ${mono}`}}>
+            {forecast.points.map(p=>{
+              const cleared=p.r>=metrics.tau;
+              const col=cleared?VC.COMMIT.fg:VC.WAIT.fg;
+              return (
+                <div key={p.label} style={{display:'grid',gridTemplateColumns:'44px 48px 1fr 32px',gap:4,alignItems:'center'}}>
+                  <span style={{color:'rgba(216,221,230,0.6)'}}>{p.label}</span>
+                  <span style={{color:col}}>{fmt(p.r,3)}</span>
+                  <div style={{height:3,background:'rgba(255,255,255,0.07)',position:'relative'}}>
+                    <div style={{position:'absolute',left:0,top:0,bottom:0,width:`${p.pAbove*100}%`,background:col}}/>
+                    <div style={{position:'absolute',left:`${(metrics.tau)*100}%`,top:-2,bottom:-2,width:1,background:'rgba(255,255,255,0.5)'}}/>
+                  </div>
+                  <span style={{color:col,textAlign:'right'}}>{Math.round(p.pAbove*100)}%</span>
+                </div>
+              );
+            })}
+            <div style={{marginTop:6,padding:'6px 8px',background:`${VC[metrics.verdict].bg}`,border:`1px solid ${VC[metrics.verdict].fg}44`,borderRadius:2,font:`10px/1.4 ${mono}`,color:VC[metrics.verdict].fg}}>
+              ▶ {forecast.window}
+            </div>
+          </div>
+        )}
+        {tile('Agent Log','',
+          <div style={{display:'flex',flexDirection:'column',gap:2,font:`10px/1.35 ${mono}`,overflow:'hidden'}}>
+            {logs.map((l,i)=>{
+              const sc=l.sev==='E'?VC.TOXIC.fg:l.sev==='W'?VC.HOLD.fg:'rgba(216,221,230,0.3)';
+              return (
+                <div key={i} style={{display:'grid',gridTemplateColumns:'12px 46px 1fr',gap:5}}>
+                  <span style={{color:sc}}>{l.sev}</span>
+                  <span style={{color:'#4cc9f0'}}>{l.src}</span>
+                  <span style={{color:'#d8dde6',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{l.msg}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        {tile('History','last 5',
+          <div style={{display:'flex',flexDirection:'column',gap:4,font:`10.5px/1.3 ${mono}`}}>
+            {history.slice().reverse().map((h,i)=>{
+              const hc=VC[h.verdict];
+              const mins=Math.round((Date.now()-h.t)/60000);
+              return (
+                <div key={i} style={{display:'grid',gridTemplateColumns:'40px 1fr 44px 44px',gap:5,alignItems:'center'}}>
+                  <span style={{color:'rgba(216,221,230,0.35)'}}>{mins}m</span>
+                  <span style={{color:'#d8dde6'}}>{h.label}</span>
+                  <span style={{color:'rgba(216,221,230,0.4)',textAlign:'right'}}>{fmt(h.r,2)}</span>
+                  <span style={{color:hc.fg,fontWeight:600,textAlign:'right',fontSize:9.5,letterSpacing:'0.1em'}}>{h.verdict.slice(0,4)}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
-        evaluate();
-        // Clear status after 2.5 seconds
-        setTimeout(() => { statusEl.textContent = ''; }, 2500);
-        // Auto-open narrative after parse
-        setTimeout(() => {
-          const nd = document.getElementById('narrative-details');
-          if (nd && !nd.classList.contains('open')) nd.classList.add('open');
-        }, 400);
+// ═══════════════════════════════════════════════════════════
+// VIEW B — BLOOMBERG TERMINAL
+// ═══════════════════════════════════════════════════════════
+function BloombergView() {
+  const {state,update,applyPreset,parseScenario,parsing,metrics,sensitivity,factors,forecast,history,logs,api,presets} = useNerva();
+  const blx={bg:'#000',panel:'#050505',panelHi:'#0a0a0a',text:'#f7c948',dim:'#a07f1f',hi:'#fff7d6',green:'#5fff87',red:'#ff4d4d',blue:'#5fbfff',orange:'#ff9a3c',mauve:'#ff7ab5',line:'#1a1a1a',lineHi:'#2a2a2a',mono:'"JetBrains Mono","IBM Plex Mono",monospace'};
+  const vc={COMMIT:blx.green,HOLD:blx.text,WAIT:blx.blue,ESCALATE:blx.orange,TOXIC:blx.red};
+  const blk=' ▁▂▃▄▅▆▇█';
+  const spark=vals=>vals.map(v=>blk[Math.min(8,Math.max(0,Math.round(v*8)))]).join('');
+  const panel=(id,title,hint,children,style={})=>(
+    <div style={{background:blx.panel,border:`1px solid ${blx.line}`,display:'flex',flexDirection:'column',minHeight:0,...style}}>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'3px 8px',background:blx.panelHi,borderBottom:`1px solid ${blx.line}`,font:`10.5px/1.2 ${blx.mono}`,letterSpacing:'0.04em'}}>
+        <span><span style={{color:blx.dim}}>&lt;{id}&gt;</span> <span style={{color:blx.hi}}>{title}</span></span>
+        {hint&&<span style={{color:blx.dim}}>{hint}</span>}
+      </div>
+      <div style={{flex:1,minHeight:0,padding:6,fontFamily:blx.mono,fontSize:11,lineHeight:1.4,color:blx.text,overflow:'hidden',display:'flex',flexDirection:'column'}}>{children}</div>
+    </div>
+  );
+  const bar=(v,w=24,col=blx.text)=>{const f=Math.round(v*w);return <span style={{color:col,letterSpacing:'-0.05em'}}>{'█'.repeat(f)}<span style={{color:blx.line}}>{'░'.repeat(w-f)}</span></span>;};
 
-      } catch (err) {
-        statusEl.style.color = '#ef4444';
-        statusEl.textContent = `✗ Parse failed — ${err.message}`;
-        btn.textContent = '⚡ PARSE WITH AI';
-        btn.disabled = false;
-      }
-    }
+  return (
+    <div style={{width:'100%',height:'100%',background:blx.bg,color:blx.text,fontFamily:blx.mono,fontSize:11,display:'grid',gridTemplateRows:'24px 1fr 22px',overflow:'hidden'}}>
+      {/* topbar */}
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 8px',background:blx.text,color:'#000',font:`600 11px/1 ${blx.mono}`,letterSpacing:'0.04em'}}>
+        <div style={{display:'flex',gap:16}}><span>NERVA&lt;GO&gt;</span><span>DECISION INTEGRITY TERMINAL v10.0</span><span style={{opacity:0.6}}>SES 7F-2A91</span></div>
+        <div style={{display:'flex',gap:12}}><span>{api.region.toUpperCase()}</span><span>{Math.round(api.latency)}MS</span><span>99.982%</span><span>{new Date().toTimeString().slice(0,8)}</span></div>
+      </div>
 
-    function generateNarrative(r, inputs) {
-      const d = r.decision;
-      const i = r.metrics.integrity;
-      const ev = r.metrics.EV;
-      const entropy = r.metrics.entropy;
-      const mag = r.bloch.r;
-      const tau = r.threshold.used;
-      const rev = (inputs.support + inputs.stability) / 2;
+      {/* grid */}
+      <div style={{display:'grid',gridTemplateColumns:'260px 1fr 1fr 240px',gridTemplateRows:'1fr 1fr 140px',gap:1,background:blx.line,overflow:'hidden'}}>
+        {/* INP */}
+        {panel('INP','INPUTS','OPERATOR',
+          <>
+            <div style={{color:blx.hi,fontSize:10.5,lineHeight:1.5,marginBottom:6,maxHeight:60,overflow:'hidden'}}>{state.scenario}</div>
+            <div style={{display:'flex',gap:4,marginBottom:6}}>
+              <button onClick={()=>parseScenario(state.scenario)} disabled={parsing} style={{flex:1,background:parsing?'transparent':'rgba(247,201,72,0.12)',border:`1px solid ${parsing?blx.line:blx.text}`,color:parsing?blx.dim:blx.text,font:`700 10px/1 ${blx.mono}`,letterSpacing:'0.08em',padding:'4px 0'}}>
+                {parsing?'PARSING...':'F2 · PARSE'}
+              </button>
+              <div style={{display:'flex',gap:2,flexWrap:'wrap'}}>
+                {presets.slice(0,3).map(p=><button key={p.id} onClick={()=>applyPreset(p.id)} style={{background:state.activePreset===p.id?blx.text:'transparent',color:state.activePreset===p.id?'#000':blx.dim,border:`1px solid ${blx.line}`,font:`9px/1 ${blx.mono}`,padding:'3px 6px'}}>{p.id.toUpperCase()}</button>)}
+              </div>
+            </div>
+            <div style={{font:`9.5px/1 ${blx.mono}`,color:blx.dim,letterSpacing:'0.1em',marginBottom:4}}>PARAMETERS (0.000–1.000)</div>
+            {[['E','URGENCY',state.E,v=>update({E:v}),blx.orange],['S','STRATEGY',state.S,v=>update({S:v}),blx.green],['R','RISK',state.R,v=>update({R:v}),blx.red],['Sp','SUPPORT',state.Sp,v=>update({Sp:v}),blx.blue],['St','STABILITY',state.St,v=>update({St:v}),blx.mauve]].map(([sym,lbl,val,set,col])=>(
+              <div key={sym} style={{marginBottom:5}}>
+                <div style={{display:'flex',justifyContent:'space-between'}}><span style={{color:blx.hi}}>{sym} {lbl}</span><span>{fmt(val,3)}</span></div>
+                <div style={{height:3,background:blx.lineHi,position:'relative',marginBottom:1}}>
+                  <div style={{position:'absolute',left:0,top:0,bottom:0,width:`${val*100}%`,background:col}}/>
+                </div>
+                <input type="range" min="0" max="1" step="0.01" value={val} onChange={e=>set(parseFloat(e.target.value))} style={{accentColor:col,color:col,width:'100%',height:2}}/>
+              </div>
+            ))}
+            <div style={{marginTop:4}}>
+              <div style={{display:'flex',gap:4}}>
+                {['auto','manual'].map(m=><button key={m} onClick={()=>update({tauMode:m})} style={{flex:1,background:state.tauMode===m?blx.text:'transparent',color:state.tauMode===m?'#000':blx.dim,border:`1px solid ${blx.line}`,font:`9px/1 ${blx.mono}`,letterSpacing:'0.08em',padding:'3px 0'}}>{m.toUpperCase()}</button>)}
+              </div>
+              {state.tauMode==='manual'&&<input type="range" min="0.15" max="0.85" step="0.01" value={state.tauManual} onChange={e=>update({tauManual:parseFloat(e.target.value)})} style={{accentColor:blx.text,color:blx.text,width:'100%',marginTop:3}}/>}
+            </div>
+          </>,
+          {gridRow:'span 2'}
+        )}
 
-      const decisionLabels = {
-        COMMIT: 'COMMIT — Proceed',
-        HOLD: 'HOLD — Monitor',
-        WAIT: 'WAIT — Insufficient Signal',
-        ESCALATE: 'ESCALATE — Route to Human',
-        TOXIC: 'TOXIC — Hard Veto'
-      };
+        {/* VRD */}
+        {panel('VRD','VERDICT','',
+          <div style={{display:'flex',flexDirection:'column',gap:4}}>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(6,1fr)',gap:8,borderBottom:`1px solid ${blx.lineHi}`,paddingBottom:6,marginBottom:4}}>
+              {[[metrics.r,'|r|'],[metrics.tau,'τ'],[metrics.EV,'EV'],[metrics.theta+'°','θ'],[metrics.phi+'°','Φ'],].map(([v,l])=>(
+                <div key={l}><div style={{color:blx.dim,fontSize:9.5}}>{l}</div><div style={{color:blx.hi,fontSize:19,fontWeight:300}}>{typeof v==='number'?fmt(v,3):v}</div></div>
+              ))}
+            </div>
+            <div style={{fontSize:32,fontWeight:700,color:vc[metrics.verdict],letterSpacing:'0.08em',lineHeight:1}}>{metrics.verdict}</div>
+            <div style={{fontSize:11,color:blx.hi,marginTop:2}}>{'>'} {metrics.reason.slice(0,80)}</div>
+            <div style={{fontSize:10,color:blx.dim}}>CONFIDENCE BAND: |r| ± {fmt(metrics.entropy*0.15,2)} · σ {fmt(metrics.entropy,2)}</div>
+          </div>
+        )}
 
-      const trajectoryMap = {
-        COMMIT: `The decision state has sufficient integrity and positive expected value. The signal magnitude (|r|=${mag.toFixed(2)}) clears the commitment threshold (τ=${tau.toFixed(2)}), and the evidence foundation is strong enough to proceed autonomously. Monitor for state changes.`,
-        HOLD: `The signal is present but the foundation needs strengthening. Integrity (${i.toFixed(2)}) is in the middle range — there's intent and some evidence, but not enough to commit without further validation. Build more supporting data before acting.`,
-        WAIT: `The signal magnitude (|r|=${mag.toFixed(2)}) does not clear the commitment threshold (τ=${tau.toFixed(2)}). This is not a rejection — it means the state hasn't accumulated enough evidence to warrant action yet. Gather more data and re-evaluate.`,
-        ESCALATE: `The system has detected conditions requiring human judgment. Either the stakes are too high for autonomous action, or the integrity foundation is incomplete given the urgency. A human decision-maker should be briefed and brought into the loop immediately.`,
-        TOXIC: `NERVA has issued a hard veto. The combination of low integrity (${i.toFixed(2)}), negative expected value (EV=${ev.toFixed(2)}), and elevated pressure creates conditions where autonomous action would be dangerous. Do not proceed. This decision requires full human authorization and review.`
-      };
+        {/* FCT */}
+        {panel('FCT','FORECAST',`slope ${forecast.slope>=0?'+':''}${fmt(forecast.slope*1000,1)}·10⁻³`,
+          <div style={{display:'flex',flexDirection:'column',gap:3}}>
+            <div style={{display:'grid',gridTemplateColumns:'44px 52px 38px 1fr',gap:4,color:blx.dim,fontSize:9.5,borderBottom:`1px solid ${blx.line}`,paddingBottom:2}}>
+              <span>HZN</span><span>|r|̂</span><span style={{textAlign:'right'}}>±σ</span><span style={{textAlign:'right'}}>P(≥τ)</span>
+            </div>
+            {forecast.points.map(p=>{
+              const cleared=p.r>=metrics.tau;
+              const col=cleared?blx.green:blx.red;
+              const f=Math.round(p.pAbove*10);
+              return (
+                <div key={p.label} style={{display:'grid',gridTemplateColumns:'44px 52px 38px 1fr',gap:4,alignItems:'center'}}>
+                  <span style={{color:blx.hi}}>{p.label}</span>
+                  <span style={{color:col}}>{fmt(p.r,3)}</span>
+                  <span style={{color:blx.dim,textAlign:'right'}}>{fmt(p.sigma,2)}</span>
+                  <span style={{textAlign:'right',display:'flex',alignItems:'center',justifyContent:'flex-end',gap:4}}>
+                    <span style={{color:col,letterSpacing:'-0.05em'}}>{'█'.repeat(f)}<span style={{color:blx.line}}>{'░'.repeat(10-f)}</span></span>
+                    <span style={{color:col,width:26,textAlign:'right'}}>{Math.round(p.pAbove*100)}%</span>
+                  </span>
+                </div>
+              );
+            })}
+            <div style={{marginTop:'auto',borderTop:`1px solid ${blx.line}`,paddingTop:4}}>
+              <div style={{color:blx.dim,fontSize:9.5}}>RECOMMENDATION</div>
+              <div style={{color:forecast.window.startsWith('ACT')?blx.green:forecast.window.startsWith('HOLD')?blx.orange:blx.text,marginTop:2}}>▶ {forecast.window}</div>
+            </div>
+          </div>
+        )}
 
-      const factorLines = [];
-      if (i >= 0.6) factorLines.push('✓ Strong evidence foundation');
-      else if (i >= 0.4) factorLines.push('⚠ Moderate foundation — needs strengthening');
-      else factorLines.push('✗ Weak foundation — insufficient support/stability');
+        {/* MAP */}
+        {panel('MAP','PHASE MAP',`E:${fmt(state.E,2)} · I:${fmt(metrics.integrity,2)}`,
+          <div style={{flex:1,minHeight:0}}><PhaseMap metrics={metrics} state={state} W={260} H={160} mono={blx.mono}/></div>
+        )}
 
-      if (ev > 0.2) factorLines.push('✓ Positive expected value');
-      else if (ev > 0) factorLines.push('⚠ Marginally positive expected value');
-      else factorLines.push('✗ Negative expected value — action likely harmful');
+        {/* QLT */}
+        {panel('QLT','QUALITY METRICS','0.000–1.000',
+          <div style={{display:'flex',flexDirection:'column',gap:5}}>
+            {[['INTEGRITY ',metrics.integrity,blx.green],['COHERENCE ',metrics.coherence,blx.blue],['PURITY    ',metrics.purity,blx.mauve],['REVERSIBLE',metrics.reversibility,'#c084fc'],['ENTROPY   ',metrics.entropy,blx.orange],['EXP-VALUE ',(metrics.EV+1)/2,metrics.EV>0?blx.green:blx.red]].map(([l,v,col])=>(
+              <div key={l} style={{display:'grid',gridTemplateColumns:'90px 1fr 50px',gap:5,alignItems:'center'}}>
+                <span style={{color:blx.dim,fontSize:10.5}}>{l}</span>
+                {bar(v,22,col)}
+                <span style={{color:col,textAlign:'right'}}>{fmt(v,3)}</span>
+              </div>
+            ))}
+          </div>
+        )}
 
-      if (entropy < 0.4) factorLines.push('✓ Low uncertainty — clear state');
-      else if (entropy < 0.7) factorLines.push('⚠ Moderate uncertainty in decision state');
-      else factorLines.push('✗ High entropy — significant uncertainty');
+        {/* FAC */}
+        {panel('FAC','FACTOR CONTRIBUTIONS','signed to |r|',
+          <div style={{display:'flex',flexDirection:'column',gap:3}}>
+            <div style={{display:'grid',gridTemplateColumns:'60px 1fr 50px 50px',gap:4,color:blx.dim,fontSize:9.5,borderBottom:`1px solid ${blx.line}`,paddingBottom:2}}>
+              <span>FACTOR</span><span>WEIGHT</span><span style={{textAlign:'right'}}>RAW</span><span style={{textAlign:'right'}}>FLAG</span>
+            </div>
+            {factors.map(f=>{
+              const pos=f.weight>=0;
+              const mag=Math.min(11,Math.round(Math.abs(f.weight)*(11/0.3)));
+              const bar2=pos?' '.repeat(11)+'+'+'█'.repeat(mag)+'·'.repeat(11-mag):' '.repeat(11-mag)+'█'.repeat(mag)+'-'+'·'.repeat(11);
+              return (
+                <div key={f.key} style={{display:'grid',gridTemplateColumns:'60px 1fr 50px 50px',gap:4,alignItems:'center'}}>
+                  <span style={{color:blx.hi}}>{f.label.toUpperCase().slice(0,8)}</span>
+                  <span style={{color:pos?blx.green:blx.red,whiteSpace:'pre',fontSize:10,letterSpacing:'-0.04em'}}>{bar2}</span>
+                  <span style={{color:blx.text,textAlign:'right'}}>{fmt(f.raw,2)}</span>
+                  <span style={{color:pos?blx.green:blx.red,textAlign:'right'}}>{pos?'+':''}{fmt(f.weight,3)}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
-      if (rev < 0.4) factorLines.push('⚠ Low reversibility — one-way door detected');
-      else factorLines.push('✓ Reversible — can adjust course');
+        {/* SEN */}
+        {panel('SEN','SENSITIVITY ANALYSIS','δ = ±0.10',
+          <>
+            <div style={{display:'grid',gridTemplateColumns:'36px 90px 1fr 90px',gap:4,color:blx.dim,fontSize:9.5,borderBottom:`1px solid ${blx.line}`,paddingBottom:2,marginBottom:4}}>
+              <span>PAR</span><span>−0.10</span><span style={{textAlign:'center'}}>Δ(|r|-τ)</span><span style={{textAlign:'right'}}>+0.10</span>
+            </div>
+            {sensitivity.map(s=>(
+              <div key={s.key} style={{display:'grid',gridTemplateColumns:'36px 90px 1fr 90px',gap:4,alignItems:'center',fontSize:11}}>
+                <span style={{color:blx.hi}}>{s.key}</span>
+                <span style={{color:s.flipDn?vc[s.flipDn]:blx.dim}}>{s.flipDn?`▶ ${s.flipDn.slice(0,4)}`:'— stable'}</span>
+                <span style={{color:blx.text,textAlign:'center'}}>{s.dDn>=0?'+':''}{fmt(s.dDn,3)} / {s.dUp>=0?'+':''}{fmt(s.dUp,3)}</span>
+                <span style={{color:s.flipUp?vc[s.flipUp]:blx.dim,textAlign:'right'}}>{s.flipUp?`${s.flipUp.slice(0,4)} ◀`:'stable —'}</span>
+              </div>
+            ))}
+          </>
+        )}
 
-      if (inputs.E >= 0.8) factorLines.push('⚠ High urgency — pressure to act quickly');
-      else if (inputs.E >= 0.5) factorLines.push('⚠ Moderate urgency');
-      else factorLines.push('✓ Low urgency — time to deliberate');
+        {/* HST + LOG */}
+        {panel('HST','DECISION HISTORY','last 5',
+          <div style={{display:'flex',flexDirection:'column',gap:3}}>
+            {history.slice().reverse().map((h,i)=>{
+              const hc=vc[h.verdict];
+              const mins=Math.round((Date.now()-h.t)/60000);
+              return (
+                <div key={i} style={{display:'grid',gridTemplateColumns:'40px 80px 48px 1fr',gap:4}}>
+                  <span style={{color:blx.dim}}>{mins}m</span>
+                  <span style={{color:blx.hi}}>{h.label}</span>
+                  <span style={{textAlign:'right'}}>{fmt(h.r,2)}</span>
+                  <span style={{color:hc,textAlign:'right',fontWeight:600}}>{h.verdict}</span>
+                </div>
+              );
+            })}
+            <div style={{marginTop:'auto',color:blx.dim,fontSize:10}}>
+              TRACE {spark(history.map(h=>h.r).concat([metrics.r]))}
+            </div>
+          </div>
+        )}
+        {panel('LOG','AGENT LOG','streaming',
+          <div style={{display:'flex',flexDirection:'column',gap:1,fontSize:10.5}}>
+            {logs.map((l,i)=>{
+              const sc=l.sev==='E'?blx.red:l.sev==='W'?blx.orange:blx.dim;
+              return (
+                <div key={i} style={{display:'grid',gridTemplateColumns:'12px 44px 1fr',gap:4}}>
+                  <span style={{color:sc}}>{l.sev}</span>
+                  <span style={{color:blx.blue}}>{l.src}</span>
+                  <span style={{color:blx.hi,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{l.msg}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
-      return {
-        label: decisionLabels[d] || d,
-        trajectory: trajectoryMap[d] || 'Unknown decision state.',
-        factors: factorLines
-      };
-    }
+      {/* statusbar */}
+      <div style={{background:blx.text,color:'#000',padding:'0 8px',display:'flex',alignItems:'center',justifyContent:'space-between',font:`600 11px/1 ${blx.mono}`,letterSpacing:'0.04em'}}>
+        <div style={{display:'flex',gap:12}}><span>F1:HELP</span><span>F2:PARSE</span><span>F3:LOAD</span><span>F4:SAVE</span><span>F5:COMPARE</span><span>F6:AUDIT</span><span>F9:OVERRIDE</span></div>
+        <div style={{display:'flex',gap:12}}><span>{metrics.verdict}</span><span>|r|={fmt(metrics.r,3)}</span><span>τ={fmt(metrics.tau,3)}</span><span style={{background:'#000',color:blx.green,padding:'0 6px'}}>● LIVE</span></div>
+      </div>
+    </div>
+  );
+}
 
-    // Initialize
-    evaluate();
-  </script>
+// ═══════════════════════════════════════════════════════════
+// VIEW C — PHASE SPACE (Scientific Paper)
+// ═══════════════════════════════════════════════════════════
+function PhaseSpaceView() {
+  const {state,update,applyPreset,parseScenario,parsing,metrics,sensitivity,factors,history,logs,api,presets} = useNerva();
+  const psx={bg:'#f5f1e8',paper:'#fbf8f0',ink:'#1a1814',dim:'rgba(26,24,20,0.62)',faint:'rgba(26,24,20,0.38)',rule:'rgba(26,24,20,0.15)',ruleHi:'rgba(26,24,20,0.35)',accent:'#a3361b',serif:'"Newsreader","Georgia",serif',sans:'"IBM Plex Sans",system-ui,sans-serif',mono:'"JetBrains Mono",monospace'};
+  const psvc={COMMIT:{fg:'#2e6f3e',bg:'rgba(46,111,62,0.08)'},HOLD:{fg:'#8a6a1a',bg:'rgba(138,106,26,0.08)'},WAIT:{fg:'#2a4a8a',bg:'rgba(42,74,138,0.08)'},ESCALATE:{fg:'#a3531b',bg:'rgba(163,83,27,0.08)'},TOXIC:{fg:'#a3361b',bg:'rgba(163,54,27,0.10)'}};
+  const c=psvc[metrics.verdict];
+
+  const W=580,H=400,M={l:50,r:30,t:28,b:42};
+  const pw=W-M.l-M.r,ph=H-M.t-M.b;
+  const xp=v=>M.l+v*pw, yp=v=>M.t+(1-v)*ph;
+  const px_=xp(state.E), py_=yp(metrics.integrity);
+  const rx=14+metrics.entropy*32, ry=10+metrics.entropy*22;
+
+  return (
+    <div style={{width:'100%',height:'100%',background:psx.bg,color:psx.ink,fontFamily:psx.sans,overflow:'hidden',display:'grid',gridTemplateRows:'auto 1fr'}}>
+      {/* masthead */}
+      <header style={{padding:'12px 24px 10px',borderBottom:`1px solid ${psx.ink}`,background:psx.paper,display:'flex',justifyContent:'space-between',alignItems:'baseline'}}>
+        <div>
+          <div style={{font:`10px ${psx.mono}`,color:psx.faint,letterSpacing:'0.18em'}}>VOL. 10 · ISSUE 0 · {new Date().toLocaleDateString('en-US',{month:'long',year:'numeric'}).toUpperCase()} · INTERNAL REVIEW</div>
+          <h1 style={{margin:'4px 0 0',font:`400 28px/1 ${psx.serif}`,letterSpacing:'-0.02em',color:psx.ink}}>Nerva <em>—</em> a decision integrity engine</h1>
+          <div style={{font:`italic 12.5px/1.3 ${psx.serif}`,color:psx.dim,marginTop:3}}>Phase-space evaluation · Bloch sphere kernel v10.0 · {metrics.validation.components_consistent?'✓ components consistent':'⚠ check components'}</div>
+        </div>
+        <div style={{textAlign:'right',font:`10px/1.5 ${psx.mono}`,color:psx.faint}}>
+          <div style={{color:psx.ink}}>SESSION 7F-2A91</div>
+          <div>nerva-bloch-v10 · {api.region}</div>
+          <div>{Math.round(api.latency)}ms · {api.uptime}%</div>
+          <div style={{color:psvc.COMMIT.fg}}>● {api.status}</div>
+        </div>
+      </header>
+
+      {/* 3-col body */}
+      <div style={{display:'grid',gridTemplateColumns:'260px 1fr 260px',minHeight:0,overflow:'hidden'}}>
+        {/* LEFT */}
+        <aside style={{padding:'14px 18px',borderRight:`1px solid ${psx.rule}`,overflow:'hidden',display:'flex',flexDirection:'column',minHeight:0}}>
+          <div style={{font:`9px ${psx.mono}`,color:psx.faint,letterSpacing:'0.18em',marginBottom:5}}>§ 1 — SCENARIO</div>
+          <textarea value={state.scenario} onChange={e=>update({scenario:e.target.value})} style={{background:'transparent',font:`12.5px/1.5 ${psx.serif}`,color:psx.ink,height:70,padding:0,marginBottom:6}}/>
+          <button onClick={()=>parseScenario(state.scenario)} disabled={parsing} style={{background:parsing?'transparent':c.bg,border:`1px solid ${c.fg}`,color:c.fg,font:`italic 12px ${psx.serif}`,padding:'5px 0',marginBottom:8}}>
+            {parsing?'parsing…':'⚡ parse with AI'}
+          </button>
+          <div style={{font:`9px ${psx.mono}`,color:psx.faint,letterSpacing:'0.18em',marginBottom:4}}>CASES IN CORPUS</div>
+          <div style={{display:'flex',flexDirection:'column',borderTop:`1px solid ${psx.rule}`}}>
+            {presets.map(p=>(
+              <button key={p.id} onClick={()=>applyPreset(p.id)} style={{background:state.activePreset===p.id?c.bg:'transparent',border:'none',borderBottom:`1px solid ${psx.rule}`,textAlign:'left',cursor:'pointer',padding:'5px 2px',color:psx.ink}}>
+                <span style={{font:`500 12.5px/1 ${psx.serif}`,color:state.activePreset===p.id?psx.accent:psx.ink}}>{p.name}</span>
+                <span style={{font:`9px ${psx.mono}`,color:psx.faint,marginLeft:6}}>{p.id.toUpperCase()}</span>
+              </button>
+            ))}
+          </div>
+          <div style={{font:`9px ${psx.mono}`,color:psx.faint,letterSpacing:'0.18em',margin:'10px 0 5px'}}>§ 2 — PARAMETERS</div>
+          {[['E','Urgency','emotional / pressure',state.E,v=>update({E:v})],['S','Strategy','plan coherence',state.S,v=>update({S:v})],['R','Risk','exposure to neg. outcomes',state.R,v=>update({R:v})],['Sp','Support','data confidence',state.Sp,v=>update({Sp:v})],['St','Stability','system health',state.St,v=>update({St:v})]].map(([sym,lbl,sub,val,set])=>(
+            <div key={sym} style={{display:'flex',flexDirection:'column',gap:2,padding:'5px 0',borderBottom:`1px solid ${psx.rule}`}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline'}}>
+                <span style={{font:`12.5px/1 ${psx.serif}`,color:psx.ink}}><em style={{color:psx.accent,marginRight:5}}>{sym}</em>{lbl}</span>
+                <span style={{font:`11px/1 ${psx.mono}`,color:psx.ink}}>{fmt(val,2)}</span>
+              </div>
+              <div style={{font:`italic 10.5px/1 ${psx.serif}`,color:psx.dim}}>{sub}</div>
+              <input type="range" min="0" max="1" step="0.01" value={val} onChange={e=>set(parseFloat(e.target.value))} style={{accentColor:psx.accent,width:'100%'}}/>
+            </div>
+          ))}
+        </aside>
+
+        {/* CENTER */}
+        <main style={{padding:'14px 20px',overflow:'hidden',display:'grid',gridTemplateRows:'auto 1fr auto',gap:10,minHeight:0}}>
+          {/* verdict callout */}
+          <div style={{display:'grid',gridTemplateColumns:'auto 1fr',gap:16,alignItems:'start',paddingBottom:10,borderBottom:`1px solid ${psx.rule}`}}>
+            <div style={{padding:'8px 16px',background:c.bg,border:`1px solid ${c.fg}`,minWidth:130,textAlign:'center'}}>
+              <div style={{font:`9px ${psx.mono}`,color:psx.faint,letterSpacing:'0.2em'}}>RESULT</div>
+              <div style={{font:`400 26px/1 ${psx.serif}`,color:c.fg,marginTop:3}}>{metrics.verdict.charAt(0)+metrics.verdict.slice(1).toLowerCase()}</div>
+              <div style={{font:`italic 10.5px ${psx.serif}`,color:psx.dim,marginTop:2}}>|r|={fmt(metrics.r,3)} · τ={fmt(metrics.tau,3)}</div>
+            </div>
+            <div style={{font:`italic 12.5px/1.55 ${psx.serif}`,color:psx.ink,columnCount:2,columnGap:20,textIndent:'1em'}}>
+              {metrics.reason} Bloch vector: ({fmt(metrics.r_x,4)}, {fmt(metrics.r_y,4)}, {fmt(metrics.r_z,4)}). Purity Tr(ρ²)={fmt(metrics.purity,4)} ∈ [0.5,1]. S(ρ)={fmt(metrics.entropy,4)}. Components consistent: {metrics.validation.components_consistent?'yes':'NO — check normalization'}.
+            </div>
+          </div>
+
+          {/* hero phase diagram */}
+          <figure style={{margin:0,display:'flex',flexDirection:'column',minHeight:0}}>
+            <div style={{flex:1,minHeight:0,position:'relative',border:`1px solid ${psx.rule}`,background:psx.paper}}>
+              <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet" style={{width:'100%',height:'100%',display:'block'}}>
+                {/* zones */}
+                <rect x={M.l} y={M.t} width={pw} height={ph*0.35} fill={psvc.COMMIT.fg} opacity="0.07"/>
+                <rect x={M.l} y={M.t+ph*0.35} width={pw*0.5} height={ph*0.30} fill={psvc.HOLD.fg} opacity="0.07"/>
+                <rect x={M.l+pw*0.5} y={M.t+ph*0.35} width={pw*0.5} height={ph*0.30} fill={psvc.ESCALATE.fg} opacity="0.07"/>
+                <rect x={M.l} y={M.t+ph*0.65} width={pw*0.5} height={ph*0.35} fill={psvc.ESCALATE.fg} opacity="0.07"/>
+                <rect x={M.l+pw*0.5} y={M.t+ph*0.65} width={pw*0.5} height={ph*0.35} fill={psvc.TOXIC.fg} opacity="0.09"/>
+                {/* τ line */}
+                <line x1={M.l} y1={yp(metrics.tau)} x2={M.l+pw} y2={yp(metrics.tau)} stroke={c.fg} strokeDasharray="4 3" strokeWidth="1" opacity="0.6"/>
+                <text x={M.l+pw-2} y={yp(metrics.tau)-4} textAnchor="end" style={{font:`9.5px ${psx.mono}`,fill:c.fg,opacity:0.7}}>τ={fmt(metrics.tau,3)}</text>
+                {/* zone labels */}
+                {[['COMMIT',0.5,0.18,psvc.COMMIT.fg],['HOLD',0.25,0.52,psvc.HOLD.fg],['ESCALATE',0.75,0.52,psvc.ESCALATE.fg],['ESCALATE',0.25,0.85,psvc.ESCALATE.fg],['TOXIC',0.75,0.85,psvc.TOXIC.fg]].map(([n,xi,yi,col])=>(
+                  <text key={n+xi} x={xp(xi)} y={yp(1-yi)} textAnchor="middle" style={{font:`italic 13px ${psx.serif}`,fill:col,opacity:0.7}}>{n}</text>
+                ))}
+                {/* grid */}
+                {[0,0.25,0.5,0.75,1].map(t=>(
+                  <g key={t}>
+                    <line x1={xp(t)} y1={M.t} x2={xp(t)} y2={M.t+ph} stroke={psx.rule} strokeDasharray="2 3"/>
+                    <line x1={M.l} y1={yp(t)} x2={M.l+pw} y2={yp(t)} stroke={psx.rule} strokeDasharray="2 3"/>
+                    <text x={xp(t)} y={M.t+ph+16} textAnchor="middle" style={{font:`10px ${psx.mono}`,fill:psx.faint}}>{t.toFixed(2)}</text>
+                    <text x={M.l-6} y={yp(t)+3} textAnchor="end" style={{font:`10px ${psx.mono}`,fill:psx.faint}}>{t.toFixed(2)}</text>
+                  </g>
+                ))}
+                {/* axes */}
+                <line x1={M.l} y1={M.t} x2={M.l} y2={M.t+ph} stroke={psx.ink} strokeWidth="1.2"/>
+                <line x1={M.l} y1={M.t+ph} x2={M.l+pw} y2={M.t+ph} stroke={psx.ink} strokeWidth="1.2"/>
+                <line x1={M.l} y1={yp(0.35)} x2={M.l+pw} y2={yp(0.35)} stroke={psx.ruleHi}/>
+                <line x1={M.l} y1={yp(0.65)} x2={M.l+pw} y2={yp(0.65)} stroke={psx.ruleHi}/>
+                <line x1={xp(0.5)} y1={yp(0.65)} x2={xp(0.5)} y2={M.t+ph} stroke={psx.ruleHi}/>
+                <text x={M.l+pw/2} y={H-6} textAnchor="middle" style={{font:`italic 11.5px ${psx.serif}`,fill:psx.ink}}>Urgency  E</text>
+                <text x={13} y={M.t+ph/2} textAnchor="middle" transform={`rotate(-90 13 ${M.t+ph/2})`} style={{font:`italic 11.5px ${psx.serif}`,fill:psx.ink}}>Integrity</text>
+                {/* history trail */}
+                {history.map((h,i)=><circle key={i} cx={xp(h.E)} cy={yp(h.integrity)} r="2.5" fill={psvc[h.verdict]?.fg||psx.faint} opacity={0.2+i*0.08}/>)}
+                {history.length>0&&<polyline points={history.map(h=>`${xp(h.E)},${yp(h.integrity)}`).concat([`${px_},${py_}`]).join(' ')} fill="none" stroke={psx.faint} strokeWidth="0.8" strokeDasharray="3 3"/>}
+                {/* confidence ellipse */}
+                <ellipse cx={px_} cy={py_} rx={rx} ry={ry} fill="none" stroke={c.fg} strokeWidth="0.8" strokeDasharray="2 2" opacity="0.7"/>
+                <ellipse cx={px_} cy={py_} rx={rx*0.5} ry={ry*0.5} fill={c.fg} opacity="0.10"/>
+                {/* dot */}
+                <circle cx={px_} cy={py_} r="7" fill="none" stroke={c.fg} strokeWidth="1.5"/>
+                <circle cx={px_} cy={py_} r="3.5" fill={metrics.signal?c.fg:'none'} stroke={c.fg} strokeWidth="1"/>
+                <line x1={px_+6} y1={py_-6} x2={px_+30} y2={py_-20} stroke={c.fg} strokeWidth="0.8"/>
+                <text x={px_+34} y={py_-22} style={{font:`italic 11.5px ${psx.serif}`,fill:c.fg}}>{metrics.verdict.toLowerCase()} · |r|={fmt(metrics.r,2)}</text>
+              </svg>
+            </div>
+            <figcaption style={{marginTop:5,font:`11px/1.45 ${psx.sans}`,color:psx.dim}}>
+              <span style={{font:`600 10.5px ${psx.mono}`,color:psx.ink,marginRight:5}}>FIG. 1</span>
+              Phase diagram. τ={fmt(metrics.tau,3)} (dashed line). Dashed envelope = entropy-scaled confidence. Trail = last {history.length} decisions.
+            </figcaption>
+          </figure>
+
+          {/* bottom metrics row */}
+          <div style={{display:'grid',gridTemplateColumns:'repeat(6,1fr)',borderTop:`1px solid ${psx.ink}`,paddingTop:7,gap:12}}>
+            {[[fmt(metrics.r,3),'|r|','signal magnitude',c.fg],[fmt(metrics.tau,3),'τ',state.tauMode+' threshold',null],[fmt(metrics.EV,3),'EV','expected value',metrics.EV>0?psvc.COMMIT.fg:psvc.TOXIC.fg],[Math.round(metrics.theta)+'°','θ','integrity angle',null],[Math.round(metrics.phi)+'°','Φ','coherence angle',null],[fmt(metrics.reversibility,2),'ρ','reversibility',null]].map(([v,l,sub,col])=>(
+              <div key={l} style={{borderBottom:`1px solid ${psx.rule}`,paddingBottom:5}}>
+                <div style={{font:`9px ${psx.mono}`,color:psx.faint,letterSpacing:'0.14em',marginBottom:2}}>{l}</div>
+                <div style={{font:`300 22px/1 ${psx.serif}`,color:col||psx.ink}}>{v}</div>
+                <div style={{font:`italic 10px ${psx.serif}`,color:psx.dim,marginTop:2}}>{sub}</div>
+              </div>
+            ))}
+          </div>
+        </main>
+
+        {/* RIGHT */}
+        <aside style={{padding:'14px 18px',borderLeft:`1px solid ${psx.rule}`,overflow:'hidden',display:'flex',flexDirection:'column',minHeight:0}}>
+          <div style={{font:`9px ${psx.mono}`,color:psx.faint,letterSpacing:'0.18em',marginBottom:5}}>§ 3 — BLOCH VECTOR</div>
+          {[['r_x',metrics.r_x,'intent axis'],[' r_y',metrics.r_y,'risk axis'],['r_z',metrics.r_z,'integrity axis'],['|r|',metrics.r,'signal magnitude']].map(([l,v,sub])=>(
+            <div key={l} style={{display:'flex',alignItems:'center',gap:8,padding:'4px 0',borderBottom:`1px solid ${psx.rule}`}}>
+              <div style={{flex:1}}><div style={{font:`12px ${psx.mono}`,color:psx.ink}}>{l}</div><div style={{font:`italic 10px ${psx.serif}`,color:psx.dim}}>{sub}</div></div>
+              <div style={{font:`12px ${psx.mono}`,color:psx.ink}}>{fmt(v,4)}</div>
+            </div>
+          ))}
+          <div style={{font:`9px ${psx.mono}`,color:psx.faint,letterSpacing:'0.18em',margin:'10px 0 5px'}}>§ 4 — DERIVED</div>
+          {[['Purity','Tr(ρ²)=½(1+|r|²)',metrics.purity],['Entropy','S(ρ)=−λ₊log₂λ₊−λ₋log₂λ₋',metrics.entropy],['Coherence','√(r_x²+r_y²)',metrics.coherence],['Integrity','Sp×St',metrics.integrity]].map(([l,sub,v])=>(
+            <div key={l} style={{display:'flex',alignItems:'center',gap:6,padding:'4px 0',borderBottom:`1px solid ${psx.rule}`}}>
+              <div style={{flex:1}}><div style={{font:`12.5px ${psx.serif}`,color:psx.ink}}>{l}</div><div style={{font:`9.5px ${psx.mono}`,color:psx.faint}}>{sub}</div></div>
+              <div style={{width:60,height:4,background:psx.rule,position:'relative'}}><div style={{position:'absolute',left:0,top:0,bottom:0,width:`${v*100}%`,background:psx.ink}}/></div>
+              <div style={{width:30,textAlign:'right',font:`11px ${psx.mono}`,color:psx.ink}}>{fmt(v,2)}</div>
+            </div>
+          ))}
+          <div style={{font:`9px ${psx.mono}`,color:psx.faint,letterSpacing:'0.18em',margin:'10px 0 5px'}}>§ 5 — SENSITIVITY</div>
+          <div style={{font:`italic 10.5px ${psx.serif}`,color:psx.dim,marginBottom:5}}>Perturb each ±0.10, hold others fixed.</div>
+          {sensitivity.map(s=>(
+            <div key={s.key} style={{display:'grid',gridTemplateColumns:'20px 1fr 1fr',alignItems:'center',padding:'3px 0',borderBottom:`1px dotted ${psx.rule}`,font:`12px ${psx.serif}`}}>
+              <em style={{color:psx.accent}}>{s.key}</em>
+              <span style={{color:s.flipDn?psvc[s.flipDn].fg:psx.faint,fontStyle:s.flipDn?'normal':'italic'}}>{s.flipDn?`↓ ${s.flipDn.toLowerCase()}`:'no flip ↓'}</span>
+              <span style={{color:s.flipUp?psvc[s.flipUp].fg:psx.faint,fontStyle:s.flipUp?'normal':'italic',textAlign:'right'}}>{s.flipUp?`${s.flipUp.toLowerCase()} ↑`:'↑ no flip'}</span>
+            </div>
+          ))}
+          <div style={{font:`9px ${psx.mono}`,color:psx.faint,letterSpacing:'0.18em',margin:'10px 0 5px'}}>§ 6 — VALIDATION</div>
+          {Object.entries(metrics.validation).map(([k,v])=>(
+            <div key={k} style={{font:`10px/1.6 ${psx.mono}`,color:v?psvc.COMMIT.fg:psvc.TOXIC.fg}}>{v?'✓':'✗'} {k.replace(/_/g,' ')}</div>
+          ))}
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// VIEW D — BRUTALIST
+// ═══════════════════════════════════════════════════════════
+function BrutalistView() {
+  const {state,update,applyPreset,parseScenario,parsing,metrics,sensitivity,factors,history,logs,api,presets} = useNerva();
+  const brx={bg:'#f4f3ef',paper:'#ffffff',ink:'#0a0a0a',dim:'rgba(10,10,10,0.55)',faint:'rgba(10,10,10,0.30)',rule:'#0a0a0a',ruleL:'rgba(10,10,10,0.16)',signal:'#d92e16',mono:'"JetBrains Mono","IBM Plex Mono",monospace'};
+  const isVeto=metrics.verdict==='TOXIC'||metrics.verdict==='ESCALATE';
+  const vCol=isVeto?brx.signal:brx.ink;
+  const vMark={COMMIT:'●',HOLD:'◑',WAIT:'○',ESCALATE:'△',TOXIC:'×'}[metrics.verdict];
+  const bbar=(v,w=28)=>{const f=Math.round(v*w);return <span style={{fontFamily:brx.mono,fontSize:12,letterSpacing:'-0.05em',color:brx.ink}}>{'█'.repeat(f)}{'·'.repeat(w-f)}</span>;};
+
+  const sec=(no,title,children,style={})=>(
+    <section style={{display:'flex',flexDirection:'column',minWidth:0,minHeight:0,...style}}>
+      <div style={{display:'flex',alignItems:'baseline',gap:8,padding:'3px 0 5px',borderBottom:`2px solid ${brx.ink}`}}>
+        <span style={{font:`700 12px/1 ${brx.mono}`,color:brx.ink}}>§{String(no).padStart(2,'0')}</span>
+        <span style={{font:`700 11px/1 ${brx.mono}`,color:brx.ink,letterSpacing:'0.16em'}}>{title}</span>
+      </div>
+      <div style={{paddingTop:8,flex:1,minHeight:0,display:'flex',flexDirection:'column'}}>{children}</div>
+    </section>
+  );
+
+  return (
+    <div style={{width:'100%',height:'100%',background:brx.bg,color:brx.ink,fontFamily:brx.mono,overflow:'hidden',display:'grid',gridTemplateRows:'auto 1fr auto'}}>
+      {/* header slab */}
+      <header style={{background:brx.ink,color:brx.bg,padding:'7px 16px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+        <div style={{display:'flex',alignItems:'baseline',gap:14,fontSize:11,letterSpacing:'0.14em'}}>
+          <span style={{fontWeight:700,fontSize:14,letterSpacing:'0.32em'}}>NERVA</span>
+          <span style={{opacity:0.6}}>v10.0</span>
+          <span style={{opacity:0.4}}>·</span>
+          <span style={{opacity:0.8}}>BRUTALIST EDITION</span>
+          <span style={{opacity:0.4}}>·</span>
+          <span style={{opacity:0.6}}>BLOCH SPHERE KERNEL</span>
+        </div>
+        <div style={{display:'flex',gap:16,fontSize:11,letterSpacing:'0.1em',opacity:0.8}}>
+          <span>SES 7F-2A91</span><span>{api.region.toUpperCase()}</span><span>{Math.round(api.latency)}MS</span>
+        </div>
+      </header>
+
+      {/* 4-col body */}
+      <div style={{display:'grid',gridTemplateColumns:'250px 1fr 1fr 240px',minHeight:0,background:brx.bg,overflow:'hidden'}}>
+        {/* COL 1 */}
+        <div style={{padding:'12px 14px',borderRight:`1px solid ${brx.ink}`,overflow:'hidden',display:'flex',flexDirection:'column',gap:14,minHeight:0}}>
+          {sec(1,'SCENARIO',
+            <>
+              <textarea value={state.scenario} onChange={e=>update({scenario:e.target.value})} style={{background:brx.paper,color:brx.ink,border:`1px solid ${brx.ink}`,font:`11px/1.45 ${brx.mono}`,padding:5,height:75,marginBottom:6}}/>
+              <button onClick={()=>parseScenario(state.scenario)} disabled={parsing} style={{background:parsing?brx.bg:brx.ink,color:parsing?brx.ink:brx.bg,border:`2px solid ${brx.ink}`,font:`700 11px/1 ${brx.mono}`,letterSpacing:'0.1em',padding:'6px 0',marginBottom:8,width:'100%'}}>
+                {parsing?'PARSING…':'⚡ PARSE WITH AI'}
+              </button>
+              <div style={{font:`10px ${brx.mono}`,color:brx.dim,letterSpacing:'0.16em',marginBottom:3}}>CASE LIBRARY</div>
+              <div style={{display:'flex',flexDirection:'column',border:`1px solid ${brx.ink}`}}>
+                {presets.map((p,i)=>(
+                  <button key={p.id} onClick={()=>applyPreset(p.id)} style={{background:state.activePreset===p.id?brx.ink:brx.paper,color:state.activePreset===p.id?brx.bg:brx.ink,border:'none',borderTop:i>0?`1px solid ${brx.ink}`:'none',font:`700 11px/1 ${brx.mono}`,letterSpacing:'0.08em',padding:'5px 7px',cursor:'pointer',textAlign:'left',display:'flex',justifyContent:'space-between'}}>
+                    <span>{p.name.toUpperCase()}</span><span style={{opacity:0.5,fontWeight:400}}>{p.id}</span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+          {sec(2,'PARAMETERS',
+            <>
+              {[['E','URGENCY',state.E,v=>update({E:v})],['S','STRATEGY',state.S,v=>update({S:v})],['R','RISK',state.R,v=>update({R:v})],['Sp','SUPPORT',state.Sp,v=>update({Sp:v})],['St','STABILITY',state.St,v=>update({St:v})]].map(([sym,lbl,val,set])=>(
+                <div key={sym} style={{marginBottom:8}}>
+                  <div style={{display:'flex',justifyContent:'space-between'}}><span style={{font:`700 11px ${brx.mono}`,letterSpacing:'0.08em'}}>{sym} · {lbl}</span><span style={{font:`700 12px ${brx.mono}`}}>{fmt(val,2)}</span></div>
+                  <div>{bbar(val)}</div>
+                  <input type="range" min="0" max="1" step="0.01" value={val} onChange={e=>set(parseFloat(e.target.value))} style={{accentColor:brx.ink,color:brx.ink,width:'100%',height:2,marginTop:1}}/>
+                </div>
+              ))}
+              <div style={{marginTop:4}}>
+                <div style={{font:`700 11px ${brx.mono}`,letterSpacing:'0.08em',marginBottom:4}}>τ · THRESHOLD</div>
+                <div style={{display:'flex',border:`1px solid ${brx.ink}`}}>
+                  {['auto','manual'].map(m=><button key={m} onClick={()=>update({tauMode:m})} style={{flex:1,background:state.tauMode===m?brx.ink:brx.paper,color:state.tauMode===m?brx.bg:brx.ink,border:'none',font:`700 11px ${brx.mono}`,letterSpacing:'0.12em',padding:'4px 0',cursor:'pointer'}}>{m.toUpperCase()}</button>)}
+                </div>
+                {state.tauMode==='manual'?<><div style={{marginTop:4}}>{bbar(state.tauManual)}</div><input type="range" min="0.15" max="0.85" step="0.01" value={state.tauManual} onChange={e=>update({tauManual:parseFloat(e.target.value)})} style={{accentColor:brx.ink,color:brx.ink,width:'100%',marginTop:2}}/><div style={{font:`11px ${brx.mono}`,color:brx.dim}}>τ = {fmt(state.tauManual,3)}</div></>
+                :<div style={{marginTop:4,font:`10px/1.4 ${brx.mono}`,color:brx.dim}}>τ = 0.25+0.35·S(ρ)+0.25·R−0.15·rev<br/>= {fmt(metrics.tauAuto,4)}</div>}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* COL 2+3 — verdict hero */}
+        <div style={{gridColumn:'span 2',padding:'12px 20px',overflow:'hidden',display:'grid',gridTemplateRows:'auto auto 1fr auto',gap:12,minHeight:0,borderRight:`1px solid ${brx.ink}`}}>
+          {/* massive verdict */}
+          <div style={{display:'grid',gridTemplateColumns:'auto 1fr',gap:16,alignItems:'start'}}>
+            <div style={{border:`3px solid ${vCol}`,padding:'5px 14px 10px',textAlign:'left'}}>
+              <div style={{font:`700 10px ${brx.mono}`,letterSpacing:'0.18em',color:brx.dim}}>VERDICT N° 1</div>
+              <div style={{font:`900 72px/0.9 ${brx.mono}`,color:vCol,letterSpacing:'-0.04em',marginTop:2}}>{metrics.verdict}</div>
+              <div style={{font:`700 10px ${brx.mono}`,letterSpacing:'0.22em',color:vCol,marginTop:3}}>{vMark} {isVeto?'HARD VETO':metrics.verdict==='COMMIT'?'PROCEED':metrics.verdict==='HOLD'?'RECHECK':metrics.verdict==='WAIT'?'INSUFFICIENT':'ROUTE HUMAN'}</div>
+            </div>
+            <div style={{paddingTop:2}}>
+              <div style={{font:`12.5px/1.55 ${brx.mono}`,color:brx.ink,textTransform:'uppercase',letterSpacing:'0.01em',marginBottom:10}}>{metrics.reason}</div>
+              <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',borderTop:`2px solid ${brx.ink}`,borderBottom:`2px solid ${brx.ink}`}}>
+                {[['|r|',fmt(metrics.r,3)],['τ',fmt(metrics.tau,3)],['EV',fmt(metrics.EV,3)],['Θ°',Math.round(metrics.theta)],['ρ',fmt(metrics.reversibility,2)]].map(([l,v],i,arr)=>(
+                  <div key={l} style={{padding:'5px 8px',borderRight:i<arr.length-1?`1px solid ${brx.ink}`:'none'}}>
+                    <div style={{font:`9px ${brx.mono}`,color:brx.dim,letterSpacing:'0.16em'}}>{l}</div>
+                    <div style={{font:`400 20px/1 ${brx.mono}`,color:brx.ink,marginTop:2}}>{v}</div>
+                  </div>
+                ))}
+              </div>
+              {/* validation strip */}
+              <div style={{display:'flex',gap:12,marginTop:6,font:`9.5px ${brx.mono}`}}>
+                {Object.entries(metrics.validation).map(([k,v])=>(
+                  <span key={k} style={{color:v?'#2a7a2a':brx.signal}}>{v?'✓':'✗'} {k.split('_')[0]}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {sec(3,'QUALITY',
+            <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',columnGap:20,rowGap:4}}>
+              {[['INTEGRITY',metrics.integrity],['COHERENCE',metrics.coherence],['PURITY',metrics.purity],['ENTROPY',metrics.entropy],['REVERSIBLE',metrics.reversibility],['EXP-VALUE',(metrics.EV+1)/2]].map(([l,v])=>(
+                <div key={l} style={{display:'grid',gridTemplateColumns:'88px 1fr 38px',gap:5,alignItems:'center'}}>
+                  <span style={{font:`700 10.5px ${brx.mono}`}}>{l}</span>
+                  <span>{bbar(v,18)}</span>
+                  <span style={{font:`12px ${brx.mono}`,textAlign:'right'}}>{fmt(v,2)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {sec(4,'DECISION SPACE',
+            <div style={{display:'grid',gridTemplateColumns:'1fr 180px',gap:14,flex:1,minHeight:0}}>
+              {/* custom brutalist phase map */}
+              <svg viewBox="0 0 380 260" preserveAspectRatio="xMidYMid meet" style={{width:'100%',height:'100%',display:'block'}}>
+                <defs><pattern id="brhatch" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke={brx.ink} strokeWidth="0.6"/></pattern></defs>
+                {[{x0:0,y0:0,w:380,h:91,n:'COMMIT'},{x0:0,y0:91,w:190,h:78,n:'HOLD'},{x0:190,y0:91,w:190,h:78,n:'ESC'},{x0:0,y0:169,w:190,h:91,n:'ESC'},{x0:190,y0:169,w:190,h:91,n:'TOXIC'}].map((z,i)=>(
+                  <g key={i}>
+                    <rect x={z.x0} y={z.y0} width={z.w} height={z.h} fill={i===4?'url(#brhatch)':brx.ink} opacity={i===4?0.15:0.04}/>
+                    <text x={z.x0+z.w/2} y={z.y0+z.h/2+4} textAnchor="middle" style={{font:`700 10px ${brx.mono}`,fill:brx.ink,letterSpacing:'0.18em',opacity:0.6}}>{z.n}</text>
+                  </g>
+                ))}
+                <rect x={0} y={0} width={380} height={260} fill="none" stroke={brx.ink} strokeWidth="1.5"/>
+                {[0.25,0.5,0.75].map(t=><g key={t}><line x1={t*380} y1={0} x2={t*380} y2={260} stroke={brx.ruleL}/><line x1={0} y1={t*260} x2={380} y2={t*260} stroke={brx.ruleL}/></g>)}
+                <line x1={0} y1={91} x2={380} y2={91} stroke={brx.ink} strokeWidth="1"/>
+                <line x1={0} y1={169} x2={380} y2={169} stroke={brx.ink} strokeWidth="1"/>
+                <line x1={190} y1={91} x2={190} y2={260} stroke={brx.ink} strokeWidth="1"/>
+                {/* τ line */}
+                <line x1={0} y1={(1-metrics.tau)*260} x2={380} y2={(1-metrics.tau)*260} stroke={isVeto?brx.signal:brx.ink} strokeDasharray="4 3" strokeWidth="1.2"/>
+                {/* history trail */}
+                {history.map((h,i)=><circle key={i} cx={h.E*380} cy={(1-h.integrity)*260} r="2" fill={brx.ink} opacity={0.3+i*0.08}/>)}
+                <polyline points={history.map(h=>`${h.E*380},${(1-h.integrity)*260}`).concat([`${state.E*380},${(1-metrics.integrity)*260}`]).join(' ')} fill="none" stroke={brx.ink} strokeWidth="0.7" strokeDasharray="3 2" opacity="0.5"/>
+                {/* current point */}
+                {(()=>{const px=state.E*380,py=(1-metrics.integrity)*260,col=isVeto?brx.signal:brx.ink;return(<><line x1={0} y1={py} x2={380} y2={py} stroke={col} strokeDasharray="2 3"/><line x1={px} y1={0} x2={px} y2={260} stroke={col} strokeDasharray="2 3"/><rect x={px-7} y={py-7} width="14" height="14" fill="none" stroke={col} strokeWidth="1.5"/><circle cx={px} cy={py} r="3" fill={col}/><text x={px+12} y={py-10} style={{font:`700 10.5px ${brx.mono}`,fill:col}}>({fmt(state.E,2)},{fmt(metrics.integrity,2)})</text></>);})()}
+                {[0,0.5,1].map(t=><g key={t}><text x={t*380} y={260+14} textAnchor="middle" style={{font:`9px ${brx.mono}`,fill:brx.dim}}>{t.toFixed(1)}</text><text x={-4} y={(1-t)*260+3} textAnchor="end" style={{font:`9px ${brx.mono}`,fill:brx.dim}}>{t.toFixed(1)}</text></g>)}
+              </svg>
+              <div style={{display:'flex',flexDirection:'column',justifyContent:'space-between'}}>
+                <div>
+                  <div style={{font:`700 10px ${brx.mono}`,letterSpacing:'0.16em',color:brx.dim,marginBottom:3}}>LEGEND</div>
+                  <div style={{font:`11px/1.7 ${brx.mono}`}}>X · URGENCY (E)<br/>Y · INTEGRITY<br/>□ · CURRENT<br/>· · HISTORY ({history.length})<br/>— · τ threshold</div>
+                </div>
+                <div>
+                  <div style={{font:`700 10px ${brx.mono}`,letterSpacing:'0.16em',color:brx.dim,marginBottom:3}}>BLOCH r</div>
+                  <div style={{font:`11px/1.5 ${brx.mono}`}}>x {fmt(metrics.r_x,4)}<br/>y {fmt(metrics.r_y,4)}<br/>z {fmt(metrics.r_z,4)}<br/>|r| {fmt(metrics.r,4)}</div>
+                </div>
+                <div>
+                  <div style={{font:`700 10px ${brx.mono}`,letterSpacing:'0.16em',color:brx.dim,marginBottom:3}}>TO COMMIT</div>
+                  <div style={{font:`11px/1.5 ${brx.mono}`,color:brx.dim}}>
+                    {metrics.integrity>=0.6&&metrics.EV>0.1?'already cleared':`+${fmt(Math.max(0,0.6-metrics.integrity),2)} integrity`}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* COL 4 */}
+        <div style={{padding:'12px 14px',overflow:'hidden',display:'flex',flexDirection:'column',gap:14,minHeight:0}}>
+          {sec(5,'FACTORS',
+            factors.map(f=>{
+              const pos=f.weight>=0, mag=Math.min(9,Math.round(Math.abs(f.weight)*(9/0.3)));
+              const bar3=pos?'·'.repeat(9)+'+'+'█'.repeat(mag)+'·'.repeat(9-mag):'·'.repeat(9-mag)+'█'.repeat(mag)+'-'+'·'.repeat(9);
+              return (
+                <div key={f.key} style={{display:'grid',gridTemplateColumns:'62px 1fr 40px',gap:3,alignItems:'center',font:`10.5px/1.5 ${brx.mono}`}}>
+                  <span style={{fontWeight:700}}>{f.label.toUpperCase().slice(0,7)}</span>
+                  <span style={{color:pos?brx.ink:brx.signal,letterSpacing:'-0.06em'}}>{bar3}</span>
+                  <span style={{textAlign:'right',color:pos?brx.ink:brx.signal}}>{pos?'+':''}{fmt(f.weight,2)}</span>
+                </div>
+              );
+            })
+          )}
+          {sec(6,'SENSITIVITY',
+            <>
+              <div style={{font:`10px/1 ${brx.mono}`,color:brx.dim,marginBottom:4}}>δ = ±0.10 · what flips</div>
+              {sensitivity.map(s=>(
+                <div key={s.key} style={{display:'grid',gridTemplateColumns:'20px 1fr 1fr',alignItems:'center',font:`10.5px/1.5 ${brx.mono}`}}>
+                  <span style={{fontWeight:700}}>{s.key}</span>
+                  <span style={{color:s.flipDn?brx.signal:brx.dim}}>{s.flipDn?`◀ ${s.flipDn.slice(0,4)}`:'— stable'}</span>
+                  <span style={{color:s.flipUp?brx.signal:brx.dim,textAlign:'right'}}>{s.flipUp?`${s.flipUp.slice(0,4)} ▶`:'stable —'}</span>
+                </div>
+              ))}
+            </>
+          )}
+          {sec(7,'LOG',
+            <div style={{display:'flex',flexDirection:'column',font:`10px/1.45 ${brx.mono}`,color:brx.dim,overflow:'hidden'}}>
+              {logs.map((l,i)=>{
+                const sc=l.sev==='E'?brx.signal:l.sev==='W'?'#a07010':brx.dim;
+                return <div key={i} style={{display:'grid',gridTemplateColumns:'10px 44px 1fr',gap:4}}><span style={{color:sc}}>{l.sev}</span><span style={{color:brx.ink}}>{l.src}</span><span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{l.msg}</span></div>;
+              })}
+            </div>
+          )}
+          {sec(8,'HISTORY',
+            <div style={{display:'flex',flexDirection:'column',font:`10.5px/1.5 ${brx.mono}`}}>
+              {history.slice().reverse().map((h,i)=>{
+                const isBad=h.verdict==='TOXIC'||h.verdict==='ESCALATE';
+                const mins=Math.round((Date.now()-h.t)/60000);
+                return (
+                  <div key={i} style={{display:'grid',gridTemplateColumns:'28px 70px 36px 1fr',gap:5,borderBottom:`1px solid ${brx.ruleL}`,padding:'2px 0'}}>
+                    <span style={{color:brx.dim}}>{mins}m</span>
+                    <span style={{fontWeight:700}}>{h.label.slice(0,8)}</span>
+                    <span style={{color:brx.dim,textAlign:'right'}}>{fmt(h.r,2)}</span>
+                    <span style={{color:isBad?brx.signal:brx.ink,fontWeight:700,textAlign:'right'}}>{h.verdict}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* footer slab */}
+      <div style={{background:brx.ink,color:brx.bg,padding:'5px 16px',display:'flex',justifyContent:'space-between',font:`700 10px ${brx.mono}`,letterSpacing:'0.14em'}}>
+        <span>NERVA · BLOCH SPHERE KERNEL · v10.0 · AMDG</span>
+        <span>● LIVE · {metrics.verdict} · |r|={fmt(metrics.r,3)} · τ={fmt(metrics.tau,3)} · ρ={fmt(metrics.purity,4)}</span>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// ROOT + NAV CONTROLLER
+// ═══════════════════════════════════════════════════════════
+const VIEWS = {
+  cockpit:   CockpitView,
+  bloomberg: BloombergView,
+  phase:     PhaseSpaceView,
+  brutalist: BrutalistView,
+};
+
+function App() {
+  const [view, setView] = useState('cockpit');
+  useEffect(() => {
+    document.querySelectorAll('.nav-tab').forEach(t => {
+      t.addEventListener('click', () => {
+        setView(t.dataset.view);
+        document.querySelectorAll('.nav-tab').forEach(x=>x.classList.remove('active'));
+        t.classList.add('active');
+      });
+    });
+  }, []);
+  const View = VIEWS[view];
+  return (
+    <NervaProvider>
+      <div style={{width:'100%',height:'100%'}}>
+        <View/>
+      </div>
+    </NervaProvider>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('view-root')).render(<App/>);
+</script>
 </body>
 </html>
