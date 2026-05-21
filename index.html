@@ -3,1074 +3,520 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>NERVA v10.0 · Decision Integrity Engine</title>
+<title>Plumb · The three-layer buyside audit · running on NERVA v10</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700;800&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=Newsreader:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&display=swap"/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&display=swap"/>
 <style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;overflow:hidden;background:#000;color:#d8dde6;font-family:'IBM Plex Sans',system-ui,sans-serif}
-#shell{display:grid;grid-template-rows:38px 1fr;height:100vh}
-#nav{background:#040608;border-bottom:1px solid rgba(255,255,255,0.07);display:flex;align-items:center;padding:0 14px;gap:2px;z-index:100;flex-shrink:0;overflow-x:auto}
-.nav-brand{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:800;letter-spacing:0.3em;color:#4cc9f0;margin-right:14px;flex-shrink:0}
-.nav-ver{font-family:'JetBrains Mono',monospace;font-size:9px;color:rgba(255,255,255,0.2);letter-spacing:0.1em;margin-right:10px;flex-shrink:0}
-.nav-sep{width:1px;height:16px;background:rgba(255,255,255,0.08);margin:0 6px;flex-shrink:0}
-.nav-tab{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.1em;padding:0 12px;height:38px;display:flex;align-items:center;cursor:pointer;border:none;background:transparent;color:rgba(255,255,255,0.3);border-bottom:2px solid transparent;transition:all 0.15s;flex-shrink:0;white-space:nowrap}
-.nav-tab:hover{color:rgba(255,255,255,0.65)}
-.nav-tab.active{color:#4cc9f0;border-bottom-color:#4cc9f0}
-.nav-tab.about-tab.active{color:#f5b942;border-bottom-color:#f5b942}
-.nav-tab.api-tab.active{color:#3ddc97;border-bottom-color:#3ddc97}
-.nav-right{margin-left:auto;display:flex;align-items:center;gap:14px;font-family:'JetBrains Mono',monospace;font-size:9.5px;color:rgba(255,255,255,0.22);letter-spacing:0.08em;flex-shrink:0;padding-left:10px}
-.nav-live{color:#3ddc97;display:flex;align-items:center;gap:5px}
-.nav-live::before{content:'';width:5px;height:5px;border-radius:50%;background:#3ddc97;animation:pdot 2s infinite}
-@keyframes pdot{0%,100%{opacity:1}50%{opacity:0.3}}
-#view-root{min-height:0;height:100%;width:100%;overflow:hidden}
-input[type=range]{-webkit-appearance:none;appearance:none;background:transparent;cursor:pointer;width:100%}
-input[type=range]::-webkit-slider-runnable-track{height:2px;background:rgba(255,255,255,0.1);border-radius:0}
-input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;height:15px;border-radius:0;background:currentColor;margin-top:-6.5px}
-input[type=range]::-moz-range-track{height:2px;background:rgba(255,255,255,0.1)}
-input[type=range]::-moz-range-thumb{width:11px;height:15px;border:none;border-radius:0;background:currentColor}
-textarea{resize:none;outline:none;border:none}
-button{cursor:pointer;font-family:inherit}
-::selection{background:#4cc9f0;color:#000}
-/* About + API page styles */
-.prose-page{width:100%;height:100%;overflow-y:auto;background:#080b10}
-.prose-wrap{max-width:860px;margin:0 auto;padding:48px 32px 80px}
-.prose-h1{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;letter-spacing:0.28em;color:#f5b942;text-transform:uppercase;margin-bottom:6px}
-.prose-title{font-size:28px;font-weight:300;color:#e8edf4;letter-spacing:-0.01em;margin-bottom:8px;line-height:1.2}
-.prose-sub{font-size:13px;color:rgba(216,221,230,0.5);margin-bottom:40px;font-style:italic}
-.prose-section{margin-bottom:40px}
-.prose-h2{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:0.22em;color:rgba(216,221,230,0.4);text-transform:uppercase;margin-bottom:14px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.06)}
-.prose-body{font-size:14px;line-height:1.75;color:rgba(216,221,230,0.75);margin-bottom:12px}
-.prose-body strong{color:#e8edf4;font-weight:600}
-.prose-code{background:#0f1419;border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:16px 20px;font-family:'JetBrains Mono',monospace;font-size:11.5px;line-height:1.7;color:#b8d4f0;margin:12px 0;overflow-x:auto;white-space:pre}
-.prose-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:12px 0}
-.prose-card{background:#0f1419;border:1px solid rgba(255,255,255,0.06);border-radius:6px;padding:16px}
-.prose-card-title{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:0.16em;color:#4cc9f0;margin-bottom:6px}
-.prose-card-body{font-size:13px;color:rgba(216,221,230,0.6);line-height:1.55}
-.prose-formula{background:#0a0e14;border-left:3px solid #4cc9f0;padding:12px 16px;font-family:'JetBrains Mono',monospace;font-size:12px;color:#b8d4f0;margin:12px 0;line-height:1.8}
-.prose-warn{background:rgba(255,140,66,0.08);border:1px solid rgba(255,140,66,0.25);border-radius:6px;padding:14px 16px;font-size:13px;color:rgba(255,200,150,0.85);margin:12px 0}
-.prose-badge{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:0.14em;padding:3px 8px;border-radius:3px;margin-right:6px}
-.live-val{font-family:'JetBrains Mono',monospace;color:#3ddc97;font-size:12px}
-.val-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:12px 0}
-.val-box{background:#0f1419;border:1px solid rgba(255,255,255,0.06);border-radius:6px;padding:12px;text-align:center}
-.val-box-label{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.16em;color:rgba(216,221,230,0.35);margin-bottom:4px}
-.val-box-value{font-family:'JetBrains Mono',monospace;font-size:18px;color:#4cc9f0}
+html,body,#root{margin:0;padding:0;min-height:100%;width:100%;background:#f6f2ea;font-family:'IBM Plex Sans',system-ui,sans-serif}
+body{color:#15110b}
+input[type=range]{-webkit-appearance:none;appearance:none;background:transparent}
+input[type=range]::-webkit-slider-runnable-track{height:3px;background:rgba(21,17,11,.15);border-radius:0}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:11px;height:14px;border-radius:0;background:#15110b;margin-top:-5.5px;cursor:pointer}
+input[type=range]::-moz-range-track{height:3px;background:rgba(21,17,11,.15)}
+input[type=range]::-moz-range-thumb{width:11px;height:14px;border:none;border-radius:0;background:#15110b;cursor:pointer}
+button{font-family:inherit}
+input,textarea{font-family:inherit}
+::selection{background:#15110b;color:#f6f2ea}
+*::-webkit-scrollbar{width:4px;height:4px}
+*::-webkit-scrollbar-thumb{background:rgba(21,17,11,.18)}
 </style>
 </head>
 <body>
-<div id="shell">
-  <div id="nav">
-    <div class="nav-brand">NERVA</div>
-    <div class="nav-ver">v10.0</div>
-    <div class="nav-sep"></div>
-    <button class="nav-tab active" data-view="cockpit">A · COCKPIT</button>
-    <button class="nav-tab" data-view="bloomberg">B · TERMINAL</button>
-    <button class="nav-tab" data-view="phase">C · PHASE SPACE</button>
-    <button class="nav-tab" data-view="brutalist">D · BRUTALIST</button>
-    <div class="nav-sep"></div>
-    <button class="nav-tab about-tab" data-view="about">ABOUT</button>
-    <button class="nav-tab api-tab" data-view="api">API</button>
-    <div class="nav-sep"></div>
-    <a href="/plumb.html" target="_blank" style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.1em;padding:0 12px;height:38px;display:flex;align-items:center;text-decoration:none;color:rgba(255,255,255,0.3);border-bottom:2px solid transparent;flex-shrink:0;white-space:nowrap;" onmouseover="this.style.color='#3ddc97';this.style.borderBottomColor='#3ddc97'" onmouseout="this.style.color='rgba(255,255,255,0.3)';this.style.borderBottomColor='transparent'">PLUMB ↗</a>
-    <div class="nav-right">
-      <span id="nav-verdict" style="letter-spacing:0.14em;font-weight:600">—</span>
-      <span id="nav-r">|r|=—</span>
-      <span id="nav-tau">τ=—</span>
-      <div class="nav-live">LIVE</div>
-    </div>
-  </div>
-  <div id="view-root"></div>
-</div>
+<div id="root"></div>
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin></script>
 <script type="text/babel" data-presets="env,react">
-const {createContext,useContext,useState,useMemo,useCallback,useEffect,useRef} = React;
-const clamp=(v,lo=0,hi=1)=>Math.max(lo,Math.min(hi,v));
-const fmt=(n,d=2)=>(n==null||isNaN(n))?'—':Number(n).toFixed(d);
+// ── REACT HOOKS ───────────────────────────────────────────
+const {
+  createContext, useContext, useState, useMemo,
+  useCallback, useEffect, useRef, useReducer
+} = React;
 
-// ── REAL BLOCH SPHERE KERNEL (v8.3.2) ────────────────────
-function vonNeumannEntropy(r){
-  if(r>=0.9999)return 0;if(r<=0.0001)return 1;
-  const lp=(1+r)/2,lm=(1-r)/2;
-  return -lp*Math.log2(lp)-lm*Math.log2(lm);
+// ── NERVA BLOCH SPHERE KERNEL v8.3.2 ─────────────────────
+const clamp = (v, lo=0, hi=1) => Math.max(lo, Math.min(hi, v));
+const fmt = (n, d=2) => (n==null||isNaN(n)) ? '—' : Number(n).toFixed(d);
+
+function vonNeumannEntropy(r) {
+  if (r >= 0.9999) return 0;
+  if (r <= 0.0001) return 1;
+  const lp = (1+r)/2, lm = (1-r)/2;
+  return -lp*Math.log2(lp) - lm*Math.log2(lm);
 }
-function computeMetrics(state){
-  const{E,S,R,Sp,St,tauMode,tauManual}=state;
-  const r_max=Math.sqrt(3);
-  const r_x=(E+S)/2/r_max, r_y=R/r_max, r_z=(Sp*St)/r_max;
-  const r=Math.sqrt(r_x*r_x+r_y*r_y+r_z*r_z);
-  const theta=r>0?Math.acos(clamp(r_z/r,-1,1))*(180/Math.PI):0;
-  const phi=Math.atan2(r_y,r_x)*(180/Math.PI);
-  const entropy=vonNeumannEntropy(r);
-  const purity=0.5*(1+r*r);
-  const coherence=Math.sqrt(r_x*r_x+r_y*r_y);
-  const integrity=Sp*St;
-  const reversibility=clamp((Sp+St)/2);
-  const EV=Sp-R;
-  const tauAuto=clamp(0.25+0.35*entropy+0.25*R-0.15*reversibility,0.15,0.85);
-  const tau=tauMode==='manual'?clamp(tauManual,0.15,0.85):tauAuto;
-  const signal=r>=tau;
-  const oneWayDoor=reversibility<0.4;
-  const validation={
-    bloch_magnitude_valid:r<=1.0001,
-    purity_range_valid:purity>=0.4999&&purity<=1.0001,
-    entropy_range_valid:entropy>=0&&entropy<=1.0001,
-    components_consistent:Math.abs(r-Math.sqrt(r_x*r_x+r_y*r_y+r_z*r_z))<0.0001
+
+function computeMetrics(state) {
+  const {E, S, R, Sp, St, tauMode, tauManual} = state;
+  const r_max = Math.sqrt(3);
+  const r_x = (E+S)/2/r_max, r_y = R/r_max, r_z = (Sp*St)/r_max;
+  const r = Math.sqrt(r_x*r_x + r_y*r_y + r_z*r_z);
+  const theta = r > 0 ? Math.acos(clamp(r_z/r,-1,1))*(180/Math.PI) : 0;
+  const phi = Math.atan2(r_y, r_x)*(180/Math.PI);
+  const entropy = vonNeumannEntropy(r);
+  const purity = 0.5*(1 + r*r);
+  const coherence = Math.sqrt(r_x*r_x + r_y*r_y);
+  const integrity = Sp*St;
+  const reversibility = clamp((Sp+St)/2);
+  const EV = Sp - R;
+  const tauAuto = clamp(0.25 + 0.35*entropy + 0.25*R - 0.15*reversibility, 0.15, 0.85);
+  const tau = tauMode === 'manual' ? clamp(tauManual, 0.15, 0.85) : tauAuto;
+  const signal = r >= tau;
+  const oneWayDoor = reversibility < 0.4;
+  const validation = {
+    bloch_magnitude_valid: r <= 1.0001,
+    purity_range_valid: purity >= 0.4999 && purity <= 1.0001,
+    entropy_range_valid: entropy >= 0 && entropy <= 1.0001,
+    components_consistent: Math.abs(r - Math.sqrt(r_x*r_x+r_y*r_y+r_z*r_z)) < 0.0001
   };
-  let verdict,reason;
-  if(!signal){
-    if(E>=0.75&&oneWayDoor){verdict='ESCALATE';reason='[EMERGENCY OVERRIDE] High urgency + irreversible. Cannot wait — routing to human immediately.';}
-    else{verdict='WAIT';reason=`Insufficient signal. |r|=${fmt(r,3)} < τ=${fmt(tau,3)}. Gather more data.`;}
-  } else if(integrity<0.22||(R>0.75&&integrity<0.35)){
-    verdict='TOXIC';reason=`Hard veto. Integrity=${fmt(integrity,2)}, Risk=${fmt(R,2)}. Autonomous action prohibited.`;
-  } else if(oneWayDoor&&integrity<0.55){
-    verdict='ESCALATE';reason=`One-Way Brake. Irreversible (rev=${fmt(reversibility,2)}) with weak foundation (I=${fmt(integrity,2)}).`;
-  } else if(EV<0){
-    verdict=integrity>=0.4?'HOLD':'ESCALATE';
-    reason=`EV Block. Negative expected value (EV=${fmt(EV,2)}) suppresses commit.`;
-  } else if(integrity>=0.6&&EV>0.1){
-    verdict='COMMIT';reason=`Strong foundation (I=${fmt(integrity,2)}), positive EV (${fmt(EV,2)}). Proceed with monitoring.`;
-  } else if(integrity>=0.4){
-    verdict='HOLD';reason=`Medium foundation (I=${fmt(integrity,2)}). EV=${fmt(EV,2)}. Recheck in next window.`;
+  let verdict, reason;
+  if (!signal) {
+    if (E >= 0.75 && oneWayDoor) { verdict='ESCALATE'; reason='[EMERGENCY OVERRIDE] High urgency + irreversible. Cannot wait.'; }
+    else { verdict='WAIT'; reason=`Insufficient signal. |r|=${fmt(r,3)} < τ=${fmt(tau,3)}.`; }
+  } else if (integrity < 0.22 || (R > 0.75 && integrity < 0.35)) {
+    verdict='TOXIC'; reason=`Hard veto. Integrity=${fmt(integrity,2)}, Risk=${fmt(R,2)}.`;
+  } else if (oneWayDoor && integrity < 0.55) {
+    verdict='ESCALATE'; reason=`One-Way Brake. Irreversible (rev=${fmt(reversibility,2)}) with weak foundation (I=${fmt(integrity,2)}).`;
+  } else if (EV < 0) {
+    verdict = integrity >= 0.4 ? 'HOLD' : 'ESCALATE';
+    reason = `EV Block. Negative expected value (EV=${fmt(EV,2)}).`;
+  } else if (integrity >= 0.6 && EV > 0.1) {
+    verdict='COMMIT'; reason=`Strong foundation (I=${fmt(integrity,2)}), positive EV (${fmt(EV,2)}). Proceed.`;
+  } else if (integrity >= 0.4) {
+    verdict='HOLD'; reason=`Medium foundation (I=${fmt(integrity,2)}). EV=${fmt(EV,2)}. Recheck.`;
   } else {
-    verdict='ESCALATE';reason=`Signal cleared but integrity (${fmt(integrity,2)}) below autonomous-act floor. Route to human.`;
+    verdict='ESCALATE'; reason=`Signal cleared but integrity (${fmt(integrity,2)}) below floor.`;
   }
-  return{r,r_x,r_y,r_z,theta,phi,entropy,purity,coherence,integrity,reversibility,EV,tau,tauAuto,signal,oneWayDoor,verdict,reason,validation};
+  return { r, r_x, r_y, r_z, theta, phi, entropy, purity, coherence, integrity, reversibility, EV, tau, tauAuto, signal, oneWayDoor, verdict, reason, validation };
 }
 
-const PRESETS=[
-  {id:'drone',name:'Drone ROE',subtitle:'Uncertain intel · civilian zone',desc:'Autonomous strike drone identifies target matching ROE profile at 91% confidence. Two civilians within 30m radius. Intel age: 4 minutes. Comms with ground partially degraded.',state:{E:0.74,S:0.61,R:0.78,Sp:0.42,St:0.46}},
-  {id:'hft',name:'HFT Trade',subtitle:'Volatile market',desc:'Strategy detects 47bp dislocation in cross-listed equity pair. Volume regime shifted in last 8s. Risk budget 62% consumed today. Reversibility window: 90 seconds.',state:{E:0.81,S:0.92,R:0.39,Sp:0.78,St:0.61}},
-  {id:'av',name:'AV Lane',subtitle:'Pedestrian near',desc:'L4 vehicle, 38mph, lane-change opportunity to bypass stalled truck. Pedestrian on adjacent sidewalk, no indication of crossing. Sensor confidence 0.94.',state:{E:0.52,S:0.83,R:0.31,Sp:0.86,St:0.74}},
-  {id:'surgical',name:'Surgical',subtitle:'Patient anomaly',desc:'Robotic surgical assist detects unexpected vascular structure 4mm off planned trajectory. Continuing has 0.12 complication risk. Pause adds 90s.',state:{E:0.68,S:0.71,R:0.66,Sp:0.58,St:0.55}},
-  {id:'ad',name:'Ad Buy',subtitle:'AI-owned process',desc:'Agency partner has automated the ad-buy validity step. New offering only dictates buy validity; rest of process is AI-owned. Reversibility limited by 24h commitment window.',state:{E:0.59,S:0.98,R:0.42,Sp:0.51,St:0.52}},
-  {id:'launch',name:'Launch Hold',subtitle:'Pad anomaly · T-90s',desc:'Sensor 4B reading 2.1σ outside nominal on LOX temp. Other sensors nominal. Weather window closes in 9 minutes. Scrub cost: $4.2M and 11-day delay.',state:{E:0.88,S:0.79,R:0.62,Sp:0.55,St:0.49}},
-];
-
-const VC={
-  COMMIT:{fg:'#3ddc97',bg:'rgba(61,220,151,0.10)'},
-  HOLD:{fg:'#f5b942',bg:'rgba(245,185,66,0.10)'},
-  WAIT:{fg:'#7aa7ff',bg:'rgba(122,167,255,0.10)'},
-  ESCALATE:{fg:'#ff8c42',bg:'rgba(255,140,66,0.12)'},
-  TOXIC:{fg:'#ff5c6c',bg:'rgba(255,92,108,0.12)'},
-};
-
-const NervaCtx=createContext(null);
-function seedHistory(){
-  const seeds=[
+// ── SEED HISTORY ──────────────────────────────────────────
+function seedHistory() {
+  const seeds = [
     {E:0.32,S:0.71,R:0.22,Sp:0.78,St:0.84,label:'DRN-04412'},
     {E:0.81,S:0.92,R:0.39,Sp:0.78,St:0.61,label:'HFT-09921'},
     {E:0.68,S:0.55,R:0.71,Sp:0.41,St:0.38,label:'DRN-04413'},
     {E:0.52,S:0.83,R:0.31,Sp:0.86,St:0.74,label:'AVL-77108'},
     {E:0.59,S:0.98,R:0.42,Sp:0.51,St:0.52,label:'ADV-30022'},
   ];
-  const base=Date.now();
-  return seeds.map((s,i)=>{const m=computeMetrics({...s,tauMode:'auto',tauManual:0.25});return{...s,...m,t:base-(5-i)*240000};});
+  const base = Date.now();
+  return seeds.map((s,i) => {
+    const m = computeMetrics({...s, tauMode:'auto', tauManual:0.25});
+    return {...s, ...m, t: base - (5-i)*240000};
+  });
 }
 
-function NervaProvider({children}){
-  const[state,setState]=useState({E:0.59,S:0.98,R:0.42,Sp:0.51,St:0.52,tauMode:'auto',tauManual:0.25,scenario:PRESETS[4].desc,activePreset:'ad'});
-  const[history]=useState(seedHistory);
-  const[parsing,setParsing]=useState(false);
-  const[api,setApi]=useState({latency:84,region:'us-west-2',model:'nerva-bloch-v10',status:'nominal',uptime:99.982});
-  useEffect(()=>{const id=setInterval(()=>setApi(a=>({...a,latency:clamp(a.latency+(Math.random()-0.5)*14,55,190)})),2400);return()=>clearInterval(id);},[]);
-  const metrics=useMemo(()=>computeMetrics(state),[state]);
-  useEffect(()=>{
-    const vEl=document.getElementById('nav-verdict'),rEl=document.getElementById('nav-r'),tEl=document.getElementById('nav-tau');
-    if(vEl){vEl.textContent=metrics.verdict;vEl.style.color=VC[metrics.verdict]?.fg||'#fff';}
-    if(rEl)rEl.textContent=`|r|=${fmt(metrics.r,3)}`;
-    if(tEl)tEl.textContent=`τ=${fmt(metrics.tau,3)}`;
-    // update live values on API page if visible
-    ['lv-r','lv-tau','lv-entropy','lv-purity','lv-integrity','lv-ev','lv-verdict','lv-rx','lv-ry','lv-rz'].forEach(id=>{
-      const el=document.getElementById(id);
-      if(!el)return;
-      const map={'lv-r':fmt(metrics.r,4),'lv-tau':fmt(metrics.tau,4),'lv-entropy':fmt(metrics.entropy,4),'lv-purity':fmt(metrics.purity,4),'lv-integrity':fmt(metrics.integrity,4),'lv-ev':fmt(metrics.EV,3),'lv-verdict':metrics.verdict,'lv-rx':fmt(metrics.r_x,4),'lv-ry':fmt(metrics.r_y,4),'lv-rz':fmt(metrics.r_z,4)};
-      el.textContent=map[id]||'—';
-    });
-  },[metrics]);
-  const update=useCallback(patch=>setState(s=>({...s,...patch})),[]);
-  const applyPreset=useCallback(id=>{const p=PRESETS.find(x=>x.id===id);if(p)setState(s=>({...s,...p.state,scenario:p.desc,activePreset:id}));},[]);
-
-  // Parser — calls /api/parse on Vercel
-  const parseScenario=useCallback(async(text)=>{
-    if(!text.trim())return;
-    setParsing(true);
-    try{
-      const res=await fetch('/api/parse',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({scenario:text})});
-      if(!res.ok)throw new Error(`HTTP ${res.status}`);
-      const parsed=await res.json();
-      const patch={};
-      ['E','S','R','Sp','St'].forEach(k=>{if(parsed[k]!==undefined)patch[k]=clamp(parseFloat(parsed[k]));});
-      setState(s=>({...s,...patch,activePreset:''}));
-    }catch(e){console.warn('Parse error:',e);alert('AI parsing unavailable. Check that api/parse.js is deployed.');}
-    finally{setParsing(false);}
-  },[]);
-
-  const sensitivity=useMemo(()=>['E','S','R','Sp','St'].map(k=>{
-    const up=computeMetrics({...state,[k]:clamp(state[k]+0.1)});
-    const dn=computeMetrics({...state,[k]:clamp(state[k]-0.1)});
-    const base=metrics;
-    return{key:k,dUp:(up.r-up.tau)-(base.r-base.tau),dDn:(dn.r-dn.tau)-(base.r-base.tau),flipUp:up.verdict!==base.verdict?up.verdict:null,flipDn:dn.verdict!==base.verdict?dn.verdict:null};
-  }),[state,metrics]);
-
-  const factors=useMemo(()=>{
-    const{E,S,R,Sp,St}=state;
-    return[
-      {key:'S',label:'Strategy',weight:0.40*S-0.20,raw:S},
-      {key:'Sp',label:'Support',weight:0.35*Sp-0.175,raw:Sp},
-      {key:'St',label:'Stability',weight:0.25*St-0.125,raw:St},
-      {key:'R',label:'Risk',weight:-0.25*R,raw:R},
-      {key:'E',label:'Urgency',weight:-0.12*E*(1-S),raw:E},
-    ];
-  },[state]);
-
-  const forecast=useMemo(()=>{
-    const hz=[{label:'T+1m',minutes:1},{label:'T+5m',minutes:5},{label:'T+15m',minutes:15},{label:'T+1h',minutes:60}];
-    const all=[...history.map(h=>({t:h.t,r:h.r})),{t:Date.now(),r:metrics.r}];
-    const t0=all[0].t;
-    const xs=all.map(p=>(p.t-t0)/60000),ys=all.map(p=>p.r);
-    const n=xs.length,mX=xs.reduce((a,b)=>a+b,0)/n,mY=ys.reduce((a,b)=>a+b,0)/n;
-    let num=0,den=0;xs.forEach((x,i)=>{num+=(x-mX)*(ys[i]-mY);den+=(x-mX)**2;});
-    const slope=den===0?0:num/den,HL=25;
-    const points=hz.map(h=>{
-      const damp=Math.exp(-h.minutes/HL),r=clamp(metrics.r+slope*h.minutes*damp);
-      const sigma=clamp(0.035+0.022*Math.sqrt(h.minutes)+0.12*metrics.entropy*Math.sqrt(h.minutes/30),0,0.5);
-      const z=(metrics.tau-r)/Math.max(0.01,sigma),cdf=0.5*(1+Math.sign(-z)*Math.sqrt(1-Math.exp(-2*z*z/Math.PI)));
-      let pv;if(r<metrics.tau)pv='WAIT';else if(metrics.integrity<0.4)pv='ESCALATE';else if(metrics.EV>0.1&&metrics.integrity>0.6)pv='COMMIT';else pv='HOLD';
-      return{...h,r,sigma,lo:clamp(r-sigma),hi:clamp(r+sigma),pAbove:clamp(1-cdf),predVerdict:pv};
-    });
-    let window;
-    if(Math.abs(slope)<0.002)window=metrics.r>=metrics.tau?'ACT NOW — signal stable above τ':'HOLD — signal stable below τ';
-    else if(slope>0){if(metrics.r>=metrics.tau)window='ACT NOW — signal strengthening';else{const need=(metrics.tau-metrics.r)/slope;window=need>60?'WAIT — unlikely to clear τ within 1h':`WAIT — likely to clear τ in ~${Math.max(1,Math.round(need))}m`;}}
-    else{if(metrics.r>=metrics.tau){const fade=(metrics.r-metrics.tau)/Math.abs(slope);window=fade>60?'ACT THIS HOUR — stable for now':`ACT WITHIN ~${Math.max(1,Math.round(fade))}m — signal decaying`;}else window='HOLD — signal decaying below τ';}
-    return{slope,points,window,histR:ys};
-  },[history,metrics,state]);
-
-  const logs=useMemo(()=>[
-    {sev:'I',src:'parse',msg:`scenario tokens=${Math.floor(state.scenario.length/4)} model=nerva-bloch-v10`},
-    {sev:'I',src:'extract',msg:`E=${fmt(state.E,2)} S=${fmt(state.S,2)} R=${fmt(state.R,2)} Sp=${fmt(state.Sp,2)} St=${fmt(state.St,2)}`},
-    {sev:metrics.oneWayDoor?'W':'I',src:'brake',msg:`reversibility=${fmt(metrics.reversibility,2)} ${metrics.oneWayDoor?'ONE-WAY ARMED':'disarmed'}`},
-    {sev:'I',src:'bloch',msg:`r=( ${fmt(metrics.r_x,4)}, ${fmt(metrics.r_y,4)}, ${fmt(metrics.r_z,4)} )`},
-    {sev:'I',src:'compute',msg:`|r|=${fmt(metrics.r,4)} τ=${fmt(metrics.tau,4)} S(ρ)=${fmt(metrics.entropy,4)}`},
-    {sev:metrics.verdict==='TOXIC'||metrics.verdict==='ESCALATE'?'E':'I',src:'verdict',msg:`${metrics.verdict} · purity=${fmt(metrics.purity,4)}`},
-    {sev:'I',src:'audit',msg:`components_consistent=${metrics.validation.components_consistent}`},
-    {sev:'I',src:'route',msg:metrics.verdict==='ESCALATE'||metrics.verdict==='TOXIC'?'human #decision-review-p0':'auto-dispatch ok'},
-  ],[state,metrics]);
-
-  const value={state,update,applyPreset,parseScenario,parsing,metrics,sensitivity,factors,forecast,history,logs,api,presets:PRESETS,VC};
-  return React.createElement(NervaCtx.Provider,{value},children);
+// ── FORECAST ──────────────────────────────────────────────
+function computeForecast(history, metrics, state) {
+  const hz = [{label:'T+1m',minutes:1},{label:'T+5m',minutes:5},{label:'T+15m',minutes:15},{label:'T+1h',minutes:60}];
+  const all = [...history.map(h=>({t:h.t,r:h.r})), {t:Date.now(),r:metrics.r}];
+  const t0 = all[0].t;
+  const xs = all.map(p=>(p.t-t0)/60000), ys = all.map(p=>p.r);
+  const n = xs.length, mX = xs.reduce((a,b)=>a+b,0)/n, mY = ys.reduce((a,b)=>a+b,0)/n;
+  let num=0, den=0;
+  xs.forEach((x,i) => { num+=(x-mX)*(ys[i]-mY); den+=(x-mX)**2; });
+  const slope = den===0 ? 0 : num/den, HL=25;
+  const points = hz.map(h => {
+    const damp = Math.exp(-h.minutes/HL), r = clamp(metrics.r + slope*h.minutes*damp);
+    const sigma = clamp(0.035 + 0.022*Math.sqrt(h.minutes) + 0.12*metrics.entropy*Math.sqrt(h.minutes/30), 0, 0.5);
+    const z = (metrics.tau-r)/Math.max(0.01,sigma);
+    const cdf = 0.5*(1+Math.sign(-z)*Math.sqrt(1-Math.exp(-2*z*z/Math.PI)));
+    return {...h, r, sigma, lo:clamp(r-sigma), hi:clamp(r+sigma), pAbove:clamp(1-cdf)};
+  });
+  let window;
+  if (Math.abs(slope) < 0.002) window = metrics.r>=metrics.tau ? 'ACT NOW — signal stable above τ' : 'HOLD — signal stable below τ';
+  else if (slope > 0) {
+    if (metrics.r >= metrics.tau) window = 'ACT NOW — signal strengthening';
+    else { const need=(metrics.tau-metrics.r)/slope; window=need>60?'WAIT — unlikely to clear τ within 1h':`WAIT — likely to clear τ in ~${Math.max(1,Math.round(need))}m`; }
+  } else {
+    if (metrics.r >= metrics.tau) { const fade=(metrics.r-metrics.tau)/Math.abs(slope); window=fade>60?'ACT THIS HOUR — stable for now':`ACT WITHIN ~${Math.max(1,Math.round(fade))}m — signal decaying`; }
+    else window = 'HOLD — signal decaying below τ';
+  }
+  return { slope, points, window };
 }
-function useNerva(){return useContext(NervaCtx);}
 
-// ── SHARED ────────────────────────────────────────────────
-function Spark({values,w=80,h=18,stroke='currentColor'}){
-  if(!values?.length)return null;
-  const max=Math.max(...values,0.01),min=Math.min(...values,0),rng=max-min||1;
-  const pts=values.map((v,i)=>`${((i/(values.length-1))*w).toFixed(1)},${(h-((v-min)/rng)*h).toFixed(1)}`).join(' ');
-  return <svg width={w} height={h} style={{display:'block',overflow:'visible'}}><polyline points={pts} fill="none" stroke={stroke} strokeWidth="1.3" strokeLinejoin="round" strokeLinecap="round"/></svg>;
+// ── NERVA CONTEXT ─────────────────────────────────────────
+const NervaCtx = createContext(null);
+
+function NervaProvider({children}) {
+  const [state, setState] = useState({
+    E:0.59, S:0.98, R:0.42, Sp:0.51, St:0.52,
+    tauMode:'auto', tauManual:0.25,
+    scenario:'Agency partner has automated the ad-buy validity step.', activePreset:'ad'
+  });
+  const [history] = useState(seedHistory);
+  const [api, setApi] = useState({latency:84, region:'us-west-2', model:'nerva-bloch-v10', status:'nominal', uptime:99.982});
+  useEffect(() => {
+    const id = setInterval(() => setApi(a => ({...a, latency: clamp(a.latency+(Math.random()-0.5)*14, 55, 190)})), 2400);
+    return () => clearInterval(id);
+  }, []);
+  const metrics = useMemo(() => computeMetrics(state), [state]);
+  const forecast = useMemo(() => computeForecast(history, metrics, state), [history, metrics, state]);
+  const update = useCallback(patch => setState(s => ({...s, ...patch})), []);
+  const value = {state, update, metrics, forecast, history, api};
+  return <NervaCtx.Provider value={value}>{children}</NervaCtx.Provider>;
 }
-function PhaseMap({metrics,state,W=320,H=220}){
-  const x=state.E*W,y=(1-metrics.integrity)*H,c=VC[metrics.verdict];
-  const mono="'JetBrains Mono',monospace";
-  const zones=[{n:'COMMIT',x0:0,y0:0,w:W,h:H*0.35,c:VC.COMMIT.fg},{n:'HOLD',x0:0,y0:H*0.35,w:W*0.5,h:H*0.30,c:VC.HOLD.fg},{n:'ESC',x0:W*0.5,y0:H*0.35,w:W*0.5,h:H*0.30,c:VC.ESCALATE.fg},{n:'ESC',x0:0,y0:H*0.65,w:W*0.5,h:H*0.35,c:VC.ESCALATE.fg},{n:'TOXIC',x0:W*0.5,y0:H*0.65,w:W*0.5,h:H*0.35,c:VC.TOXIC.fg}];
-  return(
-    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{width:'100%',height:'100%',display:'block',background:'#070a0e'}}>
-      {zones.map((z,i)=><g key={i}><rect x={z.x0} y={z.y0} width={z.w} height={z.h} fill={z.c} opacity={0.10}/><text x={z.x0+z.w/2} y={z.y0+z.h/2+4} textAnchor="middle" style={{font:`600 9px ${mono}`,fill:z.c,letterSpacing:'0.18em',opacity:0.6}}>{z.n}</text></g>)}
-      {[0.25,0.5,0.75].map(t=><g key={t}><line x1={t*W} y1="0" x2={t*W} y2={H} stroke="rgba(255,255,255,0.05)" strokeDasharray="2 3"/><line x1="0" y1={t*H} x2={W} y2={t*H} stroke="rgba(255,255,255,0.05)" strokeDasharray="2 3"/></g>)}
-      <line x1="0" y1={H*0.35} x2={W} y2={H*0.35} stroke="rgba(255,255,255,0.1)"/>
-      <line x1="0" y1={H*0.65} x2={W} y2={H*0.65} stroke="rgba(255,255,255,0.1)"/>
-      <line x1={W*0.5} y1={H*0.35} x2={W*0.5} y2={H} stroke="rgba(255,255,255,0.1)"/>
-      <line x1="0" y1={(1-metrics.tau)*H} x2={W} y2={(1-metrics.tau)*H} stroke={c.fg} strokeDasharray="4 3" strokeWidth="1" opacity="0.5"/>
-      <ellipse cx={x} cy={y} rx={22} ry={16} fill={c.fg} opacity={0.10}/>
-      <line x1="0" y1={y} x2={W} y2={y} stroke={c.fg} strokeDasharray="3 4" strokeWidth="0.7" opacity="0.35"/>
-      <line x1={x} y1="0" x2={x} y2={H} stroke={c.fg} strokeDasharray="3 4" strokeWidth="0.7" opacity="0.35"/>
-      <circle cx={x} cy={y} r={metrics.signal?6:5} fill={metrics.signal?c.fg:'none'} opacity={metrics.signal?1:0.4}/>
-      <circle cx={x} cy={y} r="10" fill="none" stroke={c.fg} strokeWidth="1" opacity={metrics.signal?0.5:0.2}/>
-      {!metrics.signal&&<circle cx={x} cy={y} r="5" fill={c.fg} opacity="0.3"/>}
+
+function useNerva() { return useContext(NervaCtx); }
+
+// ── PLUMB METRIC DEFINITIONS ──────────────────────────────
+const PLUMB_LAYERS = [
+  {
+    id:'opt', name:'Optimization', subtitle:'Distribution math',
+    note:'AI platforms automate this layer natively. Necessary to score, no longer sufficient to differentiate.',
+    metrics:[
+      {id:'cpm',  label:'CPM efficiency',      source:'Geopath · platform rate cards',      human:false},
+      {id:'reach',label:'Reach quality',        source:'MRI-Simmons · Scarborough',          human:false},
+      {id:'freq', label:'Frequency fit',         source:'Dwell model · format spec',          human:false},
+      {id:'targ', label:'Targeting precision',   source:'Audience zone data',                 human:false},
+      {id:'attr', label:'Attribution clarity',   source:'Measurement partner',                human:false},
+    ],
+  },
+  {
+    id:'auth', name:'Authenticity', subtitle:'Standing in the moment',
+    note:'Three of five auto-score. Cultural Truth and Moment Respect require senior buyer review by design.',
+    metrics:[
+      {id:'ctx',  label:'Context fit',           source:'Semantic match · placement DB',      human:false},
+      {id:'dig',  label:'Audience dignity',      source:'Creative rubric · brand voice',      human:false},
+      {id:'cult', label:'Cultural truth',        source:'Social listening · BAV',             human:true},
+      {id:'earn', label:'Earned placement',      source:'Brand history · category affinity',  human:false},
+      {id:'mom',  label:'Moment respect',        source:'Audience state · creative register', human:true},
+    ],
+  },
+  {
+    id:'price', name:'Pricing', subtitle:'Capital math',
+    note:"The CFO question. A COMMIT at WRONG price renegotiates before IO.",
+    metrics:[
+      {id:'budg', label:'Budget fit',            source:'Category benchmark · brand stage',   human:false},
+      {id:'cpk',  label:'Cost per KPI',          source:'Named targets · flight math',        human:false},
+      {id:'scale',label:'Scale threshold',       source:'Impact floor · diminishing return',  human:false},
+      {id:'pay',  label:'Payback window',        source:'Brand cycle · flight window',        human:false},
+      {id:'rev',  label:'Reversibility cost',    source:'Unrecoverable spend mid-flight',     human:false},
+    ],
+  },
+];
+
+const PLUMB_DEFAULTS = {
+  cpm:75, reach:82, freq:72, targ:78, attr:70,
+  ctx:78, dig:80, cult:72, earn:80, mom:76,
+  budg:78, cpk:75, scale:80, pay:76, rev:80,
+};
+
+const PLUMB_BRIEFS = [
+  {id:'trust-q3', brand:'Sample Bank', category:'Financial services', channel:'OOH · place-based', title:'Q3 trust campaign', target:'8.2M viewable imp · +6pp recall · 12K branch visits · top-3 SOV', budget:1200000, flight:'8 wk', cult:'reviewed', mom:'reviewed', values:{cpm:75,reach:82,freq:72,targ:78,attr:70,ctx:78,dig:80,cult:72,earn:80,mom:76,budg:78,cpk:75,scale:80,pay:76,rev:80}},
+  {id:'saturation-a', brand:'Sample Bank', category:'Financial services', channel:'OOH · national', title:'Variant A — saturation play', target:'8.2M viewable imp · +6pp recall · 12K branch visits', budget:1200000, flight:'8 wk', cult:'pending', mom:'reviewed', values:{cpm:88,reach:86,freq:78,targ:82,attr:76,ctx:38,dig:42,cult:28,earn:44,mom:38,budg:45,cpk:38,scale:88,pay:32,rev:22}},
+  {id:'targeted-b', brand:'Sample Bank', category:'Financial services', channel:'OOH · hub markets', title:'Variant B — targeted context', target:'8.2M viewable imp · +6pp recall · 12K branch visits', budget:580000, flight:'6 wk', cult:'reviewed', mom:'reviewed', values:{cpm:72,reach:76,freq:78,targ:80,attr:72,ctx:80,dig:82,cult:76,earn:78,mom:76,budg:78,cpk:76,scale:78,pay:78,rev:80}},
+  {id:'bespoke-c', brand:'Sample Bank', category:'Financial services', channel:'OOH · single market', title:'Variant C — premium bespoke', target:'8.2M viewable imp · +6pp recall · 12K branch visits', budget:940000, flight:'4 wk', cult:'reviewed', mom:'pending', values:{cpm:58,reach:52,freq:64,targ:60,attr:56,ctx:90,dig:92,cult:86,earn:88,mom:84,budg:38,cpk:42,scale:28,pay:48,rev:36}},
+  {id:'search-q2', brand:'Auto dealer group', category:'Auto', channel:'Search', title:'Q2 acquisition push', target:'$48 CPA · 4.2K leads · 14% conv', budget:180000, flight:'12 wk', cult:'pending', mom:'reviewed', values:{cpm:78,reach:70,freq:74,targ:80,attr:76,ctx:62,dig:54,cult:48,earn:52,mom:60,budg:64,cpk:62,scale:62,pay:60,rev:64}},
+];
+
+function plumbToNerva(scores, flightPressure=0.5) {
+  const m = arr => arr.reduce((a,b)=>a+b,0)/arr.length/100;
+  const opt = m([scores.cpm,scores.reach,scores.freq,scores.targ,scores.attr]);
+  const auth = m([scores.ctx,scores.dig,scores.cult,scores.earn,scores.mom]);
+  const pricing_stability = m([scores.budg,scores.scale,scores.pay]);
+  const pricing_risk = (200 - scores.cpk - scores.rev) / 200;
+  return {
+    E: flightPressure, S: auth, R: 1-pricing_risk, Sp: opt, St: pricing_stability,
+    composites: { opt:opt*100, auth:auth*100, pricing:((pricing_stability*100*3)+scores.cpk+scores.rev)/5 },
+  };
+}
+
+const PLUMB_VERDICT = {
+  COMMIT:   {label:'COMMIT',  action:'Approve',     color:'#1f6b3f'},
+  HOLD:     {label:'HOLD',    action:'Tighten',     color:'#8a6a1a'},
+  WAIT:     {label:'WAIT',    action:'Renegotiate', color:'#3a5285'},
+  ESCALATE: {label:'CONSULT', action:'Escalate',    color:'#9a5a14'},
+  TOXIC:    {label:'TOXIC',   action:'Reject',      color:'#a3361b'},
+};
+
+const PRICING_SUB = c => c>=72 ? {label:'FAIR',tint:'#1f6b3f'} : c>=55 ? {label:'STRETCHED',tint:'#8a6a1a'} : {label:'WRONG',tint:'#a3361b'};
+
+const px = {
+  bg:'#f6f2ea', paper:'#fbf8f0', ink:'#15110b',
+  inkDim:'rgba(21,17,11,0.62)', inkFaint:'rgba(21,17,11,0.38)',
+  rule:'rgba(21,17,11,0.14)', ruleHi:'rgba(21,17,11,0.32)',
+  accent:'#a3361b', green:'#1f6b3f', amber:'#8a6a1a', blue:'#3a5285',
+  serif:'"Newsreader","Iowan Old Style",Georgia,serif',
+  sans:'"IBM Plex Sans",system-ui,sans-serif',
+  mono:'"JetBrains Mono",ui-monospace,monospace',
+};
+
+// ── PLUMB COMPONENTS ──────────────────────────────────────
+function PlumbSlider({value, onChange, color=px.ink}) {
+  return <input type="range" min="0" max="100" step="1" value={value} onChange={e=>onChange(parseInt(e.target.value,10))} style={{width:'100%',accentColor:color,height:4}}/>;
+}
+
+function MetricRow({metric, value, onChange, humanReviewed}) {
+  const color = value>=70 ? px.green : value>=55 ? px.amber : px.accent;
+  return (
+    <div style={{padding:'8px 0',borderBottom:`1px solid ${px.rule}`}}>
+      <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',gap:6}}>
+        <div style={{minWidth:0}}>
+          <div style={{font:`500 13.5px/1.2 ${px.serif}`,color:px.ink,display:'flex',alignItems:'center',gap:6}}>
+            {metric.label}
+            {metric.human && (
+              <span style={{font:`600 9px/1 ${px.mono}`,letterSpacing:'0.1em',padding:'2px 4px',borderRadius:2,
+                background:humanReviewed==='reviewed'?'rgba(31,107,63,0.12)':'rgba(163,54,27,0.12)',
+                color:humanReviewed==='reviewed'?px.green:px.accent,
+                border:`1px solid ${humanReviewed==='reviewed'?'rgba(31,107,63,0.4)':'rgba(163,54,27,0.4)'}`}}>
+                {humanReviewed==='reviewed'?'REVIEWED':'NEEDS REVIEW'}
+              </span>
+            )}
+          </div>
+          <div style={{font:`11.5px/1.3 ${px.sans}`,color:px.inkDim,marginTop:1}}>{metric.source}</div>
+        </div>
+        <div style={{font:`400 22px/1 ${px.mono}`,color,fontVariantNumeric:'tabular-nums',flex:'0 0 auto'}}>{value}</div>
+      </div>
+      <div style={{marginTop:6}}><PlumbSlider value={value} onChange={onChange} color={color}/></div>
+    </div>
+  );
+}
+
+function GateBadge({score}) {
+  const [label,color,bg] = score>=70 ? ['CLEARS',px.green,'rgba(31,107,63,0.10)'] : score>=55 ? ['SOFT',px.amber,'rgba(138,106,26,0.10)'] : ['FAILS',px.accent,'rgba(163,54,27,0.10)'];
+  return <span style={{font:`600 10.5px/1 ${px.mono}`,letterSpacing:'0.16em',padding:'4px 8px',background:bg,color,border:`1px solid ${color}55`}}>{label}</span>;
+}
+
+function LayerCard({layer, scores, setScore, humanState, setHumanState, composite}) {
+  return (
+    <div style={{background:px.paper,border:`1px solid ${px.ruleHi}`,display:'flex',flexDirection:'column',minHeight:0,padding:'14px 16px'}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:8,marginBottom:10}}>
+        <div>
+          <div style={{font:`10px/1 ${px.mono}`,color:px.inkFaint,letterSpacing:'0.2em'}}>LAYER · {layer.id.toUpperCase()}</div>
+          <h2 style={{margin:'4px 0 0',font:`500 22px/1.05 ${px.serif}`,color:px.ink,letterSpacing:'-0.01em'}}>{layer.name}.</h2>
+          <div style={{font:`italic 12.5px/1.3 ${px.serif}`,color:px.inkDim,marginTop:2}}>{layer.subtitle}</div>
+        </div>
+        <div style={{textAlign:'right'}}>
+          <div style={{font:`200 38px/0.9 ${px.serif}`,color:px.ink,letterSpacing:'-0.02em',fontVariantNumeric:'tabular-nums'}}>{Math.round(composite)}</div>
+          <div style={{marginTop:4}}><GateBadge score={composite}/></div>
+        </div>
+      </div>
+      <div style={{font:`11px/1.4 ${px.sans}`,color:px.inkDim,marginBottom:8}}>{layer.note}</div>
+      <div style={{flex:1,minHeight:0,overflowY:'auto'}}>
+        {layer.metrics.map(m => (
+          <MetricRow key={m.id} metric={m} value={scores[m.id]} humanReviewed={humanState[m.id]}
+            onChange={v=>setScore(m.id,v)}/>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PlumbForecastChart({history, current, forecast}) {
+  const W=280, H=88, M={l:6,r:6,t:10,b:14};
+  const pw=W-M.l-M.r, ph=H-M.t-M.b;
+  const nowX=0.4;
+  const histPts = history.map((h,i) => ({x:(i/Math.max(1,history.length))*nowX, r:h.r}));
+  const fcPts = [{x:nowX,r:current.r,sigma:0}];
+  forecast.points.forEach(p => fcPts.push({x:nowX+(p.minutes/60)*(1-nowX),r:p.r,sigma:p.sigma}));
+  const xp = v => M.l+v*pw, yp = v => M.t+(1-v)*ph;
+  const tauY = yp(current.tau);
+  const bandTop = fcPts.map(p=>`${xp(p.x)},${yp(Math.min(1,p.r+p.sigma))}`).join(' ');
+  const bandBot = fcPts.map(p=>`${xp(p.x)},${yp(Math.max(0,p.r-p.sigma))}`).reverse().join(' ');
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{width:'100%',height:H,display:'block'}}>
+      <line x1={M.l} y1={tauY} x2={M.l+pw} y2={tauY} stroke={px.ink} strokeDasharray="3 3" opacity="0.4"/>
+      <text x={M.l+pw-2} y={tauY-3} textAnchor="end" style={{font:`9.5px ${px.mono}`,fill:px.inkDim}}>τ {fmt(current.tau,2)}</text>
+      <line x1={xp(nowX)} y1={M.t} x2={xp(nowX)} y2={M.t+ph} stroke={px.ink} strokeDasharray="1 2" opacity="0.35"/>
+      <text x={xp(nowX)} y={M.t-2} textAnchor="middle" style={{font:`9.5px ${px.mono}`,fill:px.ink}}>NOW</text>
+      <polygon points={`${bandTop} ${bandBot}`} fill={px.ink} opacity="0.10"/>
+      <polyline points={histPts.map(p=>`${xp(p.x)},${yp(p.r)}`).join(' ')} fill="none" stroke={px.ink} strokeWidth="1.4" opacity="0.7"/>
+      {histPts.map((p,i) => <circle key={i} cx={xp(p.x)} cy={yp(p.r)} r="1.6" fill={px.ink} opacity="0.6"/>)}
+      <polyline points={fcPts.map(p=>`${xp(p.x)},${yp(p.r)}`).join(' ')} fill="none" stroke={px.ink} strokeWidth="1.6" strokeDasharray="3 2"/>
+      <circle cx={xp(nowX)} cy={yp(current.r)} r="3" fill={px.ink}/>
+      {forecast.points.map((p,i) => {
+        const x = xp(nowX+(p.minutes/60)*(1-nowX));
+        return <g key={i}><line x1={x} y1={M.t+ph} x2={x} y2={M.t+ph+2} stroke={px.inkDim}/><text x={x} y={M.t+ph+11} textAnchor="middle" style={{font:`9.5px ${px.mono}`,fill:px.inkDim}}>{p.label.replace('T+','')}</text></g>;
+      })}
     </svg>
   );
 }
-function Slider({label,sub,value,onChange,sym}){
-  const mono="'JetBrains Mono',monospace",sans="'IBM Plex Sans',sans-serif";
-  return(
-    <div style={{display:'flex',flexDirection:'column',gap:4}}>
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline'}}>
-        <div style={{font:`500 11px/1 ${sans}`,color:'#d8dde6'}}><span style={{color:'#4cc9f0',font:`500 11px/1 ${mono}`,marginRight:6}}>{sym}</span>{label}</div>
-        <div style={{font:`500 12px/1 ${mono}`,color:'#d8dde6'}}>{fmt(value,2)}</div>
-      </div>
-      {sub&&<div style={{font:`10px/1.3 ${sans}`,color:'rgba(216,221,230,0.4)'}}>{sub}</div>}
-      <input type="range" min="0" max="1" step="0.01" value={value} onChange={e=>onChange(parseFloat(e.target.value))} style={{accentColor:'#4cc9f0',color:'#4cc9f0',width:'100%'}}/>
-    </div>
-  );
-}
 
-// ── ABOUT PAGE ────────────────────────────────────────────
-function AboutView(){
-  return(
-    <div className="prose-page">
-      <div className="prose-wrap">
-        <div className="prose-h1">NERVA v10.0</div>
-        <div className="prose-title">Decision Integrity Layer for Autonomous Systems</div>
-        <div className="prose-sub">Built by Phasewell Research · Mathematically grounded in quantum information theory · AMDG</div>
+// ── PLUMB MAIN VIEW ───────────────────────────────────────
+function PlumbView() {
+  const {state, update, metrics, forecast, history, api} = useNerva();
+  const [scores, setScores] = useState(PLUMB_DEFAULTS);
+  const [humanState, setHumanState] = useState({cult:'reviewed', mom:'reviewed'});
+  const [brief, setBrief] = useState(PLUMB_BRIEFS[0]);
+  const [flightPressure, setFlightPressure] = useState(0.5);
+  const [oneWayDoor, setOneWayDoor] = useState('First measurable recall signal at week 2');
 
-        <div className="prose-section">
-          <div className="prose-h2">What It Does</div>
-          <p className="prose-body">Autonomous systems — drones, trading algorithms, surgical robots, self-driving vehicles — make decisions at machine speed. Most guardrails either slow things down too much or can't explain themselves after the fact.</p>
-          <p className="prose-body">NERVA sits between a proposed action and its execution. It evaluates the decision state and returns one of five verdicts — with full mathematical provenance for every call.</p>
-          <div className="prose-formula">Proposed action → 6D state vector → Bloch sphere projection → COMMIT | HOLD | WAIT | ESCALATE | TOXIC</div>
-        </div>
+  const mapped = useMemo(() => plumbToNerva(scores, flightPressure), [scores, flightPressure]);
+  useEffect(() => {
+    update({E:mapped.E, S:mapped.S, R:mapped.R, Sp:mapped.Sp, St:mapped.St});
+  }, [mapped.E, mapped.S, mapped.R, mapped.Sp, mapped.St]);
 
-        <div className="prose-section">
-          <div className="prose-h2">How It Works</div>
-          <p className="prose-body">Each decision is mapped to five input dimensions: urgency (E), strategy quality (S), risk exposure (R), evidence support (Sp), environmental stability (St). These collapse into a normalized Bloch vector — a point inside a unit sphere representing the decision state.</p>
-          <div className="prose-formula">{`r_x = (E + S) / 2√3    // intent axis
-r_y = R / √3           // risk axis  
-r_z = (Sp × St) / √3  // integrity axis
-|r| = √(r_x² + r_y² + r_z²)   guaranteed ≤ 1`}</div>
-          <p className="prose-body">From that state, NERVA computes density matrix metrics — entropy, purity, coherence — and derives an information-theoretic commitment threshold. The threshold adapts: higher uncertainty and higher stakes raise the bar for action.</p>
-          <div className="prose-formula">{`ρ = ½(I + r_x·σ_x + r_y·σ_y + r_z·σ_z)
+  const composites = mapped.composites;
+  const overall = Math.round((composites.opt + composites.auth + composites.pricing) / 3);
+  const verdict = metrics.verdict;
+  const humanGate = (humanState.cult==='pending' && scores.cult<70) || (humanState.mom==='pending' && scores.mom<70);
+  const finalVerdict = humanGate && verdict==='COMMIT' ? 'ESCALATE' : verdict;
+  const v = PLUMB_VERDICT[finalVerdict];
+  const pricingSub = PRICING_SUB(composites.pricing);
+  const isToxicShape = composites.opt >= 65 && composites.auth < 50;
 
-Entropy:   S(ρ) = −λ₊ log₂(λ₊) − λ₋ log₂(λ₋)   where λ± = ½(1 ± |r|)
-Purity:    Tr(ρ²) = ½(1 + |r|²) ∈ [0.5, 1]
-Coherence: C = √(r_x² + r_y²)   (ℓ₁-norm, computational basis)
-Threshold: τ = 0.25 + 0.35·S(ρ) + 0.25·R − 0.15·reversibility`}</div>
-        </div>
+  const applyBrief = b => { setBrief(b); setScores(b.values); setHumanState({cult:b.cult, mom:b.mom}); };
+  const setScore = (id, val) => setScores(s => ({...s, [id]:val}));
 
-        <div className="prose-section">
-          <div className="prose-h2">Safety Overrides</div>
-          <div className="prose-warn">⚠ <strong>One-Way Brake</strong> — If a decision is irreversible (reversibility &lt; 0.4) and the integrity foundation is incomplete (I &lt; 0.55), NERVA forces ESCALATE regardless of other signals. Irreversible decisions require a higher standard of evidence — enforced mathematically, not by policy.</div>
-          <div className="prose-warn" style={{borderColor:'rgba(255,92,108,0.25)',background:'rgba(255,92,108,0.06)',color:'rgba(255,180,180,0.85)'}}>⛔ <strong>TOXIC Veto</strong> — Low integrity combined with high risk triggers a hard veto. No autonomous action. Human authorization required.</div>
-          <div className="prose-warn" style={{borderColor:'rgba(122,167,255,0.25)',background:'rgba(122,167,255,0.06)',color:'rgba(180,210,255,0.85)'}}>🔄 <strong>Emergency Override</strong> — High urgency (E ≥ 0.75) combined with an irreversible action cannot sit in WAIT. Forces ESCALATE immediately. Prevents "patient dies while gathering data" scenarios.</div>
-          <div className="prose-warn" style={{borderColor:'rgba(245,185,66,0.25)',background:'rgba(245,185,66,0.06)',color:'rgba(255,220,150,0.85)'}}>📊 <strong>EV Block</strong> — If expected value is negative, COMMIT is suppressed. The system won't recommend action when the math says the outcome is likely harmful.</div>
-        </div>
-
-        <div className="prose-section">
-          <div className="prose-h2">Where It Applies</div>
-          <div className="prose-grid">
-            {[['Defense / Autonomous Weapons','Rules of engagement enforcement, lethal action gating. The drone ROE preset demonstrates Emergency Override under degraded comms.'],['Financial Systems','HFT guardrails, position sizing under uncertainty. The One-Way Brake catches irreversible trades with incomplete evidence.'],['Autonomous Vehicles','Triage logic, edge case escalation. Normal AV ops typically reach COMMIT; pedestrian-adjacent scenarios trigger HOLD or ESCALATE.'],['Medical / Surgical','Anomaly response, procedure deviation. Arterial bleed scenarios with unavailable personnel correctly trigger Emergency Override.']].map(([t,b])=>(
-              <div className="prose-card" key={t}><div className="prose-card-title">{t}</div><div className="prose-card-body">{b}</div></div>
-            ))}
-          </div>
-        </div>
-
-        <div className="prose-section">
-          <div className="prose-h2">Mathematical Provenance</div>
-          <p className="prose-body">NERVA's formalism is grounded in <strong>Nielsen & Chuang (2010)</strong> Ch. 2 & 11, <strong>Shannon (1948)</strong>, and <strong>Baumgratz et al. (2014)</strong>. The v8.3.1 normalization correction (credited to Grok) ensures internal consistency — the density matrix, entropy, purity, and coherence all derive from the same normalized Bloch vector by construction. Validated across Claude Opus, Claude Sonnet, Grok, and Gemini independently.</p>
-          <p className="prose-body" style={{color:'rgba(216,221,230,0.4)',fontSize:12}}>Anthony Migliazzo · Phasewell Research · anthony@phasewell.io · NERVA · AMDG</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── API PAGE ──────────────────────────────────────────────
-function ApiView(){
-  const {metrics,state}=useNerva();
-  return(
-    <div className="prose-page">
-      <div className="prose-wrap">
-        <div className="prose-h1">NERVA v10.0 API</div>
-        <div className="prose-title">Decision Integrity Endpoint</div>
-        <div className="prose-sub">POST /api/validate · Real-time Bloch sphere evaluation · Full mathematical provenance</div>
-
-        <div className="prose-section">
-          <div className="prose-h2">Live Values — Current Demo State</div>
-          <p className="prose-body" style={{fontSize:12,color:'rgba(216,221,230,0.4)'}}>These update in real time as you adjust sliders in any of the four views.</p>
-          <div className="val-grid">
-            {[['VERDICT','lv-verdict'],['|r|','lv-r'],['τ','lv-tau'],['S(ρ)','lv-entropy'],['Purity','lv-purity'],['Integrity','lv-integrity'],['EV','lv-ev'],['r_x','lv-rx'],['r_y','lv-ry'],['r_z','lv-rz']].map(([l,id])=>(
-              <div className="val-box" key={id}><div className="val-box-label">{l}</div><div className="val-box-value" id={id}>—</div></div>
-            ))}
-          </div>
-        </div>
-
-        <div className="prose-section">
-          <div className="prose-h2">Endpoint</div>
-          <div className="prose-code">POST /v1/validate
-Content-Type: application/json</div>
-        </div>
-
-        <div className="prose-section">
-          <div className="prose-h2">Request Schema</div>
-          <div className="prose-code">{`{
-  "emotion":    0.59,   // E — Urgency / emotional pressure  [0,1]
-  "strategy":   0.98,   // S — Plan quality / coherence      [0,1]
-  "risk":       0.42,   // R — Exposure to negative outcomes [0,1]
-  "support":    0.51,   // Sp — Data confidence / evidence   [0,1]
-  "stability":  0.52,   // St — System health / environment  [0,1]
-  "threshold":  "auto"  // "auto" | "manual"
-  // "tau": 0.35        // required if threshold = "manual"
-}`}</div>
-        </div>
-
-        <div className="prose-section">
-          <div className="prose-h2">Response Schema (v10.0)</div>
-          <div className="prose-code">{`{
-  "version": "v10.0",
-  "decision": "HOLD",          // COMMIT | HOLD | WAIT | ESCALATE | TOXIC
-  "reason": "Medium foundation. EV=0.09. Recheck in next window.",
-  "bloch": {
-    "r":   0.496,              // signal magnitude |r| ∈ [0,1]
-    "r_x": 0.447,              // intent axis
-    "r_y": 0.242,              // risk axis
-    "r_z": 0.173,              // integrity axis
-    "theta": 69.4,             // polar angle (degrees)
-    "phi":   28.4              // azimuthal angle (degrees)
-  },
-  "metrics": {
-    "integrity":    0.265,     // Sp × St
-    "coherence":    0.511,     // √(r_x² + r_y²)  ℓ₁-norm
-    "purity":       0.623,     // Tr(ρ²) = ½(1 + |r|²) ∈ [0.5,1]
-    "entropy":      0.814,     // S(ρ) = −λ₊log₂λ₊ − λ₋log₂λ₋
-    "reversibility":0.515,     // (Sp + St) / 2
-    "EV":           0.090      // Sp − R
-  },
-  "threshold": {
-    "used":         0.423,
-    "mode":         "auto",
-    "components": {
-      "base":         0.250,
-      "entropy_term": 0.285,   // 0.35 × S(ρ)
-      "risk_term":    0.105,   // 0.25 × R
-      "rev_term":    -0.077    // −0.15 × reversibility
-    }
-  },
-  "overrides": {
-    "one_way_brake":     false,
-    "emergency_override":false,
-    "ev_block":          false,
-    "toxic_veto":        false
-  },
-  "validation": {
-    "bloch_magnitude_valid":  true,   // |r| ≤ 1
-    "purity_range_valid":     true,   // Tr(ρ²) ∈ [0.5,1]
-    "entropy_range_valid":    true,   // S(ρ) ∈ [0,1]
-    "components_consistent":  true    // |r| === √(r_x²+r_y²+r_z²)
-  }
-}`}</div>
-        </div>
-
-        <div className="prose-section">
-          <div className="prose-h2">LLM Tool-Use Schema (Function Calling)</div>
-          <div className="prose-code">{`{
-  "name": "nerva_validate",
-  "description": "Evaluate decision integrity using NERVA Bloch sphere kernel. Returns COMMIT/HOLD/WAIT/ESCALATE/TOXIC with full mathematical provenance. Use before any high-stakes autonomous action.",
-  "parameters": {
-    "type": "object",
-    "properties": {
-      "emotion":   {"type":"number","description":"Urgency 0-1"},
-      "strategy":  {"type":"number","description":"Plan quality 0-1"},
-      "risk":      {"type":"number","description":"Downside exposure 0-1"},
-      "support":   {"type":"number","description":"Evidence confidence 0-1"},
-      "stability": {"type":"number","description":"Environment stability 0-1"}
-    },
-    "required": ["emotion","strategy","risk","support","stability"]
-  }
-}`}</div>
-        </div>
-
-        <div className="prose-section">
-          <div className="prose-h2">Example — Drone ROE (TOXIC veto)</div>
-          <div className="prose-code">{`// Request
-POST /v1/validate
-{
-  "emotion": 0.74, "strategy": 0.61, "risk": 0.78,
-  "support": 0.42, "stability": 0.46, "threshold": "auto"
-}
-
-// Response
-{
-  "decision": "TOXIC",
-  "reason": "Hard veto. Integrity=0.193, Risk=0.78. Autonomous action prohibited.",
-  "bloch": { "r": 0.639, "r_x": 0.394, "r_y": 0.450, "r_z": 0.111 },
-  "metrics": { "integrity": 0.193, "EV": -0.360, "entropy": 0.711 },
-  "overrides": { "toxic_veto": true }
-}`}</div>
-        </div>
-
-        <div className="prose-section">
-          <div className="prose-h2">Mathematical References</div>
-          <div className="prose-body" style={{fontSize:12}}>
-            Nielsen & Chuang (2010), <em>Quantum Computation and Quantum Information</em>, Ch. 2 & 11 — Bloch sphere, density matrices, von Neumann entropy.<br/>
-            Shannon (1948), <em>A Mathematical Theory of Communication</em> — information-theoretic threshold derivation.<br/>
-            Baumgratz, Cramer & Plenio (2014), <em>Quantifying Coherence</em> — ℓ₁-norm coherence measure.
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── COCKPIT VIEW ──────────────────────────────────────────
-function CPGauge({value,tau,verdict}){
-  const c=VC[verdict],sz=220,cx=110,cy=110,rO=96,rI=72,a0=-135,a1=135;
-  const mono="'JetBrains Mono',monospace";
-  const ticks=[];
-  for(let i=0;i<=30;i++){const t=i/30,ang=(a0+(a1-a0)*t)*Math.PI/180,major=i%5===0,active=t<=value;ticks.push(<line key={i} x1={cx+Math.cos(ang)*(rO+2)} y1={cy+Math.sin(ang)*(rO+2)} x2={cx+Math.cos(ang)*(rO+(major?10:5))} y2={cy+Math.sin(ang)*(rO+(major?10:5))} stroke={active?c.fg:'rgba(255,255,255,0.15)'} strokeWidth={major?1.5:0.7}/>);}
-  const vAng=(a0+(a1-a0)*value)*Math.PI/180,tAng=(a0+(a1-a0)*tau)*Math.PI/180;
-  const arcEnd=a0+(a1-a0)*value,large=Math.abs(arcEnd-a0)>180?1:0;
-  const arc=`M ${cx+Math.cos(a0*Math.PI/180)*rI} ${cy+Math.sin(a0*Math.PI/180)*rI} A ${rI} ${rI} 0 ${large} 1 ${cx+Math.cos(arcEnd*Math.PI/180)*rI} ${cy+Math.sin(arcEnd*Math.PI/180)*rI}`;
-  return(
-    <div style={{position:'relative',width:sz,height:sz,alignSelf:'center'}}>
-      <svg width={sz} height={sz} style={{position:'absolute',inset:0}}>
-        <circle cx={cx} cy={cy} r={rO} fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="1"/>
-        {ticks}
-        <path d={arc} fill="none" stroke={c.fg} strokeWidth="3" opacity="0.9"/>
-        <line x1={cx+Math.cos(tAng)*(rO-4)} y1={cy+Math.sin(tAng)*(rO-4)} x2={cx+Math.cos(tAng)*(rO+14)} y2={cy+Math.sin(tAng)*(rO+14)} stroke="#fff" strokeWidth="1.5" strokeDasharray="2 2"/>
-        <line x1={cx} y1={cy} x2={cx+Math.cos(vAng)*(rI-6)} y2={cy+Math.sin(vAng)*(rI-6)} stroke={c.fg} strokeWidth="2.5" strokeLinecap="round"/>
-        <circle cx={cx} cy={cy} r="5" fill="#0a0d12" stroke={c.fg} strokeWidth="2"/>
-      </svg>
-      <div style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',pointerEvents:'none'}}>
-        <div style={{font:`600 11px/1 ${mono}`,color:c.fg,letterSpacing:'0.22em',marginBottom:6}}>{verdict}</div>
-        <div style={{font:`300 36px/1 ${mono}`,color:'#d8dde6'}}>{fmt(value,3)}</div>
-        <div style={{font:`9.5px/1 ${mono}`,color:'rgba(216,221,230,0.5)',marginTop:6}}>|r| · τ {fmt(tau,3)}</div>
-      </div>
-    </div>
-  );
-}
-
-function CockpitView(){
-  const{state,update,applyPreset,parseScenario,parsing,metrics,sensitivity,factors,forecast,history,logs,api,presets}=useNerva();
-  const c=VC[metrics.verdict];
-  const mono="'JetBrains Mono',monospace",sans="'IBM Plex Sans',sans-serif";
-  const tile=(title,hint,children,style={})=>(
-    <div style={{background:'#0f1419',border:'1px solid rgba(255,255,255,0.06)',borderRadius:4,padding:'10px 12px',display:'flex',flexDirection:'column',...style}}>
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',marginBottom:8}}>
-        <div style={{font:`500 9.5px/1 ${mono}`,letterSpacing:'0.14em',color:'rgba(216,221,230,0.5)',textTransform:'uppercase'}}>{title}</div>
-        {hint&&<div style={{font:`9.5px/1 ${mono}`,color:'rgba(216,221,230,0.3)'}}>{hint}</div>}
-      </div>
-      <div style={{flex:1,minHeight:0,display:'flex',flexDirection:'column'}}>{children}</div>
-    </div>
-  );
-  const rHist=history.map(h=>h.r).concat([metrics.r]);
-  return(
-    <div style={{width:'100%',height:'100%',background:'#0a0d12',color:'#d8dde6',fontFamily:sans,display:'grid',gridTemplateColumns:'280px 1fr 300px',gap:8,padding:8,overflow:'hidden'}}>
-      {/* LEFT */}
-      <div style={{display:'flex',flexDirection:'column',gap:8,overflow:'hidden'}}>
-        {tile('Scenario',presets.find(p=>p.id===state.activePreset)?.name||'custom',<>
-          <textarea value={state.scenario} onChange={e=>update({scenario:e.target.value})} style={{background:'transparent',color:'#d8dde6',font:`12px/1.45 ${sans}`,height:70,padding:0,marginBottom:8}}/>
-          <button onClick={()=>parseScenario(state.scenario)} disabled={parsing} style={{background:parsing?'rgba(76,201,240,0.05)':'rgba(76,201,240,0.1)',border:`1px solid ${parsing?'rgba(76,201,240,0.2)':'rgba(76,201,240,0.4)'}`,color:parsing?'rgba(76,201,240,0.4)':'#4cc9f0',font:`600 10px/1 ${mono}`,letterSpacing:'0.12em',padding:'7px 0',marginBottom:8}}>
-            {parsing?'⟳ PARSING...':'⚡ PARSE WITH AI'}
-          </button>
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:4}}>
-            {presets.map(p=><button key={p.id} onClick={()=>applyPreset(p.id)} style={{background:state.activePreset===p.id?'rgba(76,201,240,0.12)':'rgba(255,255,255,0.025)',border:`1px solid ${state.activePreset===p.id?'#4cc9f0':'rgba(255,255,255,0.06)'}`,color:'#d8dde6',font:`500 10px/1.2 ${sans}`,padding:'5px 7px',textAlign:'left',borderRadius:3}}>
-              <div style={{color:state.activePreset===p.id?'#4cc9f0':'#d8dde6',fontSize:10.5}}>{p.name}</div>
-              <div style={{font:`9px/1 ${mono}`,color:'rgba(216,221,230,0.35)',marginTop:2}}>{p.subtitle}</div>
-            </button>)}
-          </div>
-        </>)}
-        {tile('Parameters','LIVE',<div style={{display:'flex',flexDirection:'column',gap:11}}>
-          <Slider sym="E" label="Urgency" sub="priority / pressure" value={state.E} onChange={v=>update({E:v})}/>
-          <Slider sym="S" label="Strategy" sub="plan quality / coherence" value={state.S} onChange={v=>update({S:v})}/>
-          <Slider sym="R" label="Risk" sub="exposure to neg. outcomes" value={state.R} onChange={v=>update({R:v})}/>
-          <Slider sym="Sp" label="Support" sub="data confidence / evidence" value={state.Sp} onChange={v=>update({Sp:v})}/>
-          <Slider sym="St" label="Stability" sub="system health / environment" value={state.St} onChange={v=>update({St:v})}/>
-        </div>)}
-        {tile('Threshold τ',state.tauMode==='auto'?'AUTO':'MANUAL',<>
-          <div style={{display:'flex',gap:4,marginBottom:8}}>
-            {['auto','manual'].map(m=><button key={m} onClick={()=>update({tauMode:m})} style={{flex:1,background:state.tauMode===m?'#4cc9f0':'transparent',color:state.tauMode===m?'#000':'#d8dde6',border:`1px solid ${state.tauMode===m?'#4cc9f0':'rgba(255,255,255,0.1)'}`,font:`500 10px/1 ${mono}`,letterSpacing:'0.12em',padding:'6px 0',borderRadius:3}}>{m.toUpperCase()}</button>)}
-          </div>
-          {state.tauMode==='manual'?<Slider sym="τ" label="Manual" value={state.tauManual} onChange={v=>update({tauManual:v})}/>:<div style={{font:`10px/1.4 ${mono}`,color:'rgba(216,221,230,0.4)'}}>τ = 0.25+0.35·S(ρ)+0.25·R−0.15·rev<br/>= {fmt(metrics.tauAuto,4)}</div>}
-        </>)}
-      </div>
-      {/* CENTER */}
-      <div style={{display:'grid',gridTemplateRows:'260px 1fr',gap:8,overflow:'hidden'}}>
-        <div style={{display:'grid',gridTemplateColumns:'260px 1fr',gap:8}}>
-          {tile('Verdict','|r| vs τ',<CPGauge value={metrics.r} tau={metrics.tau} verdict={metrics.verdict}/>)}
-          {tile('Foundation','quality',<div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:10,height:'100%'}}>
-            {[['INT',metrics.integrity,'#3ddc97'],['COH',metrics.coherence,'#4cc9f0'],['PUR',metrics.purity,'#7aa7ff'],['REV',metrics.reversibility,'#c084fc'],['ENT',metrics.entropy,'#f5b942']].map(([l,v,col])=>(
-              <div key={l} style={{display:'flex',flexDirection:'column',gap:5}}>
-                <div style={{font:`9px/1 ${mono}`,color:'rgba(216,221,230,0.4)',letterSpacing:'0.14em'}}>{l}</div>
-                <div style={{flex:1,position:'relative',background:'rgba(255,255,255,0.025)'}}><div style={{position:'absolute',left:0,right:0,bottom:0,height:`${v*100}%`,background:`linear-gradient(0deg,${col}66,${col})`,transition:'height 0.25s'}}/></div>
-                <div style={{font:`500 12px/1 ${mono}`,color:'#d8dde6'}}>{fmt(v,2)}</div>
-              </div>
-            ))}
-          </div>)}
-        </div>
-        {tile('Decision Zone Map',`E:${fmt(state.E,2)} · I:${fmt(metrics.integrity,2)} · |r|=${fmt(metrics.r,3)}`,
-          <div style={{display:'grid',gridTemplateColumns:'1fr 260px',gap:12,flex:1,minHeight:0}}>
-            <div style={{position:'relative',flex:1,minHeight:0}}>
-              <PhaseMap metrics={metrics} state={state}/>
-              {!metrics.signal&&<div style={{position:'absolute',bottom:6,left:6,right:6,background:'rgba(0,0,0,0.7)',border:`1px solid ${VC[metrics.verdict].fg}44`,borderRadius:3,padding:'5px 8px',font:`10px/1.3 ${mono}`,color:VC[metrics.verdict].fg}}>⏸ SIGNAL BELOW τ — dot shows zone position only</div>}
-            </div>
-            <div style={{display:'flex',flexDirection:'column',gap:8}}>
-              <div style={{background:c.bg,border:`1px solid ${c.fg}55`,padding:10,borderRadius:3}}>
-                <div style={{font:`600 10px/1 ${mono}`,color:c.fg,letterSpacing:'0.18em',marginBottom:5}}>{metrics.verdict}</div>
-                <div style={{font:`11px/1.45 ${sans}`,color:'#d8dde6'}}>{metrics.reason}</div>
-              </div>
-              <div style={{font:`9.5px/1 ${mono}`,color:'rgba(216,221,230,0.4)',letterSpacing:'0.14em'}}>FACTORS</div>
-              {factors.map(f=>{const pos=f.weight>=0,W=Math.min(1,Math.abs(f.weight)/0.3);return(
-                <div key={f.key} style={{display:'flex',alignItems:'center',gap:6,font:`11px/1 ${mono}`}}>
-                  <div style={{width:62,color:'#d8dde6'}}>{f.label}</div>
-                  <div style={{flex:1,position:'relative',height:11,background:'rgba(255,255,255,0.03)'}}>
-                    <div style={{position:'absolute',top:0,bottom:0,left:'50%',width:1,background:'rgba(255,255,255,0.1)'}}/>
-                    <div style={{position:'absolute',top:1,bottom:1,left:pos?'50%':`${50-W*50}%`,width:`${W*50}%`,background:pos?VC.COMMIT.fg:VC.TOXIC.fg,opacity:0.85}}/>
-                  </div>
-                  <div style={{width:46,textAlign:'right',color:pos?VC.COMMIT.fg:VC.TOXIC.fg}}>{pos?'+':''}{fmt(f.weight,3)}</div>
-                </div>
-              );})}
-              <div style={{display:'flex',alignItems:'center',gap:8,marginTop:4}}>
-                <Spark values={rHist} w={160} h={24} stroke="#4cc9f0"/>
-                <span style={{font:`12px/1 ${mono}`,color:'#d8dde6'}}>{fmt(metrics.r,3)}</span>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-      {/* RIGHT */}
-      <div style={{display:'flex',flexDirection:'column',gap:8,overflow:'hidden'}}>
-        {tile('Sensitivity ±0.1','what flips',<div style={{display:'flex',flexDirection:'column',gap:5,font:`10.5px/1.3 ${mono}`}}>
-          {sensitivity.map(s=><div key={s.key} style={{display:'grid',gridTemplateColumns:'28px 1fr 1fr',gap:5,alignItems:'center'}}>
-            <span style={{color:'#4cc9f0'}}>{s.key}</span>
-            <span style={{color:s.flipDn?VC[s.flipDn].fg:'rgba(216,221,230,0.3)'}}>{s.flipDn?`−0.1→${s.flipDn}`:'stable −'}</span>
-            <span style={{color:s.flipUp?VC[s.flipUp].fg:'rgba(216,221,230,0.3)',textAlign:'right'}}>{s.flipUp?`+0.1→${s.flipUp}`:'stable +'}</span>
-          </div>)}
-        </div>)}
-        {tile('Forecast',`slope ${forecast.slope>=0?'+':''}${fmt(forecast.slope*1000,1)}·10⁻³/m`,<div style={{display:'flex',flexDirection:'column',gap:4,font:`10.5px/1.35 ${mono}`}}>
-          {forecast.points.map(p=>{const cleared=p.r>=metrics.tau,col=cleared?VC.COMMIT.fg:VC.WAIT.fg;return(
-            <div key={p.label} style={{display:'grid',gridTemplateColumns:'44px 48px 1fr 32px',gap:4,alignItems:'center'}}>
-              <span style={{color:'rgba(216,221,230,0.6)'}}>{p.label}</span>
-              <span style={{color:col}}>{fmt(p.r,3)}</span>
-              <div style={{height:3,background:'rgba(255,255,255,0.07)',position:'relative'}}>
-                <div style={{position:'absolute',left:0,top:0,bottom:0,width:`${p.pAbove*100}%`,background:col}}/>
-                <div style={{position:'absolute',left:`${metrics.tau*100}%`,top:-2,bottom:-2,width:1,background:'rgba(255,255,255,0.5)'}}/>
-              </div>
-              <span style={{color:col,textAlign:'right'}}>{Math.round(p.pAbove*100)}%</span>
-            </div>
-          );})}
-          <div style={{marginTop:6,padding:'6px 8px',background:c.bg,border:`1px solid ${c.fg}44`,borderRadius:2,font:`10px/1.4 ${mono}`,color:c.fg}}>▶ {forecast.window}</div>
-        </div>)}
-        {tile('Agent Log','',<div style={{display:'flex',flexDirection:'column',gap:2,font:`10px/1.35 ${mono}`,overflow:'hidden'}}>
-          {logs.map((l,i)=>{const sc=l.sev==='E'?VC.TOXIC.fg:l.sev==='W'?VC.HOLD.fg:'rgba(216,221,230,0.3)';return(
-            <div key={i} style={{display:'grid',gridTemplateColumns:'12px 46px 1fr',gap:5}}>
-              <span style={{color:sc}}>{l.sev}</span><span style={{color:'#4cc9f0'}}>{l.src}</span>
-              <span style={{color:'#d8dde6',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{l.msg}</span>
-            </div>);})}
-        </div>)}
-        {tile('History','last 5',<div style={{display:'flex',flexDirection:'column',gap:4,font:`10.5px/1.3 ${mono}`}}>
-          {history.slice().reverse().map((h,i)=>{const hc=VC[h.verdict],mins=Math.round((Date.now()-h.t)/60000);return(
-            <div key={i} style={{display:'grid',gridTemplateColumns:'40px 1fr 44px 44px',gap:5,alignItems:'center'}}>
-              <span style={{color:'rgba(216,221,230,0.35)'}}>{mins}m</span>
-              <span style={{color:'#d8dde6'}}>{h.label}</span>
-              <span style={{color:'rgba(216,221,230,0.4)',textAlign:'right'}}>{fmt(h.r,2)}</span>
-              <span style={{color:hc.fg,fontWeight:600,textAlign:'right',fontSize:9.5,letterSpacing:'0.1em'}}>{h.verdict.slice(0,4)}</span>
-            </div>);})}
-        </div>)}
-      </div>
-    </div>
-  );
-}
-
-// ── BLOOMBERG ─────────────────────────────────────────────
-function BloombergView(){
-  const{state,update,applyPreset,parseScenario,parsing,metrics,sensitivity,factors,forecast,history,logs,api,presets}=useNerva();
-  const blx={bg:'#000',panel:'#050505',panelHi:'#0a0a0a',text:'#f7c948',dim:'#a07f1f',hi:'#fff7d6',green:'#5fff87',red:'#ff4d4d',blue:'#5fbfff',orange:'#ff9a3c',mauve:'#ff7ab5',line:'#1a1a1a',lineHi:'#2a2a2a',mono:'"JetBrains Mono","IBM Plex Mono",monospace'};
-  const vc={COMMIT:blx.green,HOLD:blx.text,WAIT:blx.blue,ESCALATE:blx.orange,TOXIC:blx.red};
-  const blk=' ▁▂▃▄▅▆▇█';
-  const spark=vals=>vals.map(v=>blk[Math.min(8,Math.max(0,Math.round(v*8)))]).join('');
-  const panel=(id,title,hint,children,style={})=>(
-    <div style={{background:blx.panel,border:`1px solid ${blx.line}`,display:'flex',flexDirection:'column',minHeight:0,...style}}>
-      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'3px 8px',background:blx.panelHi,borderBottom:`1px solid ${blx.line}`,font:`10.5px/1.2 ${blx.mono}`,letterSpacing:'0.04em'}}>
-        <span><span style={{color:blx.dim}}>&lt;{id}&gt;</span>{' '}<span style={{color:blx.hi}}>{title}</span></span>
-        {hint&&<span style={{color:blx.dim}}>{hint}</span>}
-      </div>
-      <div style={{flex:1,minHeight:0,padding:6,fontFamily:blx.mono,fontSize:11,lineHeight:1.4,color:blx.text,overflow:'hidden',display:'flex',flexDirection:'column'}}>{children}</div>
-    </div>
-  );
-  const bar=(v,w=24,col=blx.text)=>{const f=Math.round(v*w);return <span style={{color:col,letterSpacing:'-0.05em'}}>{'█'.repeat(f)}<span style={{color:blx.line}}>{'░'.repeat(w-f)}</span></span>;};
-  return(
-    <div style={{width:'100%',height:'100%',background:blx.bg,color:blx.text,fontFamily:blx.mono,fontSize:11,display:'grid',gridTemplateRows:'24px 1fr 22px',overflow:'hidden'}}>
-      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 8px',background:blx.text,color:'#000',font:`600 11px/1 ${blx.mono}`,letterSpacing:'0.04em'}}>
-        <div style={{display:'flex',gap:16}}><span>NERVA&lt;GO&gt;</span><span>DECISION INTEGRITY TERMINAL v10.0</span><span style={{opacity:0.6}}>SES 7F-2A91</span></div>
-        <div style={{display:'flex',gap:12}}><span>{api.region.toUpperCase()}</span><span>{Math.round(api.latency)}MS</span><span>99.982%</span><span>{new Date().toTimeString().slice(0,8)}</span></div>
-      </div>
-      <div style={{display:'grid',gridTemplateColumns:'260px 1fr 1fr 240px',gridTemplateRows:'1fr 1fr 140px',gap:1,background:blx.line,overflow:'hidden'}}>
-        {panel('INP','INPUTS','OPERATOR',<>
-          <div style={{color:blx.hi,fontSize:10.5,lineHeight:1.5,marginBottom:6,maxHeight:60,overflow:'hidden'}}>{state.scenario}</div>
-          <div style={{display:'flex',gap:4,marginBottom:6}}>
-            <button onClick={()=>parseScenario(state.scenario)} disabled={parsing} style={{flex:1,background:parsing?'transparent':'rgba(247,201,72,0.12)',border:`1px solid ${parsing?blx.line:blx.text}`,color:parsing?blx.dim:blx.text,font:`700 10px/1 ${blx.mono}`,letterSpacing:'0.08em',padding:'4px 0'}}>
-              {parsing?'PARSING...':'F2 · PARSE'}
-            </button>
-          </div>
-          <div style={{display:'flex',flexWrap:'wrap',gap:2,marginBottom:6}}>
-            {presets.map(p=><button key={p.id} onClick={()=>applyPreset(p.id)} style={{background:state.activePreset===p.id?blx.text:'transparent',color:state.activePreset===p.id?'#000':blx.dim,border:`1px solid ${blx.line}`,font:`9px/1 ${blx.mono}`,padding:'2px 5px'}}>{p.id.toUpperCase()}</button>)}
-          </div>
-          {[['E','URGENCY',state.E,v=>update({E:v}),blx.orange],['S','STRATEGY',state.S,v=>update({S:v}),blx.green],['R','RISK',state.R,v=>update({R:v}),blx.red],['Sp','SUPPORT',state.Sp,v=>update({Sp:v}),blx.blue],['St','STABILITY',state.St,v=>update({St:v}),blx.mauve]].map(([sym,lbl,val,set,col])=>(
-            <div key={sym} style={{marginBottom:4}}>
-              <div style={{display:'flex',justifyContent:'space-between'}}><span style={{color:blx.hi}}>{sym} {lbl}</span><span>{fmt(val,3)}</span></div>
-              <div style={{height:3,background:blx.lineHi,position:'relative',marginBottom:1}}><div style={{position:'absolute',left:0,top:0,bottom:0,width:`${val*100}%`,background:col}}/></div>
-              <input type="range" min="0" max="1" step="0.01" value={val} onChange={e=>set(parseFloat(e.target.value))} style={{accentColor:col,color:col,width:'100%',height:2}}/>
-            </div>
-          ))}
-          <div style={{display:'flex',gap:4,marginTop:4}}>
-            {['auto','manual'].map(m=><button key={m} onClick={()=>update({tauMode:m})} style={{flex:1,background:state.tauMode===m?blx.text:'transparent',color:state.tauMode===m?'#000':blx.dim,border:`1px solid ${blx.line}`,font:`9px/1 ${blx.mono}`,padding:'3px 0'}}>{m.toUpperCase()}</button>)}
-          </div>
-          {state.tauMode==='manual'&&<input type="range" min="0.15" max="0.85" step="0.01" value={state.tauManual} onChange={e=>update({tauManual:parseFloat(e.target.value)})} style={{accentColor:blx.text,color:blx.text,width:'100%',marginTop:3}}/>}
-        </>,{gridRow:'span 2'})}
-        {panel('VRD','VERDICT','',<div style={{display:'flex',flexDirection:'column',gap:4}}>
-          <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:6,borderBottom:`1px solid ${blx.lineHi}`,paddingBottom:6,marginBottom:4}}>
-            {[[metrics.r,'|r|'],[metrics.tau,'τ'],[metrics.EV,'EV'],[Math.round(metrics.theta)+'°','θ'],[Math.round(metrics.phi)+'°','Φ']].map(([v,l])=>(
-              <div key={l}><div style={{color:blx.dim,fontSize:9.5}}>{l}</div><div style={{color:blx.hi,fontSize:17,fontWeight:300}}>{typeof v==='number'?fmt(v,3):v}</div></div>
-            ))}
-          </div>
-          <div style={{fontSize:30,fontWeight:700,color:vc[metrics.verdict],letterSpacing:'0.08em',lineHeight:1}}>{metrics.verdict}</div>
-          <div style={{fontSize:11,color:blx.hi,marginTop:2}}>&gt; {metrics.reason.slice(0,90)}</div>
-          <div style={{fontSize:10,color:blx.dim}}>BAND: |r|±{fmt(metrics.entropy*0.15,2)} · σ={fmt(metrics.entropy,2)}</div>
-        </div>)}
-        {panel('FCT','FORECAST','',<div style={{display:'flex',flexDirection:'column',gap:3}}>
-          {forecast.points.map(p=>{const cleared=p.r>=metrics.tau,col=cleared?blx.green:blx.red,f=Math.round(p.pAbove*10);return(
-            <div key={p.label} style={{display:'grid',gridTemplateColumns:'44px 52px 38px 1fr',gap:4,alignItems:'center'}}>
-              <span style={{color:blx.hi}}>{p.label}</span><span style={{color:col}}>{fmt(p.r,3)}</span><span style={{color:blx.dim,textAlign:'right'}}>{fmt(p.sigma,2)}</span>
-              <span style={{textAlign:'right',display:'flex',alignItems:'center',justifyContent:'flex-end',gap:4}}><span style={{color:col,letterSpacing:'-0.05em'}}>{'█'.repeat(f)}<span style={{color:blx.line}}>{'░'.repeat(10-f)}</span></span><span style={{color:col,width:26,textAlign:'right'}}>{Math.round(p.pAbove*100)}%</span></span>
-            </div>);})}
-          <div style={{marginTop:'auto',borderTop:`1px solid ${blx.line}`,paddingTop:4,color:forecast.window.startsWith('ACT')?blx.green:blx.text}}>▶ {forecast.window}</div>
-        </div>)}
-        {panel('MAP','PHASE MAP',`E:${fmt(state.E,2)}·I:${fmt(metrics.integrity,2)}`,<div style={{flex:1,minHeight:0}}><PhaseMap metrics={metrics} state={state} W={260} H={160}/></div>)}
-        {panel('QLT','QUALITY METRICS','0–1',<div style={{display:'flex',flexDirection:'column',gap:5}}>
-          {[['INTEGRITY ',metrics.integrity,blx.green],['COHERENCE ',metrics.coherence,blx.blue],['PURITY    ',metrics.purity,blx.mauve],['REVERSIBLE',metrics.reversibility,'#c084fc'],['ENTROPY   ',metrics.entropy,blx.orange],['EXP-VALUE ',(metrics.EV+1)/2,metrics.EV>0?blx.green:blx.red]].map(([l,v,col])=>(
-            <div key={l} style={{display:'grid',gridTemplateColumns:'90px 1fr 50px',gap:5,alignItems:'center'}}><span style={{color:blx.dim,fontSize:10.5}}>{l}</span>{bar(v,22,col)}<span style={{color:col,textAlign:'right'}}>{fmt(v,3)}</span></div>))}
-        </div>)}
-        {panel('FAC','FACTORS','signed',<div style={{display:'flex',flexDirection:'column',gap:3}}>
-          {factors.map(f=>{const pos=f.weight>=0,mag=Math.min(11,Math.round(Math.abs(f.weight)*(11/0.3)));return(
-            <div key={f.key} style={{display:'grid',gridTemplateColumns:'60px 1fr 50px 48px',gap:4,alignItems:'center',fontSize:11}}>
-              <span style={{color:blx.hi}}>{f.label.toUpperCase().slice(0,8)}</span>
-              <span style={{color:pos?blx.green:blx.red,whiteSpace:'pre',letterSpacing:'-0.04em',fontSize:10}}>{pos?' '.repeat(11)+'+'+'█'.repeat(mag)+'·'.repeat(11-mag):' '.repeat(11-mag)+'█'.repeat(mag)+'-'+'·'.repeat(11)}</span>
-              <span style={{color:blx.text,textAlign:'right'}}>{fmt(f.raw,2)}</span>
-              <span style={{color:pos?blx.green:blx.red,textAlign:'right'}}>{pos?'+':''}{fmt(f.weight,3)}</span>
-            </div>);})}
-        </div>)}
-        {panel('SEN','SENSITIVITY','δ=±0.10',<>{sensitivity.map(s=>(
-          <div key={s.key} style={{display:'grid',gridTemplateColumns:'36px 90px 1fr 90px',gap:4,alignItems:'center',fontSize:11,marginBottom:3}}>
-            <span style={{color:blx.hi}}>{s.key}</span>
-            <span style={{color:s.flipDn?vc[s.flipDn]:blx.dim}}>{s.flipDn?`▶ ${s.flipDn.slice(0,4)}`:'— stable'}</span>
-            <span style={{color:blx.text,textAlign:'center'}}>{s.dDn>=0?'+':''}{fmt(s.dDn,3)}/{s.dUp>=0?'+':''}{fmt(s.dUp,3)}</span>
-            <span style={{color:s.flipUp?vc[s.flipUp]:blx.dim,textAlign:'right'}}>{s.flipUp?`${s.flipUp.slice(0,4)} ◀`:'stable —'}</span>
-          </div>))}</>)}
-        {panel('HST','HISTORY','last 5',<div style={{display:'flex',flexDirection:'column',gap:3}}>
-          {history.slice().reverse().map((h,i)=>{const mins=Math.round((Date.now()-h.t)/60000);return(
-            <div key={i} style={{display:'grid',gridTemplateColumns:'40px 80px 48px 1fr',gap:4}}>
-              <span style={{color:blx.dim}}>{mins}m</span><span style={{color:blx.hi}}>{h.label}</span>
-              <span style={{textAlign:'right'}}>{fmt(h.r,2)}</span><span style={{color:vc[h.verdict],textAlign:'right',fontWeight:600}}>{h.verdict}</span>
-            </div>);})}
-          <div style={{marginTop:'auto',color:blx.dim,fontSize:10}}>TRACE {spark(history.map(h=>h.r).concat([metrics.r]))}</div>
-        </div>)}
-        {panel('LOG','AGENT LOG','streaming',<div style={{display:'flex',flexDirection:'column',gap:1,fontSize:10.5}}>
-          {logs.map((l,i)=>{const sc=l.sev==='E'?blx.red:l.sev==='W'?blx.orange:blx.dim;return(
-            <div key={i} style={{display:'grid',gridTemplateColumns:'12px 44px 1fr',gap:4}}>
-              <span style={{color:sc}}>{l.sev}</span><span style={{color:blx.blue}}>{l.src}</span>
-              <span style={{color:blx.hi,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{l.msg}</span>
-            </div>);})}
-        </div>)}
-      </div>
-      <div style={{background:blx.text,color:'#000',padding:'0 8px',display:'flex',alignItems:'center',justifyContent:'space-between',font:`600 11px/1 ${blx.mono}`,letterSpacing:'0.04em'}}>
-        <div style={{display:'flex',gap:12}}><span>F1:HELP</span><span>F2:PARSE</span><span>F3:LOAD</span><span>F4:SAVE</span><span>F5:COMPARE</span><span>F6:AUDIT</span><span>F9:OVERRIDE</span></div>
-        <div style={{display:'flex',gap:12}}><span>{metrics.verdict}</span><span>|r|={fmt(metrics.r,3)}</span><span>τ={fmt(metrics.tau,3)}</span><span style={{background:'#000',color:blx.green,padding:'0 6px'}}>● LIVE</span></div>
-      </div>
-    </div>
-  );
-}
-
-// ── PHASE SPACE ───────────────────────────────────────────
-function PhaseSpaceView(){
-  const{state,update,applyPreset,parseScenario,parsing,metrics,sensitivity,factors,history,api,presets}=useNerva();
-  const psx={bg:'#f5f1e8',paper:'#fbf8f0',ink:'#1a1814',dim:'rgba(26,24,20,0.62)',faint:'rgba(26,24,20,0.38)',rule:'rgba(26,24,20,0.15)',ruleHi:'rgba(26,24,20,0.35)',accent:'#a3361b',serif:'"Newsreader","Georgia",serif',sans:'"IBM Plex Sans",system-ui,sans-serif',mono:'"JetBrains Mono",monospace'};
-  const psvc={COMMIT:{fg:'#2e6f3e',bg:'rgba(46,111,62,0.08)'},HOLD:{fg:'#8a6a1a',bg:'rgba(138,106,26,0.08)'},WAIT:{fg:'#2a4a8a',bg:'rgba(42,74,138,0.08)'},ESCALATE:{fg:'#a3531b',bg:'rgba(163,83,27,0.08)'},TOXIC:{fg:'#a3361b',bg:'rgba(163,54,27,0.10)'}};
-  const c=psvc[metrics.verdict];
-  const W=560,H=380,M={l:46,r:28,t:26,b:40};
-  const pw=W-M.l-M.r,ph=H-M.t-M.b;
-  const xp=v=>M.l+v*pw,yp=v=>M.t+(1-v)*ph;
-  const px_=xp(state.E),py_=yp(metrics.integrity);
-  const rx=13+metrics.entropy*30,ry=9+metrics.entropy*20;
-  return(
-    <div style={{width:'100%',height:'100%',background:psx.bg,color:psx.ink,fontFamily:psx.sans,overflow:'hidden',display:'grid',gridTemplateRows:'auto 1fr'}}>
-      <header style={{padding:'10px 22px 8px',borderBottom:`1px solid ${psx.ink}`,background:psx.paper,display:'flex',justifyContent:'space-between',alignItems:'baseline'}}>
+  return (
+    <div style={{width:'100%',minHeight:'100vh',background:px.bg,color:px.ink,fontFamily:px.sans,display:'flex',flexDirection:'column'}}>
+      {/* HEADER */}
+      <header style={{padding:'14px 28px 12px',display:'grid',gridTemplateColumns:'1fr auto 1fr',alignItems:'end',gap:18,borderBottom:`1px solid ${px.ink}`,background:px.paper}}>
         <div>
-          <div style={{font:`9px ${psx.mono}`,color:psx.faint,letterSpacing:'0.18em'}}>VOL. 10 · ISSUE 0 · {new Date().toLocaleDateString('en-US',{month:'short',year:'numeric'}).toUpperCase()} · INTERNAL REVIEW</div>
-          <h1 style={{margin:'3px 0 0',font:`400 26px/1 ${psx.serif}`,letterSpacing:'-0.02em'}}>Nerva <em>—</em> a decision integrity engine</h1>
-          <div style={{font:`italic 12px ${psx.serif}`,color:psx.dim,marginTop:2}}>Phase-space evaluation · Bloch kernel v10.0 · {metrics.validation.components_consistent?'✓ consistent':'⚠ check normalization'}</div>
+          <div style={{font:`10px ${px.mono}`,color:px.inkDim,letterSpacing:'0.22em'}}>AC ADS · PLUMB · v3 · 2026</div>
+          <h1 style={{margin:'4px 0 0',font:`500 38px/0.95 ${px.serif}`,color:px.ink,letterSpacing:'-0.02em'}}>Plumb.</h1>
+          <div style={{font:`italic 14px/1.3 ${px.serif}`,color:px.inkDim,marginTop:2}}>The three-layer buyside audit.</div>
         </div>
-        <div style={{textAlign:'right',font:`9.5px/1.5 ${psx.mono}`,color:psx.faint}}><div style={{color:psx.ink}}>7F-2A91</div><div>{Math.round(api.latency)}ms</div><div style={{color:psvc.COMMIT.fg}}>● {api.status}</div></div>
+        <div style={{textAlign:'center',borderLeft:`1px solid ${px.rule}`,borderRight:`1px solid ${px.rule}`,padding:'0 22px'}}>
+          <div style={{font:`10px ${px.mono}`,color:px.inkDim,letterSpacing:'0.18em'}}>SCORING ENGINE</div>
+          <div style={{font:`500 16px/1 ${px.serif}`,marginTop:4}}>running on <span style={{font:`600 14px ${px.mono}`,letterSpacing:'0.18em',color:px.ink}}>NERVA v10</span></div>
+          <div style={{font:`italic 11.5px/1.3 ${px.serif}`,color:px.inkDim,marginTop:4}}>decision integrity engine · {api.region} · {Math.round(api.latency)}ms</div>
+        </div>
+        <div style={{textAlign:'right',font:`11px/1.45 ${px.mono}`,color:px.inkDim}}>
+          <div style={{color:px.ink,font:`500 12px ${px.mono}`,letterSpacing:'0.08em'}}>AUDIT 28491 · LIVE</div>
+          <div>session 7F-2A91</div>
+          <div style={{color:px.green,marginTop:1}}>● api nominal {api.uptime}%</div>
+          <a href="/" style={{color:px.inkFaint,font:`9px ${px.mono}`,letterSpacing:'0.14em',textDecoration:'none',marginTop:4,display:'block'}}>← NERVA v10</a>
+        </div>
       </header>
-      <div style={{display:'grid',gridTemplateColumns:'250px 1fr 240px',minHeight:0,overflow:'hidden'}}>
-        <aside style={{padding:'12px 16px',borderRight:`1px solid ${psx.rule}`,overflow:'hidden',display:'flex',flexDirection:'column',minHeight:0}}>
-          <div style={{font:`9px ${psx.mono}`,color:psx.faint,letterSpacing:'0.18em',marginBottom:4}}>§ 1 — SCENARIO</div>
-          <textarea value={state.scenario} onChange={e=>update({scenario:e.target.value})} style={{background:'transparent',font:`12px/1.5 ${psx.serif}`,color:psx.ink,height:60,padding:0,marginBottom:5}}/>
-          <button onClick={()=>parseScenario(state.scenario)} disabled={parsing} style={{background:parsing?'transparent':c.bg,border:`1px solid ${c.fg}`,color:c.fg,font:`italic 11.5px ${psx.serif}`,padding:'4px 0',marginBottom:7}}>{parsing?'parsing…':'⚡ parse with AI'}</button>
-          <div style={{font:`9px ${psx.mono}`,color:psx.faint,letterSpacing:'0.18em',marginBottom:3}}>CORPUS</div>
-          <div style={{display:'flex',flexDirection:'column',borderTop:`1px solid ${psx.rule}`}}>
-            {presets.map(p=><button key={p.id} onClick={()=>applyPreset(p.id)} style={{background:state.activePreset===p.id?c.bg:'transparent',border:'none',borderBottom:`1px solid ${psx.rule}`,textAlign:'left',cursor:'pointer',padding:'4px 2px',color:psx.ink}}>
-              <span style={{font:`500 12px/1 ${psx.serif}`,color:state.activePreset===p.id?psx.accent:psx.ink}}>{p.name}</span>
-              <span style={{font:`9px ${psx.mono}`,color:psx.faint,marginLeft:5}}>{p.id.toUpperCase()}</span>
-            </button>)}
-          </div>
-          <div style={{font:`9px ${psx.mono}`,color:psx.faint,letterSpacing:'0.18em',margin:'8px 0 4px'}}>§ 2 — PARAMETERS</div>
-          {[['E','Urgency',state.E,v=>update({E:v})],['S','Strategy',state.S,v=>update({S:v})],['R','Risk',state.R,v=>update({R:v})],['Sp','Support',state.Sp,v=>update({Sp:v})],['St','Stability',state.St,v=>update({St:v})]].map(([sym,lbl,val,set])=>(
-            <div key={sym} style={{display:'flex',flexDirection:'column',gap:2,padding:'4px 0',borderBottom:`1px solid ${psx.rule}`}}>
-              <div style={{display:'flex',justifyContent:'space-between'}}><span style={{font:`12px/1 ${psx.serif}`}}><em style={{color:psx.accent,marginRight:4}}>{sym}</em>{lbl}</span><span style={{font:`11px/1 ${psx.mono}`}}>{fmt(val,2)}</span></div>
-              <input type="range" min="0" max="1" step="0.01" value={val} onChange={e=>set(parseFloat(e.target.value))} style={{accentColor:psx.accent,width:'100%'}}/>
-            </div>
-          ))}
-        </aside>
-        <main style={{padding:'12px 18px',overflow:'hidden',display:'grid',gridTemplateRows:'auto 1fr auto',gap:8,minHeight:0}}>
-          <div style={{display:'grid',gridTemplateColumns:'auto 1fr',gap:14,alignItems:'start',paddingBottom:8,borderBottom:`1px solid ${psx.rule}`}}>
-            <div style={{padding:'7px 14px',background:c.bg,border:`1px solid ${c.fg}`,minWidth:120,textAlign:'center'}}>
-              <div style={{font:`9px ${psx.mono}`,color:psx.faint,letterSpacing:'0.2em'}}>RESULT</div>
-              <div style={{font:`400 24px/1 ${psx.serif}`,color:c.fg,marginTop:3}}>{metrics.verdict.charAt(0)+metrics.verdict.slice(1).toLowerCase()}</div>
-              <div style={{font:`9.5px ${psx.mono}`,color:psx.faint,marginTop:2}}>|r|={fmt(metrics.r,3)} τ={fmt(metrics.tau,3)}</div>
-            </div>
-            <div style={{font:`italic 12px/1.55 ${psx.serif}`,color:psx.ink,columnCount:2,columnGap:18,textIndent:'1em'}}>
-              {metrics.reason} At ({fmt(state.E,2)}, {fmt(metrics.integrity,2)}) in phase space. Bloch: r=({fmt(metrics.r_x,4)}, {fmt(metrics.r_y,4)}, {fmt(metrics.r_z,4)}). Purity {fmt(metrics.purity,4)} ∈ [0.5,1]. S(ρ)={fmt(metrics.entropy,4)}.
-            </div>
-          </div>
-          <figure style={{margin:0,display:'flex',flexDirection:'column',minHeight:0}}>
-            <div style={{flex:1,minHeight:0,position:'relative',border:`1px solid ${psx.rule}`,background:psx.paper}}>
-              <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet" style={{width:'100%',height:'100%',display:'block'}}>
-                {[{y:0.65,x2:1,col:psvc.COMMIT},{y:0.35,x0:0,w:0.5,col:psvc.HOLD},{y:0.35,x0:0.5,w:0.5,col:psvc.ESCALATE},{y:0,x0:0,w:0.5,yt:0.65,col:psvc.ESCALATE},{y:0,x0:0.5,w:0.5,yt:0.65,col:psvc.TOXIC}].map((_,i)=>{
-                  const zones=[[0,0,1,0.35,psvc.COMMIT.fg],[0,0.35,0.5,0.30,psvc.HOLD.fg],[0.5,0.35,0.5,0.30,psvc.ESCALATE.fg],[0,0.65,0.5,0.35,psvc.ESCALATE.fg],[0.5,0.65,0.5,0.35,psvc.TOXIC.fg]];
-                  const[x0,y0,w,h,col]=zones[i];
-                  return <rect key={i} x={xp(x0)} y={yp(y0+h)} width={pw*w} height={ph*h} fill={col} opacity="0.07"/>;
-                })}
-                {[['COMMIT',0.5,0.18,psvc.COMMIT.fg],['HOLD',0.25,0.52,psvc.HOLD.fg],['ESCALATE',0.75,0.52,psvc.ESCALATE.fg],['ESCALATE',0.25,0.85,psvc.ESCALATE.fg],['TOXIC',0.75,0.85,psvc.TOXIC.fg]].map(([n,xi,yi,col])=>(
-                  <text key={n+xi} x={xp(xi)} y={yp(1-yi)} textAnchor="middle" style={{font:`italic 12px ${psx.serif}`,fill:col,opacity:0.7}}>{n}</text>
-                ))}
-                <line x1={M.l} y1={yp(metrics.tau)} x2={M.l+pw} y2={yp(metrics.tau)} stroke={c.fg} strokeDasharray="4 3" strokeWidth="1" opacity="0.6"/>
-                <text x={M.l+pw-2} y={yp(metrics.tau)-4} textAnchor="end" style={{font:`9px ${psx.mono}`,fill:c.fg,opacity:0.7}}>τ={fmt(metrics.tau,3)}</text>
-                {[0,0.25,0.5,0.75,1].map(t=><g key={t}><line x1={xp(t)} y1={M.t} x2={xp(t)} y2={M.t+ph} stroke={psx.rule} strokeDasharray="2 3"/><line x1={M.l} y1={yp(t)} x2={M.l+pw} y2={yp(t)} stroke={psx.rule} strokeDasharray="2 3"/><text x={xp(t)} y={M.t+ph+16} textAnchor="middle" style={{font:`9.5px ${psx.mono}`,fill:psx.faint}}>{t.toFixed(2)}</text><text x={M.l-5} y={yp(t)+3} textAnchor="end" style={{font:`9.5px ${psx.mono}`,fill:psx.faint}}>{t.toFixed(2)}</text></g>)}
-                <line x1={M.l} y1={M.t} x2={M.l} y2={M.t+ph} stroke={psx.ink} strokeWidth="1.2"/>
-                <line x1={M.l} y1={M.t+ph} x2={M.l+pw} y2={M.t+ph} stroke={psx.ink} strokeWidth="1.2"/>
-                <line x1={M.l} y1={yp(0.35)} x2={M.l+pw} y2={yp(0.35)} stroke={psx.ruleHi}/>
-                <line x1={M.l} y1={yp(0.65)} x2={M.l+pw} y2={yp(0.65)} stroke={psx.ruleHi}/>
-                <line x1={xp(0.5)} y1={yp(0.65)} x2={xp(0.5)} y2={M.t+ph} stroke={psx.ruleHi}/>
-                <text x={M.l+pw/2} y={H-5} textAnchor="middle" style={{font:`italic 11px ${psx.serif}`,fill:psx.ink}}>Urgency  E</text>
-                <text x={12} y={M.t+ph/2} textAnchor="middle" transform={`rotate(-90 12 ${M.t+ph/2})`} style={{font:`italic 11px ${psx.serif}`,fill:psx.ink}}>Integrity</text>
-                {history.map((h,i)=><circle key={i} cx={xp(h.E)} cy={yp(h.integrity)} r="2.5" fill={psvc[h.verdict]?.fg||psx.faint} opacity={0.2+i*0.09}/>)}
-                {history.length>0&&<polyline points={history.map(h=>`${xp(h.E)},${yp(h.integrity)}`).concat([`${px_},${py_}`]).join(' ')} fill="none" stroke={psx.faint} strokeWidth="0.8" strokeDasharray="3 3"/>}
-                <ellipse cx={px_} cy={py_} rx={rx} ry={ry} fill="none" stroke={c.fg} strokeWidth="0.8" strokeDasharray="2 2" opacity="0.7"/>
-                <ellipse cx={px_} cy={py_} rx={rx*0.5} ry={ry*0.5} fill={c.fg} opacity="0.10"/>
-                <circle cx={px_} cy={py_} r="7" fill="none" stroke={c.fg} strokeWidth="1.5"/>
-                <circle cx={px_} cy={py_} r="3.5" fill={metrics.signal?c.fg:'none'} stroke={c.fg} strokeWidth="1"/>
-                <line x1={px_+6} y1={py_-6} x2={px_+28} y2={py_-18} stroke={c.fg} strokeWidth="0.8"/>
-                <text x={px_+32} y={py_-20} style={{font:`italic 11px ${psx.serif}`,fill:c.fg}}>{metrics.verdict.toLowerCase()} · |r|={fmt(metrics.r,2)}</text>
-              </svg>
-            </div>
-            <figcaption style={{marginTop:4,font:`10.5px/1.4 ${psx.sans}`,color:psx.dim}}>
-              <span style={{font:`600 10px ${psx.mono}`,color:psx.ink,marginRight:5}}>FIG. 1</span>
-              Phase diagram. τ={fmt(metrics.tau,3)} (dashed). Envelope = entropy-scaled confidence. Trail = last {history.length} sessions.
-            </figcaption>
-          </figure>
-          <div style={{display:'grid',gridTemplateColumns:'repeat(6,1fr)',borderTop:`1px solid ${psx.ink}`,paddingTop:6,gap:10}}>
-            {[[fmt(metrics.r,3),'|r|','signal',c.fg],[fmt(metrics.tau,3),'τ','threshold',null],[fmt(metrics.EV,3),'EV','exp. value',metrics.EV>0?psvc.COMMIT.fg:psvc.TOXIC.fg],[Math.round(metrics.theta)+'°','θ','integrity angle',null],[Math.round(metrics.phi)+'°','Φ','coherence angle',null],[fmt(metrics.reversibility,2),'ρ','reversibility',null]].map(([v,l,sub,col])=>(
-              <div key={l} style={{borderBottom:`1px solid ${psx.rule}`,paddingBottom:4}}>
-                <div style={{font:`9px ${psx.mono}`,color:psx.faint,letterSpacing:'0.14em',marginBottom:2}}>{l}</div>
-                <div style={{font:`300 20px/1 ${psx.serif}`,color:col||psx.ink}}>{v}</div>
-                <div style={{font:`italic 9.5px ${psx.serif}`,color:psx.dim,marginTop:1}}>{sub}</div>
-              </div>
-            ))}
-          </div>
-        </main>
-        <aside style={{padding:'12px 16px',borderLeft:`1px solid ${psx.rule}`,overflow:'hidden',display:'flex',flexDirection:'column',minHeight:0}}>
-          <div style={{font:`9px ${psx.mono}`,color:psx.faint,letterSpacing:'0.18em',marginBottom:4}}>§ 3 — BLOCH</div>
-          {[['r_x',metrics.r_x],['r_y',metrics.r_y],['r_z',metrics.r_z],['|r|',metrics.r]].map(([l,v])=>(
-            <div key={l} style={{display:'flex',justifyContent:'space-between',padding:'3px 0',borderBottom:`1px solid ${psx.rule}`,font:`11px ${psx.mono}`,color:psx.ink}}><span>{l}</span><span>{fmt(v,4)}</span></div>
-          ))}
-          <div style={{font:`9px ${psx.mono}`,color:psx.faint,letterSpacing:'0.18em',margin:'8px 0 4px'}}>§ 4 — DERIVED</div>
-          {[['Purity',metrics.purity],['Entropy',metrics.entropy],['Coherence',metrics.coherence],['Integrity',metrics.integrity]].map(([l,v])=>(
-            <div key={l} style={{display:'flex',alignItems:'center',gap:5,padding:'3px 0',borderBottom:`1px solid ${psx.rule}`}}>
-              <div style={{flex:1,font:`12px ${psx.serif}`,color:psx.ink}}>{l}</div>
-              <div style={{width:50,height:3,background:psx.rule,position:'relative'}}><div style={{position:'absolute',left:0,top:0,bottom:0,width:`${v*100}%`,background:psx.ink}}/></div>
-              <div style={{width:28,textAlign:'right',font:`10px ${psx.mono}`}}>{fmt(v,2)}</div>
-            </div>
-          ))}
-          <div style={{font:`9px ${psx.mono}`,color:psx.faint,letterSpacing:'0.18em',margin:'8px 0 4px'}}>§ 5 — SENSITIVITY</div>
-          {sensitivity.map(s=>(
-            <div key={s.key} style={{display:'grid',gridTemplateColumns:'18px 1fr 1fr',alignItems:'center',padding:'2px 0',borderBottom:`1px dotted ${psx.rule}`,font:`11.5px ${psx.serif}`}}>
-              <em style={{color:psx.accent}}>{s.key}</em>
-              <span style={{color:s.flipDn?psvc[s.flipDn].fg:psx.faint,fontStyle:s.flipDn?'normal':'italic',fontSize:11}}>{s.flipDn?`↓ ${s.flipDn.toLowerCase()}`:'no flip ↓'}</span>
-              <span style={{color:s.flipUp?psvc[s.flipUp].fg:psx.faint,fontStyle:s.flipUp?'normal':'italic',textAlign:'right',fontSize:11}}>{s.flipUp?`${s.flipUp.toLowerCase()} ↑`:'↑ no flip'}</span>
-            </div>
-          ))}
-          <div style={{font:`9px ${psx.mono}`,color:psx.faint,letterSpacing:'0.18em',margin:'8px 0 4px'}}>§ 6 — VALIDATION</div>
-          {Object.entries(metrics.validation).map(([k,v])=>(
-            <div key={k} style={{font:`9.5px/1.6 ${psx.mono}`,color:v?psvc.COMMIT.fg:psvc.TOXIC.fg}}>{v?'✓':'✗'} {k.replace(/_/g,' ')}</div>
-          ))}
-        </aside>
-      </div>
-    </div>
-  );
-}
 
-// ── BRUTALIST ─────────────────────────────────────────────
-function BrutalistView(){
-  const{state,update,applyPreset,parseScenario,parsing,metrics,sensitivity,factors,history,logs,api,presets}=useNerva();
-  const brx={bg:'#f4f3ef',paper:'#ffffff',ink:'#0a0a0a',dim:'rgba(10,10,10,0.55)',faint:'rgba(10,10,10,0.30)',rule:'#0a0a0a',ruleL:'rgba(10,10,10,0.16)',signal:'#d92e16',mono:'"JetBrains Mono","IBM Plex Mono",monospace'};
-  const isVeto=metrics.verdict==='TOXIC'||metrics.verdict==='ESCALATE';
-  const vCol=isVeto?brx.signal:brx.ink;
-  const bbar=(v,w=26)=>{const f=Math.round(v*w);return <span style={{fontFamily:brx.mono,fontSize:11.5,letterSpacing:'-0.05em',color:brx.ink}}>{'█'.repeat(f)}{'·'.repeat(w-f)}</span>;};
-  const sec=(no,title,children,style={})=>(
-    <section style={{display:'flex',flexDirection:'column',minWidth:0,minHeight:0,...style}}>
-      <div style={{display:'flex',alignItems:'baseline',gap:7,padding:'3px 0 5px',borderBottom:`2px solid ${brx.ink}`}}>
-        <span style={{font:`700 11px/1 ${brx.mono}`,color:brx.ink}}>§{String(no).padStart(2,'0')}</span>
-        <span style={{font:`700 10.5px/1 ${brx.mono}`,color:brx.ink,letterSpacing:'0.16em'}}>{title}</span>
+      {/* BRIEF BAR */}
+      <div style={{padding:'10px 28px',borderBottom:`1px solid ${px.rule}`,background:px.bg,display:'grid',gridTemplateColumns:'auto 1fr auto',gap:24,alignItems:'center'}}>
+        <div>
+          <div style={{font:`9.5px ${px.mono}`,color:px.inkDim,letterSpacing:'0.18em',marginBottom:2}}>BRIEF</div>
+          <div style={{font:`500 15px/1.1 ${px.serif}`,color:px.ink}}>{brief.brand} <span style={{color:px.inkDim}}>·</span> {brief.title}</div>
+          <div style={{font:`italic 12px ${px.serif}`,color:px.inkDim}}>{brief.category} · {brief.channel} · ${(brief.budget/1000).toFixed(0)}K · {brief.flight}</div>
+        </div>
+        <div style={{font:`12px/1.4 ${px.serif}`,color:px.inkDim,paddingLeft:16,borderLeft:`1px solid ${px.rule}`}}>
+          <span style={{color:px.ink}}>Measured against ·</span> {brief.target}
+        </div>
+        <div style={{display:'flex',gap:6,flexWrap:'wrap',justifyContent:'flex-end'}}>
+          {PLUMB_BRIEFS.map(b => (
+            <button key={b.id} onClick={() => applyBrief(b)} style={{background:brief.id===b.id?px.ink:'transparent',color:brief.id===b.id?px.paper:px.ink,border:`1px solid ${px.ink}`,font:`600 10px/1 ${px.mono}`,letterSpacing:'0.06em',padding:'5px 8px',cursor:'pointer'}}>
+              {b.title.split('—')[0].trim()||b.title}
+            </button>
+          ))}
+        </div>
       </div>
-      <div style={{paddingTop:7,flex:1,minHeight:0,display:'flex',flexDirection:'column'}}>{children}</div>
-    </section>
-  );
-  return(
-    <div style={{width:'100%',height:'100%',background:brx.bg,color:brx.ink,fontFamily:brx.mono,overflow:'hidden',display:'grid',gridTemplateRows:'auto 1fr auto'}}>
-      <header style={{background:brx.ink,color:brx.bg,padding:'6px 14px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-        <div style={{display:'flex',alignItems:'baseline',gap:12,fontSize:10.5,letterSpacing:'0.14em'}}>
-          <span style={{fontWeight:700,fontSize:13,letterSpacing:'0.32em'}}>NERVA</span>
-          <span style={{opacity:0.6}}>v10.0</span><span style={{opacity:0.4}}>·</span>
-          <span style={{opacity:0.8}}>BRUTALIST EDITION</span><span style={{opacity:0.4}}>·</span>
-          <span style={{opacity:0.6}}>BLOCH SPHERE KERNEL</span>
-        </div>
-        <div style={{display:'flex',gap:14,fontSize:10.5,letterSpacing:'0.1em',opacity:0.8}}>
-          <span>SES 7F-2A91</span><span>{api.region.toUpperCase()}</span><span>{Math.round(api.latency)}MS</span>
-        </div>
-      </header>
-      <div style={{display:'grid',gridTemplateColumns:'240px 1fr 1fr 230px',minHeight:0,background:brx.bg,overflow:'hidden'}}>
-        <div style={{padding:'11px 13px',borderRight:`1px solid ${brx.ink}`,overflow:'hidden',display:'flex',flexDirection:'column',gap:12,minHeight:0}}>
-          {sec(1,'SCENARIO',<>
-            <textarea value={state.scenario} onChange={e=>update({scenario:e.target.value})} style={{background:brx.paper,color:brx.ink,border:`1px solid ${brx.ink}`,font:`10.5px/1.45 ${brx.mono}`,padding:5,height:70,marginBottom:5}}/>
-            <button onClick={()=>parseScenario(state.scenario)} disabled={parsing} style={{background:parsing?brx.bg:brx.ink,color:parsing?brx.ink:brx.bg,border:`2px solid ${brx.ink}`,font:`700 10.5px/1 ${brx.mono}`,letterSpacing:'0.1em',padding:'5px 0',marginBottom:7,width:'100%'}}>{parsing?'PARSING…':'⚡ PARSE WITH AI'}</button>
-            <div style={{font:`9.5px ${brx.mono}`,color:brx.dim,letterSpacing:'0.16em',marginBottom:3}}>CASE LIBRARY</div>
-            <div style={{display:'flex',flexDirection:'column',border:`1px solid ${brx.ink}`}}>
-              {presets.map((p,i)=><button key={p.id} onClick={()=>applyPreset(p.id)} style={{background:state.activePreset===p.id?brx.ink:brx.paper,color:state.activePreset===p.id?brx.bg:brx.ink,border:'none',borderTop:i>0?`1px solid ${brx.ink}`:'none',font:`700 10.5px/1 ${brx.mono}`,letterSpacing:'0.08em',padding:'5px 7px',cursor:'pointer',textAlign:'left',display:'flex',justifyContent:'space-between'}}>
-                <span>{p.name.toUpperCase()}</span><span style={{opacity:0.5,fontWeight:400}}>{p.id}</span>
-              </button>)}
+
+      {/* MAIN GRID */}
+      <div style={{flex:1,display:'grid',gridTemplateColumns:'1fr 1fr 1fr 380px',gap:12,padding:'14px 22px 0'}}>
+        <LayerCard layer={PLUMB_LAYERS[0]} scores={scores} setScore={setScore} humanState={humanState} setHumanState={setHumanState} composite={composites.opt}/>
+        <LayerCard layer={PLUMB_LAYERS[1]} scores={scores} setScore={setScore} humanState={humanState} setHumanState={setHumanState} composite={composites.auth}/>
+        <LayerCard layer={PLUMB_LAYERS[2]} scores={scores} setScore={setScore} humanState={humanState} setHumanState={setHumanState} composite={composites.pricing}/>
+
+        {/* VERDICT COLUMN */}
+        <aside style={{display:'flex',flexDirection:'column',gap:12,minHeight:0}}>
+          <div style={{background:px.paper,border:`2px solid ${v.color}`,padding:'14px 18px'}}>
+            <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between'}}>
+              <span style={{font:`10px ${px.mono}`,color:px.inkDim,letterSpacing:'0.2em'}}>VERDICT</span>
+              <span style={{font:`10px ${px.mono}`,color:px.inkDim,letterSpacing:'0.12em'}}>composite {overall}</span>
             </div>
-          </>)}
-          {sec(2,'PARAMETERS',<>
-            {[['E','URGENCY',state.E,v=>update({E:v})],['S','STRATEGY',state.S,v=>update({S:v})],['R','RISK',state.R,v=>update({R:v})],['Sp','SUPPORT',state.Sp,v=>update({Sp:v})],['St','STABILITY',state.St,v=>update({St:v})]].map(([sym,lbl,val,set])=>(
-              <div key={sym} style={{marginBottom:7}}>
-                <div style={{display:'flex',justifyContent:'space-between'}}><span style={{font:`700 10.5px ${brx.mono}`,letterSpacing:'0.08em'}}>{sym} · {lbl}</span><span style={{font:`700 11px ${brx.mono}`}}>{fmt(val,2)}</span></div>
-                <div>{bbar(val)}</div>
-                <input type="range" min="0" max="1" step="0.01" value={val} onChange={e=>set(parseFloat(e.target.value))} style={{accentColor:brx.ink,color:brx.ink,width:'100%',height:2,marginTop:1}}/>
-              </div>
-            ))}
-            <div style={{marginTop:2}}>
-              <div style={{font:`700 10.5px ${brx.mono}`,letterSpacing:'0.08em',marginBottom:3}}>τ · THRESHOLD</div>
-              <div style={{display:'flex',border:`1px solid ${brx.ink}`}}>
-                {['auto','manual'].map(m=><button key={m} onClick={()=>update({tauMode:m})} style={{flex:1,background:state.tauMode===m?brx.ink:brx.paper,color:state.tauMode===m?brx.bg:brx.ink,border:'none',font:`700 10.5px ${brx.mono}`,letterSpacing:'0.12em',padding:'4px 0',cursor:'pointer'}}>{m.toUpperCase()}</button>)}
-              </div>
-              {state.tauMode==='manual'?<><div style={{marginTop:3}}>{bbar(state.tauManual)}</div><input type="range" min="0.15" max="0.85" step="0.01" value={state.tauManual} onChange={e=>update({tauManual:parseFloat(e.target.value)})} style={{accentColor:brx.ink,color:brx.ink,width:'100%',marginTop:2}}/><div style={{font:`10.5px ${brx.mono}`,color:brx.dim}}>τ = {fmt(state.tauManual,3)}</div></>
-              :<div style={{marginTop:3,font:`9.5px/1.4 ${brx.mono}`,color:brx.dim}}>τ = 0.25+0.35·S(ρ)+0.25·R−0.15·rev = {fmt(metrics.tauAuto,4)}</div>}
+            <div style={{font:`500 56px/0.95 ${px.serif}`,color:v.color,letterSpacing:'-0.03em',marginTop:2}}>
+              {v.label.charAt(0)+v.label.slice(1).toLowerCase()}
             </div>
-          </>)}
-        </div>
-        <div style={{gridColumn:'span 2',padding:'11px 18px',overflow:'hidden',display:'grid',gridTemplateRows:'auto auto 1fr auto',gap:10,minHeight:0,borderRight:`1px solid ${brx.ink}`}}>
-          <div style={{display:'grid',gridTemplateColumns:'auto 1fr',gap:14,alignItems:'start'}}>
-            <div style={{border:`3px solid ${vCol}`,padding:'5px 12px 9px',textAlign:'left'}}>
-              <div style={{font:`700 9.5px ${brx.mono}`,letterSpacing:'0.18em',color:brx.dim}}>VERDICT N° 1</div>
-              <div style={{font:`900 68px/0.9 ${brx.mono}`,color:vCol,letterSpacing:'-0.04em',marginTop:2}}>{metrics.verdict}</div>
-              <div style={{font:`700 9.5px ${brx.mono}`,letterSpacing:'0.22em',color:vCol,marginTop:3}}>{isVeto?'HARD VETO':metrics.verdict==='COMMIT'?'PROCEED':metrics.verdict==='HOLD'?'RECHECK':metrics.verdict==='WAIT'?'INSUFFICIENT':'ROUTE HUMAN'}</div>
+            <div style={{display:'flex',alignItems:'baseline',gap:8,marginTop:4}}>
+              <span style={{font:`italic 14px ${px.serif}`,color:v.color}}>{v.action}.</span>
+              <span style={{font:`italic 13px ${px.serif}`,color:px.inkDim}}>pricing <span style={{color:pricingSub.tint}}>{pricingSub.label.toLowerCase()}</span></span>
             </div>
-            <div style={{paddingTop:2}}>
-              <div style={{font:`11.5px/1.55 ${brx.mono}`,color:brx.ink,textTransform:'uppercase',letterSpacing:'0.01em',marginBottom:8}}>{metrics.reason}</div>
-              <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',borderTop:`2px solid ${brx.ink}`,borderBottom:`2px solid ${brx.ink}`}}>
-                {[['|r|',fmt(metrics.r,3)],['τ',fmt(metrics.tau,3)],['EV',fmt(metrics.EV,3)],['Θ°',Math.round(metrics.theta)],['ρ',fmt(metrics.reversibility,2)]].map(([l,v],i,arr)=>(
-                  <div key={l} style={{padding:'5px 7px',borderRight:i<arr.length-1?`1px solid ${brx.ink}`:'none'}}>
-                    <div style={{font:`9px ${brx.mono}`,color:brx.dim,letterSpacing:'0.16em'}}>{l}</div>
-                    <div style={{font:`400 19px/1 ${brx.mono}`,color:brx.ink,marginTop:2}}>{v}</div>
-                  </div>
-                ))}
-              </div>
-              <div style={{display:'flex',gap:10,marginTop:5,font:`9px ${brx.mono}`}}>
-                {Object.entries(metrics.validation).map(([k,v])=><span key={k} style={{color:v?'#2a7a2a':brx.signal}}>{v?'✓':'✗'} {k.split('_')[0]}</span>)}
-              </div>
+            <div style={{font:`13px/1.5 ${px.serif}`,color:px.ink,marginTop:10}}>
+              {finalVerdict==='COMMIT' && 'All three layers earn the buy. Distribution math clears the floor, authenticity earns the moment, pricing is sound against the named outcomes.'}
+              {finalVerdict==='HOLD' && 'One layer is soft but not disqualifying. Tighten the inputs and re-score before approving spend.'}
+              {finalVerdict==='WAIT' && 'Pricing fails or both quality layers are below threshold. Not a media question yet — return to strategy or renegotiate the rate.'}
+              {finalVerdict==='ESCALATE' && 'One layer requires judgment the model cannot supply. Escalate to named senior strategist; override reasoning logs to audit field.'}
+              {finalVerdict==='TOXIC' && (isToxicShape
+                ? 'High optimization, low authenticity. The buy scores well on metrics the agency charges against — and poorly on the layer they have no incentive to measure. The verdict no compensation model produces on its own.'
+                : 'Hard veto. Reversibility too low against current foundation. Do not proceed.')}
             </div>
           </div>
-          {sec(3,'QUALITY',<div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',columnGap:18,rowGap:3}}>
-            {[['INTEGRITY',metrics.integrity],['COHERENCE',metrics.coherence],['PURITY',metrics.purity],['ENTROPY',metrics.entropy],['REVERSIBLE',metrics.reversibility],['EXP-VALUE',(metrics.EV+1)/2]].map(([l,v])=>(
-              <div key={l} style={{display:'grid',gridTemplateColumns:'80px 1fr 36px',gap:4,alignItems:'center'}}>
-                <span style={{font:`700 10px ${brx.mono}`}}>{l}</span><span>{bbar(v,16)}</span>
-                <span style={{font:`11px ${brx.mono}`,textAlign:'right'}}>{fmt(v,2)}</span>
-              </div>
-            ))}
-          </div>)}
-          {sec(4,'DECISION SPACE',<div style={{display:'grid',gridTemplateColumns:'1fr 160px',gap:12,flex:1,minHeight:0}}>
-            <svg viewBox="0 0 380 250" preserveAspectRatio="xMidYMid meet" style={{width:'100%',height:'100%',display:'block'}}>
-              <defs><pattern id="brhatch" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke={brx.ink} strokeWidth="0.6"/></pattern></defs>
-              {[[0,0,380,87,'COMMIT',false],[0,87,190,75,'HOLD',false],[190,87,190,75,'ESC',false],[0,162,190,88,'ESC',false],[190,162,190,88,'TOXIC',true]].map(([x,y,w,h,n,hatch],i)=>(
-                <g key={i}><rect x={x} y={y} width={w} height={h} fill={hatch?'url(#brhatch)':brx.ink} opacity={hatch?0.15:0.04}/><text x={x+w/2} y={y+h/2+4} textAnchor="middle" style={{font:`700 9.5px ${brx.mono}`,fill:brx.ink,letterSpacing:'0.18em',opacity:0.6}}>{n}</text></g>
-              ))}
-              <rect x="0" y="0" width="380" height="250" fill="none" stroke={brx.ink} strokeWidth="1.5"/>
-              {[0.25,0.5,0.75].map(t=><g key={t}><line x1={t*380} y1="0" x2={t*380} y2="250" stroke={brx.ruleL}/><line x1="0" y1={t*250} x2="380" y2={t*250} stroke={brx.ruleL}/></g>)}
-              <line x1="0" y1="87" x2="380" y2="87" stroke={brx.ink} strokeWidth="1"/>
-              <line x1="0" y1="162" x2="380" y2="162" stroke={brx.ink} strokeWidth="1"/>
-              <line x1="190" y1="87" x2="190" y2="250" stroke={brx.ink} strokeWidth="1"/>
-              <line x1="0" y1={(1-metrics.tau)*250} x2="380" y2={(1-metrics.tau)*250} stroke={isVeto?brx.signal:brx.ink} strokeDasharray="4 3" strokeWidth="1.2"/>
-              {history.map((h,i)=><circle key={i} cx={h.E*380} cy={(1-h.integrity)*250} r="2" fill={brx.ink} opacity={0.25+i*0.08}/>)}
-              <polyline points={history.map(h=>`${h.E*380},${(1-h.integrity)*250}`).concat([`${state.E*380},${(1-metrics.integrity)*250}`]).join(' ')} fill="none" stroke={brx.ink} strokeWidth="0.7" strokeDasharray="3 2" opacity="0.5"/>
-              {(()=>{const px=state.E*380,py=(1-metrics.integrity)*250,col=isVeto?brx.signal:brx.ink;return<><line x1="0" y1={py} x2="380" y2={py} stroke={col} strokeDasharray="2 3"/><line x1={px} y1="0" x2={px} y2="250" stroke={col} strokeDasharray="2 3"/><rect x={px-7} y={py-7} width="14" height="14" fill="none" stroke={col} strokeWidth="1.5"/><circle cx={px} cy={py} r="3" fill={col}/><text x={px+11} y={py-9} style={{font:`700 10px ${brx.mono}`,fill:col}}>({fmt(state.E,2)},{fmt(metrics.integrity,2)})</text></>})()}
-              {[0,0.5,1].map(t=><g key={t}><text x={t*380} y="264" textAnchor="middle" style={{font:`8.5px ${brx.mono}`,fill:brx.dim}}>{t.toFixed(1)}</text><text x="-3" y={(1-t)*250+3} textAnchor="end" style={{font:`8.5px ${brx.mono}`,fill:brx.dim}}>{t.toFixed(1)}</text></g>)}
-            </svg>
-            <div style={{display:'flex',flexDirection:'column',justifyContent:'space-between'}}>
-              <div><div style={{font:`700 9px ${brx.mono}`,letterSpacing:'0.16em',color:brx.dim,marginBottom:3}}>LEGEND</div><div style={{font:`10.5px/1.7 ${brx.mono}`}}>X · URGENCY (E)<br/>Y · INTEGRITY<br/>□ · CURRENT<br/>· · HISTORY<br/>— · τ</div></div>
-              <div><div style={{font:`700 9px ${brx.mono}`,letterSpacing:'0.16em',color:brx.dim,marginBottom:3}}>BLOCH r</div><div style={{font:`10.5px/1.5 ${brx.mono}`}}>x {fmt(metrics.r_x,4)}<br/>y {fmt(metrics.r_y,4)}<br/>z {fmt(metrics.r_z,4)}<br/>|r| {fmt(metrics.r,4)}</div></div>
-              <div><div style={{font:`700 9px ${brx.mono}`,letterSpacing:'0.16em',color:brx.dim,marginBottom:2}}>TO COMMIT</div><div style={{font:`10.5px/1.5 ${brx.mono}`,color:brx.dim}}>{metrics.integrity>=0.6&&metrics.EV>0.1?'cleared':`+${fmt(Math.max(0,0.6-metrics.integrity),2)} I`}</div></div>
+
+          {/* Compound gate */}
+          <div style={{background:px.paper,border:`1px solid ${px.ruleHi}`,padding:'12px 16px'}}>
+            <div style={{font:`10px ${px.mono}`,color:px.inkDim,letterSpacing:'0.2em',marginBottom:8}}>COMPOUND GATE</div>
+            {[['Optimization',composites.opt,70],['Authenticity',composites.auth,70],['Pricing',composites.pricing,70]].map(([l,c,t]) => {
+              const color = c>=70 ? px.green : c>=55 ? px.amber : px.accent;
+              return (
+                <div key={l} style={{display:'grid',gridTemplateColumns:'90px 1fr 38px',alignItems:'center',gap:8,marginBottom:6}}>
+                  <span style={{font:`13px/1 ${px.serif}`,color:px.ink}}>{l}</span>
+                  <div style={{position:'relative',height:8,background:'rgba(21,17,11,0.06)'}}>
+                    <div style={{position:'absolute',left:0,top:0,bottom:0,width:`${c}%`,background:color}}/>
+                    <div style={{position:'absolute',left:`${t}%`,top:-3,bottom:-3,width:1.5,background:px.ink}}/>
+                  </div>
+                  <span style={{font:`12px/1 ${px.mono}`,color,textAlign:'right'}}>{Math.round(c)}</span>
+                </div>
+              );
+            })}
+            <div style={{font:`italic 11px/1.4 ${px.serif}`,color:px.inkDim,marginTop:6,paddingTop:6,borderTop:`1px solid ${px.rule}`}}>
+              All three gates clear independently for COMMIT. A strong Optimization score does not override a failed Authenticity score.
             </div>
-          </div>)}
-        </div>
-        <div style={{padding:'11px 13px',overflow:'hidden',display:'flex',flexDirection:'column',gap:12,minHeight:0}}>
-          {sec(5,'FACTORS',factors.map(f=>{const pos=f.weight>=0,mag=Math.min(8,Math.round(Math.abs(f.weight)*(8/0.3)));const bar2=pos?'·'.repeat(8)+'+'+'█'.repeat(mag)+'·'.repeat(8-mag):'·'.repeat(8-mag)+'█'.repeat(mag)+'-'+'·'.repeat(8);return(
-            <div key={f.key} style={{display:'grid',gridTemplateColumns:'58px 1fr 38px',gap:3,alignItems:'center',font:`10px/1.5 ${brx.mono}`}}>
-              <span style={{fontWeight:700}}>{f.label.toUpperCase().slice(0,7)}</span>
-              <span style={{color:pos?brx.ink:brx.signal,letterSpacing:'-0.06em'}}>{bar2}</span>
-              <span style={{textAlign:'right',color:pos?brx.ink:brx.signal}}>{pos?'+':''}{fmt(f.weight,2)}</span>
-            </div>);})
+          </div>
+
+          {/* Forecast */}
+          <div style={{background:px.paper,border:`1px solid ${px.ruleHi}`,padding:'12px 16px'}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',marginBottom:6}}>
+              <span style={{font:`10px ${px.mono}`,color:px.inkDim,letterSpacing:'0.2em'}}>FORECAST AT FLIGHT CLOSE</span>
+              <span style={{font:`9.5px ${px.mono}`,color:px.inkFaint,letterSpacing:'0.1em'}}>n={history.length+1}</span>
+            </div>
+            <PlumbForecastChart history={history} current={metrics} forecast={forecast}/>
+            <div style={{marginTop:4,font:`11.5px/1.4 ${px.serif}`,color:px.inkDim}}>
+              {forecast.window}. P(≥τ) at close: <strong style={{color:px.ink}}>{Math.round(forecast.points[forecast.points.length-1].pAbove*100)}%</strong>
+            </div>
+          </div>
+
+          {finalVerdict==='COMMIT' && (
+            <div style={{background:px.paper,border:`1px solid ${px.ruleHi}`,padding:'12px 16px'}}>
+              <div style={{font:`10px ${px.mono}`,color:px.inkDim,letterSpacing:'0.2em',marginBottom:6}}>ONE-WAY DOOR CRITERION</div>
+              <input value={oneWayDoor} onChange={e=>setOneWayDoor(e.target.value)} style={{width:'100%',font:`13px/1.4 ${px.serif}`,padding:'4px 6px',background:'transparent',border:`1px solid ${px.rule}`,color:px.ink,outline:'none'}}/>
+              <div style={{font:`italic 11px/1.4 ${px.serif}`,color:px.inkDim,marginTop:6}}>Stamps to the IO. Falsified at flight close against the named KPI target set.</div>
+            </div>
           )}
-          {sec(6,'SENSITIVITY',<>
-            <div style={{font:`9.5px/1 ${brx.mono}`,color:brx.dim,marginBottom:3}}>δ = ±0.10</div>
-            {sensitivity.map(s=><div key={s.key} style={{display:'grid',gridTemplateColumns:'18px 1fr 1fr',alignItems:'center',font:`10px/1.5 ${brx.mono}`}}>
-              <span style={{fontWeight:700}}>{s.key}</span>
-              <span style={{color:s.flipDn?brx.signal:brx.dim}}>{s.flipDn?`◀ ${s.flipDn.slice(0,4)}`:'— stable'}</span>
-              <span style={{color:s.flipUp?brx.signal:brx.dim,textAlign:'right'}}>{s.flipUp?`${s.flipUp.slice(0,4)} ▶`:'stable —'}</span>
-            </div>)}
-          </>)}
-          {sec(7,'LOG',<div style={{display:'flex',flexDirection:'column',font:`9.5px/1.45 ${brx.mono}`,color:brx.dim,overflow:'hidden'}}>
-            {logs.map((l,i)=>{const sc=l.sev==='E'?brx.signal:l.sev==='W'?'#a07010':brx.dim;return<div key={i} style={{display:'grid',gridTemplateColumns:'10px 42px 1fr',gap:3}}><span style={{color:sc}}>{l.sev}</span><span style={{color:brx.ink}}>{l.src}</span><span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{l.msg}</span></div>;})}
-          </div>)}
-          {sec(8,'HISTORY',<div style={{display:'flex',flexDirection:'column',font:`10px/1.5 ${brx.mono}`}}>
-            {history.slice().reverse().map((h,i)=>{const isBad=h.verdict==='TOXIC'||h.verdict==='ESCALATE',mins=Math.round((Date.now()-h.t)/60000);return(
-              <div key={i} style={{display:'grid',gridTemplateColumns:'26px 65px 34px 1fr',gap:4,borderBottom:`1px solid ${brx.ruleL}`,padding:'2px 0'}}>
-                <span style={{color:brx.dim}}>{mins}m</span><span style={{fontWeight:700}}>{h.label.slice(0,8)}</span>
-                <span style={{color:brx.dim,textAlign:'right'}}>{fmt(h.r,2)}</span>
-                <span style={{color:isBad?brx.signal:brx.ink,fontWeight:700,textAlign:'right'}}>{h.verdict}</span>
-              </div>);})}
-          </div>)}
-        </div>
+          {finalVerdict==='ESCALATE' && (
+            <div style={{background:px.paper,border:`1px solid ${px.ruleHi}`,padding:'12px 16px'}}>
+              <div style={{font:`10px ${px.mono}`,color:px.inkDim,letterSpacing:'0.2em',marginBottom:6}}>ESCALATION QUEUE</div>
+              <div style={{font:`13px/1.5 ${px.serif}`,color:px.ink}}>Route to <strong>Senior strategist</strong> · channel SME.</div>
+              <div style={{font:`italic 11px/1.4 ${px.serif}`,color:px.inkDim,marginTop:4}}>Documented escalations hit at 78%. Undocumented at 33%. Override reasoning stamps to audit field.</div>
+              <button style={{marginTop:8,width:'100%',background:px.ink,color:px.paper,border:'none',font:`600 11px/1 ${px.mono}`,letterSpacing:'0.16em',padding:'8px 0',cursor:'pointer'}}>SEND TO REVIEW · SARAH K</button>
+            </div>
+          )}
+        </aside>
       </div>
-      <div style={{background:brx.ink,color:brx.bg,padding:'5px 14px',display:'flex',justifyContent:'space-between',font:`700 9.5px ${brx.mono}`,letterSpacing:'0.14em'}}>
-        <span>NERVA · BLOCH SPHERE KERNEL · v10.0 · AMDG</span>
-        <span>● LIVE · {metrics.verdict} · |r|={fmt(metrics.r,3)} · τ={fmt(metrics.tau,3)} · Tr(ρ²)={fmt(metrics.purity,4)}</span>
+
+      {/* FOOTER */}
+      <div style={{marginTop:14,padding:'12px 28px 16px',borderTop:`1px solid ${px.rule}`,display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:24,background:px.paper}}>
+        <div>
+          <div style={{font:`10px ${px.mono}`,color:px.inkDim,letterSpacing:'0.2em',marginBottom:4}}>NERVA DERIVED INPUTS</div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:6,font:`12px ${px.mono}`,color:px.ink}}>
+            {[['E',mapped.E,'flight pressure'],['S',mapped.S,'authenticity'],['R',mapped.R,'price risk'],['Sp',mapped.Sp,'optimization'],['St',mapped.St,'pricing health']].map(([k,val,sub]) => (
+              <div key={k}><div style={{color:px.accent}}>{k}</div><div>{fmt(val,2)}</div><div style={{font:`italic 10px ${px.serif}`,color:px.inkFaint}}>{sub}</div></div>
+            ))}
+          </div>
+        </div>
+        <div>
+          <div style={{font:`10px ${px.mono}`,color:px.inkDim,letterSpacing:'0.2em',marginBottom:4}}>FLIGHT PRESSURE · E</div>
+          <div style={{display:'flex',alignItems:'center',gap:10}}>
+            <input type="range" min="0" max="1" step="0.01" value={flightPressure} onChange={e=>setFlightPressure(parseFloat(e.target.value))} style={{flex:1,accentColor:px.accent}}/>
+            <span style={{font:`14px ${px.mono}`,color:px.ink,width:40}}>{fmt(flightPressure,2)}</span>
+          </div>
+          <div style={{font:`italic 11px/1.4 ${px.serif}`,color:px.inkDim,marginTop:4}}>Time-to-IO pressure. Higher values raise NERVA's adaptive threshold τ.</div>
+        </div>
+        <div>
+          <div style={{font:`10px ${px.mono}`,color:px.inkDim,letterSpacing:'0.2em',marginBottom:4}}>NERVA SIGNAL</div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,font:`12px ${px.mono}`}}>
+            {[['|r|',metrics.r,v.color],['τ',metrics.tau,null],['EV',metrics.EV,metrics.EV>0?px.green:px.accent],['ρ',metrics.reversibility,null]].map(([l,val,col]) => (
+              <div key={l}><div style={{color:px.inkDim}}>{l}</div><div style={{font:`400 18px ${px.mono}`,color:col||px.ink}}>{fmt(val,3)}</div></div>
+            ))}
+          </div>
+          <div style={{font:`italic 11px/1.4 ${px.serif}`,color:px.inkDim,marginTop:4}}>Plumb's verdict and NERVA's signal gate on the same evidence. The receipt is the same number, in two languages.</div>
+        </div>
       </div>
     </div>
   );
 }
 
 // ── ROOT ──────────────────────────────────────────────────
-const VIEWS={cockpit:CockpitView,bloomberg:BloombergView,phase:PhaseSpaceView,brutalist:BrutalistView,about:AboutView,api:ApiView};
-
-function App(){
-  const[view,setView]=useState('cockpit');
-  useEffect(()=>{
-    document.querySelectorAll('.nav-tab').forEach(t=>{
-      t.addEventListener('click',()=>{
-        setView(t.dataset.view);
-        document.querySelectorAll('.nav-tab').forEach(x=>x.classList.remove('active'));
-        t.classList.add('active');
-      });
-    });
-  },[]);
-  const View=VIEWS[view];
-  const needsProvider=!['about'].includes(view);
-  if(view==='about')return <AboutView/>;
-  return <NervaProvider><View/></NervaProvider>;
-}
-
-ReactDOM.createRoot(document.getElementById('view-root')).render(<App/>);
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <NervaProvider><PlumbView/></NervaProvider>
+);
 </script>
 </body>
 </html>
