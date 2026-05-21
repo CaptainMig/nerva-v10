@@ -28,803 +28,495 @@ input,textarea{font-family:inherit}
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin></script>
 <script type="text/babel" data-presets="env,react">
-const clamp=(v,lo=0,hi=1)=>Math.max(lo,Math.min(hi,v));
-const fmt=(n,d=2)=>(n==null||isNaN(n))?'—':Number(n).toFixed(d);
+// ── REACT HOOKS ───────────────────────────────────────────
+const {
+  createContext, useContext, useState, useMemo,
+  useCallback, useEffect, useRef, useReducer
+} = React;
 
-// ── REAL BLOCH SPHERE KERNEL (v8.3.2) ────────────────────
-function vonNeumannEntropy(r){
-  if(r>=0.9999)return 0;if(r<=0.0001)return 1;
-  const lp=(1+r)/2,lm=(1-r)/2;
-  return -lp*Math.log2(lp)-lm*Math.log2(lm);
+// ── NERVA BLOCH SPHERE KERNEL v8.3.2 ─────────────────────
+const clamp = (v, lo=0, hi=1) => Math.max(lo, Math.min(hi, v));
+const fmt = (n, d=2) => (n==null||isNaN(n)) ? '—' : Number(n).toFixed(d);
+
+function vonNeumannEntropy(r) {
+  if (r >= 0.9999) return 0;
+  if (r <= 0.0001) return 1;
+  const lp = (1+r)/2, lm = (1-r)/2;
+  return -lp*Math.log2(lp) - lm*Math.log2(lm);
 }
-function computeMetrics(state){
-  const{E,S,R,Sp,St,tauMode,tauManual}=state;
-  const r_max=Math.sqrt(3);
-  const r_x=(E+S)/2/r_max, r_y=R/r_max, r_z=(Sp*St)/r_max;
-  const r=Math.sqrt(r_x*r_x+r_y*r_y+r_z*r_z);
-  const theta=r>0?Math.acos(clamp(r_z/r,-1,1))*(180/Math.PI):0;
-  const phi=Math.atan2(r_y,r_x)*(180/Math.PI);
-  const entropy=vonNeumannEntropy(r);
-  const purity=0.5*(1+r*r);
-  const coherence=Math.sqrt(r_x*r_x+r_y*r_y);
-  const integrity=Sp*St;
-  const reversibility=clamp((Sp+St)/2);
-  const EV=Sp-R;
-  const tauAuto=clamp(0.25+0.35*entropy+0.25*R-0.15*reversibility,0.15,0.85);
-  const tau=tauMode==='manual'?clamp(tauManual,0.15,0.85):tauAuto;
-  const signal=r>=tau;
-  const oneWayDoor=reversibility<0.4;
-  const validation={
-    bloch_magnitude_valid:r<=1.0001,
-    purity_range_valid:purity>=0.4999&&purity<=1.0001,
-    entropy_range_valid:entropy>=0&&entropy<=1.0001,
-    components_consistent:Math.abs(r-Math.sqrt(r_x*r_x+r_y*r_y+r_z*r_z))<0.0001
+
+function computeMetrics(state) {
+  const {E, S, R, Sp, St, tauMode, tauManual} = state;
+  const r_max = Math.sqrt(3);
+  const r_x = (E+S)/2/r_max, r_y = R/r_max, r_z = (Sp*St)/r_max;
+  const r = Math.sqrt(r_x*r_x + r_y*r_y + r_z*r_z);
+  const theta = r > 0 ? Math.acos(clamp(r_z/r,-1,1))*(180/Math.PI) : 0;
+  const phi = Math.atan2(r_y, r_x)*(180/Math.PI);
+  const entropy = vonNeumannEntropy(r);
+  const purity = 0.5*(1 + r*r);
+  const coherence = Math.sqrt(r_x*r_x + r_y*r_y);
+  const integrity = Sp*St;
+  const reversibility = clamp((Sp+St)/2);
+  const EV = Sp - R;
+  const tauAuto = clamp(0.25 + 0.35*entropy + 0.25*R - 0.15*reversibility, 0.15, 0.85);
+  const tau = tauMode === 'manual' ? clamp(tauManual, 0.15, 0.85) : tauAuto;
+  const signal = r >= tau;
+  const oneWayDoor = reversibility < 0.4;
+  const validation = {
+    bloch_magnitude_valid: r <= 1.0001,
+    purity_range_valid: purity >= 0.4999 && purity <= 1.0001,
+    entropy_range_valid: entropy >= 0 && entropy <= 1.0001,
+    components_consistent: Math.abs(r - Math.sqrt(r_x*r_x+r_y*r_y+r_z*r_z)) < 0.0001
   };
-  let verdict,reason;
-  if(!signal){
-    if(E>=0.75&&oneWayDoor){verdict='ESCALATE';reason='[EMERGENCY OVERRIDE] High urgency + irreversible. Cannot wait — routing to human immediately.';}
-    else{verdict='WAIT';reason=`Insufficient signal. |r|=${fmt(r,3)} < τ=${fmt(tau,3)}. Gather more data.`;}
-  } else if(integrity<0.22||(R>0.75&&integrity<0.35)){
-    verdict='TOXIC';reason=`Hard veto. Integrity=${fmt(integrity,2)}, Risk=${fmt(R,2)}. Autonomous action prohibited.`;
-  } else if(oneWayDoor&&integrity<0.55){
-    verdict='ESCALATE';reason=`One-Way Brake. Irreversible (rev=${fmt(reversibility,2)}) with weak foundation (I=${fmt(integrity,2)}).`;
-  } else if(EV<0){
-    verdict=integrity>=0.4?'HOLD':'ESCALATE';
-    reason=`EV Block. Negative expected value (EV=${fmt(EV,2)}) suppresses commit.`;
-  } else if(integrity>=0.6&&EV>0.1){
-    verdict='COMMIT';reason=`Strong foundation (I=${fmt(integrity,2)}), positive EV (${fmt(EV,2)}). Proceed with monitoring.`;
-  } else if(integrity>=0.4){
-    verdict='HOLD';reason=`Medium foundation (I=${fmt(integrity,2)}). EV=${fmt(EV,2)}. Recheck in next window.`;
+  let verdict, reason;
+  if (!signal) {
+    if (E >= 0.75 && oneWayDoor) { verdict='ESCALATE'; reason='[EMERGENCY OVERRIDE] High urgency + irreversible. Cannot wait.'; }
+    else { verdict='WAIT'; reason=`Insufficient signal. |r|=${fmt(r,3)} < τ=${fmt(tau,3)}.`; }
+  } else if (integrity < 0.22 || (R > 0.75 && integrity < 0.35)) {
+    verdict='TOXIC'; reason=`Hard veto. Integrity=${fmt(integrity,2)}, Risk=${fmt(R,2)}.`;
+  } else if (oneWayDoor && integrity < 0.55) {
+    verdict='ESCALATE'; reason=`One-Way Brake. Irreversible (rev=${fmt(reversibility,2)}) with weak foundation (I=${fmt(integrity,2)}).`;
+  } else if (EV < 0) {
+    verdict = integrity >= 0.4 ? 'HOLD' : 'ESCALATE';
+    reason = `EV Block. Negative expected value (EV=${fmt(EV,2)}).`;
+  } else if (integrity >= 0.6 && EV > 0.1) {
+    verdict='COMMIT'; reason=`Strong foundation (I=${fmt(integrity,2)}), positive EV (${fmt(EV,2)}). Proceed.`;
+  } else if (integrity >= 0.4) {
+    verdict='HOLD'; reason=`Medium foundation (I=${fmt(integrity,2)}). EV=${fmt(EV,2)}. Recheck.`;
   } else {
-    verdict='ESCALATE';reason=`Signal cleared but integrity (${fmt(integrity,2)}) below autonomous-act floor. Route to human.`;
+    verdict='ESCALATE'; reason=`Signal cleared but integrity (${fmt(integrity,2)}) below floor.`;
   }
-  return{r,r_x,r_y,r_z,theta,phi,entropy,purity,coherence,integrity,reversibility,EV,tau,tauAuto,signal,oneWayDoor,verdict,reason,validation};
+  return { r, r_x, r_y, r_z, theta, phi, entropy, purity, coherence, integrity, reversibility, EV, tau, tauAuto, signal, oneWayDoor, verdict, reason, validation };
 }
 
-const PRESETS=[
-  {id:'drone',name:'Drone ROE',subtitle:'Uncertain intel · civilian zone',desc:'Autonomous strike drone identifies target matching ROE profile at 91% confidence. Two civilians within 30m radius. Intel age: 4 minutes. Comms with ground partially degraded.',state:{E:0.74,S:0.61,R:0.78,Sp:0.42,St:0.46}},
-  {id:'hft',name:'HFT Trade',subtitle:'Volatile market',desc:'Strategy detects 47bp dislocation in cross-listed equity pair. Volume regime shifted in last 8s. Risk budget 62% consumed today. Reversibility window: 90 seconds.',state:{E:0.81,S:0.92,R:0.39,Sp:0.78,St:0.61}},
-  {id:'av',name:'AV Lane',subtitle:'Pedestrian near',desc:'L4 vehicle, 38mph, lane-change opportunity to bypass stalled truck. Pedestrian on adjacent sidewalk, no indication of crossing. Sensor confidence 0.94.',state:{E:0.52,S:0.83,R:0.31,Sp:0.86,St:0.74}},
-  {id:'surgical',name:'Surgical',subtitle:'Patient anomaly',desc:'Robotic surgical assist detects unexpected vascular structure 4mm off planned trajectory. Continuing has 0.12 complication risk. Pause adds 90s.',state:{E:0.68,S:0.71,R:0.66,Sp:0.58,St:0.55}},
-  {id:'ad',name:'Ad Buy',subtitle:'AI-owned process',desc:'Agency partner has automated the ad-buy validity step. New offering only dictates buy validity; rest of process is AI-owned. Reversibility limited by 24h commitment window.',state:{E:0.59,S:0.98,R:0.42,Sp:0.51,St:0.52}},
-  {id:'launch',name:'Launch Hold',subtitle:'Pad anomaly · T-90s',desc:'Sensor 4B reading 2.1σ outside nominal on LOX temp. Other sensors nominal. Weather window closes in 9 minutes. Scrub cost: $4.2M and 11-day delay.',state:{E:0.88,S:0.79,R:0.62,Sp:0.55,St:0.49}},
-];
-
-const VC={
-  COMMIT:{fg:'#3ddc97',bg:'rgba(61,220,151,0.10)'},
-  HOLD:{fg:'#f5b942',bg:'rgba(245,185,66,0.10)'},
-  WAIT:{fg:'#7aa7ff',bg:'rgba(122,167,255,0.10)'},
-  ESCALATE:{fg:'#ff8c42',bg:'rgba(255,140,66,0.12)'},
-  TOXIC:{fg:'#ff5c6c',bg:'rgba(255,92,108,0.12)'},
-};
-
-const NervaCtx=createContext(null);
-function seedHistory(){
-  const seeds=[
+// ── SEED HISTORY ──────────────────────────────────────────
+function seedHistory() {
+  const seeds = [
     {E:0.32,S:0.71,R:0.22,Sp:0.78,St:0.84,label:'DRN-04412'},
     {E:0.81,S:0.92,R:0.39,Sp:0.78,St:0.61,label:'HFT-09921'},
     {E:0.68,S:0.55,R:0.71,Sp:0.41,St:0.38,label:'DRN-04413'},
     {E:0.52,S:0.83,R:0.31,Sp:0.86,St:0.74,label:'AVL-77108'},
     {E:0.59,S:0.98,R:0.42,Sp:0.51,St:0.52,label:'ADV-30022'},
   ];
-  const base=Date.now();
-  return seeds.map((s,i)=>{const m=computeMetrics({...s,tauMode:'auto',tauManual:0.25});return{...s,...m,t:base-(5-i)*240000};});
+  const base = Date.now();
+  return seeds.map((s,i) => {
+    const m = computeMetrics({...s, tauMode:'auto', tauManual:0.25});
+    return {...s, ...m, t: base - (5-i)*240000};
+  });
 }
 
-function NervaProvider({children}){
-  const[state,setState]=useState({E:0.59,S:0.98,R:0.42,Sp:0.51,St:0.52,tauMode:'auto',tauManual:0.25,scenario:PRESETS[4].desc,activePreset:'ad'});
-  const[history]=useState(seedHistory);
-  const[parsing,setParsing]=useState(false);
-  const[api,setApi]=useState({latency:84,region:'us-west-2',model:'nerva-bloch-v10',status:'nominal',uptime:99.982});
-  useEffect(()=>{const id=setInterval(()=>setApi(a=>({...a,latency:clamp(a.latency+(Math.random()-0.5)*14,55,190)})),2400);return()=>clearInterval(id);},[]);
-  const metrics=useMemo(()=>computeMetrics(state),[state]);
-  useEffect(()=>{
-    const vEl=document.getElementById('nav-verdict'),rEl=document.getElementById('nav-r'),tEl=document.getElementById('nav-tau');
-    if(vEl){vEl.textContent=metrics.verdict;vEl.style.color=VC[metrics.verdict]?.fg||'#fff';}
-    if(rEl)rEl.textContent=`|r|=${fmt(metrics.r,3)}`;
-    if(tEl)tEl.textContent=`τ=${fmt(metrics.tau,3)}`;
-    // update live values on API page if visible
-    ['lv-r','lv-tau','lv-entropy','lv-purity','lv-integrity','lv-ev','lv-verdict','lv-rx','lv-ry','lv-rz'].forEach(id=>{
-      const el=document.getElementById(id);
-      if(!el)return;
-      const map={'lv-r':fmt(metrics.r,4),'lv-tau':fmt(metrics.tau,4),'lv-entropy':fmt(metrics.entropy,4),'lv-purity':fmt(metrics.purity,4),'lv-integrity':fmt(metrics.integrity,4),'lv-ev':fmt(metrics.EV,3),'lv-verdict':metrics.verdict,'lv-rx':fmt(metrics.r_x,4),'lv-ry':fmt(metrics.r_y,4),'lv-rz':fmt(metrics.r_z,4)};
-      el.textContent=map[id]||'—';
-    });
-  },[metrics]);
-  const update=useCallback(patch=>setState(s=>({...s,...patch})),[]);
-  const applyPreset=useCallback(id=>{const p=PRESETS.find(x=>x.id===id);if(p)setState(s=>({...s,...p.state,scenario:p.desc,activePreset:id}));},[]);
-
-  // Parser — calls /api/parse on Vercel
-  const parseScenario=useCallback(async(text)=>{
-    if(!text.trim())return;
-    setParsing(true);
-    try{
-      const res=await fetch('/api/parse',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({scenario:text})});
-      if(!res.ok)throw new Error(`HTTP ${res.status}`);
-      const parsed=await res.json();
-      const patch={};
-      ['E','S','R','Sp','St'].forEach(k=>{if(parsed[k]!==undefined)patch[k]=clamp(parseFloat(parsed[k]));});
-      setState(s=>({...s,...patch,activePreset:''}));
-    }catch(e){console.warn('Parse error:',e);alert('AI parsing unavailable. Check that api/parse.js is deployed.');}
-    finally{setParsing(false);}
-  },[]);
-
-  const sensitivity=useMemo(()=>['E','S','R','Sp','St'].map(k=>{
-    const up=computeMetrics({...state,[k]:clamp(state[k]+0.1)});
-    const dn=computeMetrics({...state,[k]:clamp(state[k]-0.1)});
-    const base=metrics;
-    return{key:k,dUp:(up.r-up.tau)-(base.r-base.tau),dDn:(dn.r-dn.tau)-(base.r-base.tau),flipUp:up.verdict!==base.verdict?up.verdict:null,flipDn:dn.verdict!==base.verdict?dn.verdict:null};
-  }),[state,metrics]);
-
-  const factors=useMemo(()=>{
-    const{E,S,R,Sp,St}=state;
-    return[
-      {key:'S',label:'Strategy',weight:0.40*S-0.20,raw:S},
-      {key:'Sp',label:'Support',weight:0.35*Sp-0.175,raw:Sp},
-      {key:'St',label:'Stability',weight:0.25*St-0.125,raw:St},
-      {key:'R',label:'Risk',weight:-0.25*R,raw:R},
-      {key:'E',label:'Urgency',weight:-0.12*E*(1-S),raw:E},
-    ];
-  },[state]);
-
-  const forecast=useMemo(()=>{
-    const hz=[{label:'T+1m',minutes:1},{label:'T+5m',minutes:5},{label:'T+15m',minutes:15},{label:'T+1h',minutes:60}];
-    const all=[...history.map(h=>({t:h.t,r:h.r})),{t:Date.now(),r:metrics.r}];
-    const t0=all[0].t;
-    const xs=all.map(p=>(p.t-t0)/60000),ys=all.map(p=>p.r);
-    const n=xs.length,mX=xs.reduce((a,b)=>a+b,0)/n,mY=ys.reduce((a,b)=>a+b,0)/n;
-    let num=0,den=0;xs.forEach((x,i)=>{num+=(x-mX)*(ys[i]-mY);den+=(x-mX)**2;});
-    const slope=den===0?0:num/den,HL=25;
-    const points=hz.map(h=>{
-      const damp=Math.exp(-h.minutes/HL),r=clamp(metrics.r+slope*h.minutes*damp);
-      const sigma=clamp(0.035+0.022*Math.sqrt(h.minutes)+0.12*metrics.entropy*Math.sqrt(h.minutes/30),0,0.5);
-      const z=(metrics.tau-r)/Math.max(0.01,sigma),cdf=0.5*(1+Math.sign(-z)*Math.sqrt(1-Math.exp(-2*z*z/Math.PI)));
-      let pv;if(r<metrics.tau)pv='WAIT';else if(metrics.integrity<0.4)pv='ESCALATE';else if(metrics.EV>0.1&&metrics.integrity>0.6)pv='COMMIT';else pv='HOLD';
-      return{...h,r,sigma,lo:clamp(r-sigma),hi:clamp(r+sigma),pAbove:clamp(1-cdf),predVerdict:pv};
-    });
-    let window;
-    if(Math.abs(slope)<0.002)window=metrics.r>=metrics.tau?'ACT NOW — signal stable above τ':'HOLD — signal stable below τ';
-    else if(slope>0){if(metrics.r>=metrics.tau)window='ACT NOW — signal strengthening';else{const need=(metrics.tau-metrics.r)/slope;window=need>60?'WAIT — unlikely to clear τ within 1h':`WAIT — likely to clear τ in ~${Math.max(1,Math.round(need))}m`;}}
-    else{if(metrics.r>=metrics.tau){const fade=(metrics.r-metrics.tau)/Math.abs(slope);window=fade>60?'ACT THIS HOUR — stable for now':`ACT WITHIN ~${Math.max(1,Math.round(fade))}m — signal decaying`;}else window='HOLD — signal decaying below τ';}
-    return{slope,points,window,histR:ys};
-  },[history,metrics,state]);
-
-  const logs=useMemo(()=>[
-    {sev:'I',src:'parse',msg:`scenario tokens=${Math.floor(state.scenario.length/4)} model=nerva-bloch-v10`},
-    {sev:'I',src:'extract',msg:`E=${fmt(state.E,2)} S=${fmt(state.S,2)} R=${fmt(state.R,2)} Sp=${fmt(state.Sp,2)} St=${fmt(state.St,2)}`},
-    {sev:metrics.oneWayDoor?'W':'I',src:'brake',msg:`reversibility=${fmt(metrics.reversibility,2)} ${metrics.oneWayDoor?'ONE-WAY ARMED':'disarmed'}`},
-    {sev:'I',src:'bloch',msg:`r=( ${fmt(metrics.r_x,4)}, ${fmt(metrics.r_y,4)}, ${fmt(metrics.r_z,4)} )`},
-    {sev:'I',src:'compute',msg:`|r|=${fmt(metrics.r,4)} τ=${fmt(metrics.tau,4)} S(ρ)=${fmt(metrics.entropy,4)}`},
-    {sev:metrics.verdict==='TOXIC'||metrics.verdict==='ESCALATE'?'E':'I',src:'verdict',msg:`${metrics.verdict} · purity=${fmt(metrics.purity,4)}`},
-    {sev:'I',src:'audit',msg:`components_consistent=${metrics.validation.components_consistent}`},
-    {sev:'I',src:'route',msg:metrics.verdict==='ESCALATE'||metrics.verdict==='TOXIC'?'human #decision-review-p0':'auto-dispatch ok'},
-  ],[state,metrics]);
-
-  const value={state,update,applyPreset,parseScenario,parsing,metrics,sensitivity,factors,forecast,history,logs,api,presets:PRESETS,VC};
-  return React.createElement(NervaCtx.Provider,{value},children);
+// ── FORECAST ──────────────────────────────────────────────
+function computeForecast(history, metrics, state) {
+  const hz = [{label:'T+1m',minutes:1},{label:'T+5m',minutes:5},{label:'T+15m',minutes:15},{label:'T+1h',minutes:60}];
+  const all = [...history.map(h=>({t:h.t,r:h.r})), {t:Date.now(),r:metrics.r}];
+  const t0 = all[0].t;
+  const xs = all.map(p=>(p.t-t0)/60000), ys = all.map(p=>p.r);
+  const n = xs.length, mX = xs.reduce((a,b)=>a+b,0)/n, mY = ys.reduce((a,b)=>a+b,0)/n;
+  let num=0, den=0;
+  xs.forEach((x,i) => { num+=(x-mX)*(ys[i]-mY); den+=(x-mX)**2; });
+  const slope = den===0 ? 0 : num/den, HL=25;
+  const points = hz.map(h => {
+    const damp = Math.exp(-h.minutes/HL), r = clamp(metrics.r + slope*h.minutes*damp);
+    const sigma = clamp(0.035 + 0.022*Math.sqrt(h.minutes) + 0.12*metrics.entropy*Math.sqrt(h.minutes/30), 0, 0.5);
+    const z = (metrics.tau-r)/Math.max(0.01,sigma);
+    const cdf = 0.5*(1+Math.sign(-z)*Math.sqrt(1-Math.exp(-2*z*z/Math.PI)));
+    return {...h, r, sigma, lo:clamp(r-sigma), hi:clamp(r+sigma), pAbove:clamp(1-cdf)};
+  });
+  let window;
+  if (Math.abs(slope) < 0.002) window = metrics.r>=metrics.tau ? 'ACT NOW — signal stable above τ' : 'HOLD — signal stable below τ';
+  else if (slope > 0) {
+    if (metrics.r >= metrics.tau) window = 'ACT NOW — signal strengthening';
+    else { const need=(metrics.tau-metrics.r)/slope; window=need>60?'WAIT — unlikely to clear τ within 1h':`WAIT — likely to clear τ in ~${Math.max(1,Math.round(need))}m`; }
+  } else {
+    if (metrics.r >= metrics.tau) { const fade=(metrics.r-metrics.tau)/Math.abs(slope); window=fade>60?'ACT THIS HOUR — stable for now':`ACT WITHIN ~${Math.max(1,Math.round(fade))}m — signal decaying`; }
+    else window = 'HOLD — signal decaying below τ';
+  }
+  return { slope, points, window };
 }
-function useNerva(){return useContext(NervaCtx);}
 
-// ── SHARED ────────────────────────────────────────────────
-function Spark({values,w=80,h=18,stroke='currentColor'}){
-  if(!values?.length)return null;
-  const max=Math.max(...values,0.01),min=Math.min(...values,0),rng=max-min||1;
-  const pts=values.map((v,i)=>`${((i/(values.length-1))*w).toFixed(1)},${(h-((v-min)/rng)*h).toFixed(1)}`).join(' ');
-  return <svg width={w} height={h} style={{display:'block',overflow:'visible'}}><polyline points={pts} fill="none" stroke={stroke} strokeWidth="1.3" strokeLinejoin="round" strokeLinecap="round"/></svg>;
-}
-function PhaseMap({metrics,state,W=320,H=220}){
-  const x=state.E*W,y=(1-metrics.integrity)*H,c=VC[metrics.verdict];
-  const mono="'JetBrains Mono',monospace";
-  const zones=[{n:'COMMIT',x0:0,y0:0,w:W,h:H*0.35,c:VC.COMMIT.fg},{n:'HOLD',x0:0,y0:H*0.35,w:W*0.5,h:H*0.30,c:VC.HOLD.fg},{n:'ESC',x0:W*0.5,y0:H*0.35,w:W*0.5,h:H*0.30,c:VC.ESCALATE.fg},{n:'ESC',x0:0,y0:H*0.65,w:W*0.5,h:H*0.35,c:VC.ESCALATE.fg},{n:'TOXIC',x0:W*0.5,y0:H*0.65,w:W*0.5,h:H*0.35,c:VC.TOXIC.fg}];
-  return(
-    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{width:'100%',height:'100%',display:'block',background:'#070a0e'}}>
-      {zones.map((z,i)=><g key={i}><rect x={z.x0} y={z.y0} width={z.w} height={z.h} fill={z.c} opacity={0.10}/><text x={z.x0+z.w/2} y={z.y0+z.h/2+4} textAnchor="middle" style={{font:`600 9px ${mono}`,fill:z.c,letterSpacing:'0.18em',opacity:0.6}}>{z.n}</text></g>)}
-      {[0.25,0.5,0.75].map(t=><g key={t}><line x1={t*W} y1="0" x2={t*W} y2={H} stroke="rgba(255,255,255,0.05)" strokeDasharray="2 3"/><line x1="0" y1={t*H} x2={W} y2={t*H} stroke="rgba(255,255,255,0.05)" strokeDasharray="2 3"/></g>)}
-      <line x1="0" y1={H*0.35} x2={W} y2={H*0.35} stroke="rgba(255,255,255,0.1)"/>
-      <line x1="0" y1={H*0.65} x2={W} y2={H*0.65} stroke="rgba(255,255,255,0.1)"/>
-      <line x1={W*0.5} y1={H*0.35} x2={W*0.5} y2={H} stroke="rgba(255,255,255,0.1)"/>
-      <line x1="0" y1={(1-metrics.tau)*H} x2={W} y2={(1-metrics.tau)*H} stroke={c.fg} strokeDasharray="4 3" strokeWidth="1" opacity="0.5"/>
-      <ellipse cx={x} cy={y} rx={22} ry={16} fill={c.fg} opacity={0.10}/>
-      <line x1="0" y1={y} x2={W} y2={y} stroke={c.fg} strokeDasharray="3 4" strokeWidth="0.7" opacity="0.35"/>
-      <line x1={x} y1="0" x2={x} y2={H} stroke={c.fg} strokeDasharray="3 4" strokeWidth="0.7" opacity="0.35"/>
-      <circle cx={x} cy={y} r={metrics.signal?6:5} fill={metrics.signal?c.fg:'none'} opacity={metrics.signal?1:0.4}/>
-      <circle cx={x} cy={y} r="10" fill="none" stroke={c.fg} strokeWidth="1" opacity={metrics.signal?0.5:0.2}/>
-      {!metrics.signal&&<circle cx={x} cy={y} r="5" fill={c.fg} opacity="0.3"/>}
-    </svg>
-  );
-}
-function Slider({label,sub,value,onChange,sym}){
-  const mono="'JetBrains Mono',monospace",sans="'IBM Plex Sans',sans-serif";
-  return(
-    <div style={{display:'flex',flexDirection:'column',gap:4}}>
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline'}}>
-        <div style={{font:`500 11px/1 ${sans}`,color:'#d8dde6'}}><span style={{color:'#4cc9f0',font:`500 11px/1 ${mono}`,marginRight:6}}>{sym}</span>{label}</div>
-        <div style={{font:`500 12px/1 ${mono}`,color:'#d8dde6'}}>{fmt(value,2)}</div>
-      </div>
-      {sub&&<div style={{font:`10px/1.3 ${sans}`,color:'rgba(216,221,230,0.4)'}}>{sub}</div>}
-      <input type="range" min="0" max="1" step="0.01" value={value} onChange={e=>onChange(parseFloat(e.target.value))} style={{accentColor:'#4cc9f0',color:'#4cc9f0',width:'100%'}}/>
-    </div>
-  );
-}
-// variation-plumb.jsx — PLUMB
-// Plumb's three-layer buyside audit (Optimization, Authenticity, Pricing)
-// running on the NERVA decision-integrity engine underneath. 15 metric
-// sliders feed layer composites, layer composites map to NERVA's 5 inputs,
-// NERVA produces the verdict + forecast.
+// ── NERVA CONTEXT ─────────────────────────────────────────
+const NervaCtx = createContext(null);
 
-const { useState: usePlumbState, useEffect: usePlumbEffect, useMemo: usePlumbMemo } = React;
+function NervaProvider({children}) {
+  const [state, setState] = useState({
+    E:0.59, S:0.98, R:0.42, Sp:0.51, St:0.52,
+    tauMode:'auto', tauManual:0.25,
+    scenario:'Agency partner has automated the ad-buy validity step.', activePreset:'ad'
+  });
+  const [history] = useState(seedHistory);
+  const [api, setApi] = useState({latency:84, region:'us-west-2', model:'nerva-bloch-v10', status:'nominal', uptime:99.982});
+  useEffect(() => {
+    const id = setInterval(() => setApi(a => ({...a, latency: clamp(a.latency+(Math.random()-0.5)*14, 55, 190)})), 2400);
+    return () => clearInterval(id);
+  }, []);
+  const metrics = useMemo(() => computeMetrics(state), [state]);
+  const forecast = useMemo(() => computeForecast(history, metrics, state), [history, metrics, state]);
+  const update = useCallback(patch => setState(s => ({...s, ...patch})), []);
+  const value = {state, update, metrics, forecast, history, api};
+  return <NervaCtx.Provider value={value}>{children}</NervaCtx.Provider>;
+}
 
-// ---------------------------------------------------------------
-// PLUMB METRIC DEFINITIONS (matches the v3 scorer at plumb-audit.vercel.app)
-// ---------------------------------------------------------------
+function useNerva() { return useContext(NervaCtx); }
+
+// ── PLUMB METRIC DEFINITIONS ──────────────────────────────
 const PLUMB_LAYERS = [
   {
-    id: 'opt',
-    name: 'Optimization',
-    subtitle: 'Distribution math',
-    note: 'AI platforms automate this layer natively. Necessary to score, no longer sufficient to differentiate.',
-    metrics: [
-      { id: 'cpm',    label: 'CPM efficiency',     source: 'Geopath · platform rate cards',     human: false },
-      { id: 'reach',  label: 'Reach quality',      source: 'MRI-Simmons · Scarborough',         human: false },
-      { id: 'freq',   label: 'Frequency fit',      source: 'Dwell model · format spec',         human: false },
-      { id: 'targ',   label: 'Targeting precision', source: 'Audience zone data',                    human: false },
-      { id: 'attr',   label: 'Attribution clarity', source: 'Measurement partner',                   human: false },
+    id:'opt', name:'Optimization', subtitle:'Distribution math',
+    note:'AI platforms automate this layer natively. Necessary to score, no longer sufficient to differentiate.',
+    metrics:[
+      {id:'cpm',  label:'CPM efficiency',      source:'Geopath · platform rate cards',      human:false},
+      {id:'reach',label:'Reach quality',        source:'MRI-Simmons · Scarborough',          human:false},
+      {id:'freq', label:'Frequency fit',         source:'Dwell model · format spec',          human:false},
+      {id:'targ', label:'Targeting precision',   source:'Audience zone data',                 human:false},
+      {id:'attr', label:'Attribution clarity',   source:'Measurement partner',                human:false},
     ],
   },
   {
-    id: 'auth',
-    name: 'Authenticity',
-    subtitle: 'Standing in the moment',
-    note: 'Three of five auto-score. Cultural Truth and Moment Respect require senior buyer review by design.',
-    metrics: [
-      { id: 'ctx',    label: 'Context fit',        source: 'Semantic match · placement DB',     human: false },
-      { id: 'dig',    label: 'Audience dignity',   source: 'Creative rubric · brand voice',     human: false },
-      { id: 'cult',   label: 'Cultural truth',     source: 'Social listening · BAV',            human: true  },
-      { id: 'earn',   label: 'Earned placement',   source: 'Brand history · category affinity', human: false },
-      { id: 'mom',    label: 'Moment respect',     source: 'Audience state · creative register', human: true  },
+    id:'auth', name:'Authenticity', subtitle:'Standing in the moment',
+    note:'Three of five auto-score. Cultural Truth and Moment Respect require senior buyer review by design.',
+    metrics:[
+      {id:'ctx',  label:'Context fit',           source:'Semantic match · placement DB',      human:false},
+      {id:'dig',  label:'Audience dignity',      source:'Creative rubric · brand voice',      human:false},
+      {id:'cult', label:'Cultural truth',        source:'Social listening · BAV',             human:true},
+      {id:'earn', label:'Earned placement',      source:'Brand history · category affinity',  human:false},
+      {id:'mom',  label:'Moment respect',        source:'Audience state · creative register', human:true},
     ],
   },
   {
-    id: 'price',
-    name: 'Pricing',
-    subtitle: 'Capital math',
-    note: 'The CFO question. A COMMIT at WRONG price renegotiates before IO.',
-    metrics: [
-      { id: 'budg',   label: 'Budget fit',         source: 'Category benchmark · brand stage',  human: false },
-      { id: 'cpk',    label: 'Cost per KPI',       source: 'Named targets · flight math',       human: false },
-      { id: 'scale',  label: 'Scale threshold',    source: 'Impact floor · diminishing return', human: false },
-      { id: 'pay',    label: 'Payback window',     source: 'Brand cycle · flight window',       human: false },
-      { id: 'rev',    label: 'Reversibility cost', source: 'Unrecoverable spend mid-flight',         human: false },
+    id:'price', name:'Pricing', subtitle:'Capital math',
+    note:"The CFO question. A COMMIT at WRONG price renegotiates before IO.",
+    metrics:[
+      {id:'budg', label:'Budget fit',            source:'Category benchmark · brand stage',   human:false},
+      {id:'cpk',  label:'Cost per KPI',          source:'Named targets · flight math',        human:false},
+      {id:'scale',label:'Scale threshold',       source:'Impact floor · diminishing return',  human:false},
+      {id:'pay',  label:'Payback window',        source:'Brand cycle · flight window',        human:false},
+      {id:'rev',  label:'Reversibility cost',    source:'Unrecoverable spend mid-flight',     human:false},
     ],
   },
 ];
 
-// Plumb v3 default values (the "Sample Bank · OOH trust campaign" preset)
 const PLUMB_DEFAULTS = {
-  cpm: 75, reach: 82, freq: 72, targ: 78, attr: 70,
-  ctx: 78, dig: 80, cult: 72, earn: 80, mom: 76,
-  budg: 78, cpk: 75, scale: 80, pay: 76, rev: 80,
+  cpm:75, reach:82, freq:72, targ:78, attr:70,
+  ctx:78, dig:80, cult:72, earn:80, mom:76,
+  budg:78, cpk:75, scale:80, pay:76, rev:80,
 };
 
-// A handful of preloaded campaign briefs
 const PLUMB_BRIEFS = [
-  {
-    id: 'trust-q3',
-    brand: 'Sample Bank',
-    category: 'Financial services',
-    channel: 'OOH · place-based',
-    title: 'Q3 trust campaign',
-    target: '8.2M viewable imp · +6pp recall · 12K branch visits · top-3 SOV',
-    budget: 1200000, flight: '8 wk',
-    cult: 'reviewed', mom: 'reviewed',
-    values: { cpm: 75, reach: 82, freq: 72, targ: 78, attr: 70, ctx: 78, dig: 80, cult: 72, earn: 80, mom: 76, budg: 78, cpk: 75, scale: 80, pay: 76, rev: 80 },
-  },
-  {
-    id: 'saturation-a',
-    brand: 'Sample Bank',
-    category: 'Financial services',
-    channel: 'OOH · national',
-    title: 'Variant A — saturation play',
-    target: '8.2M viewable imp · +6pp recall · 12K branch visits · top-3 SOV',
-    budget: 1200000, flight: '8 wk',
-    cult: 'pending', mom: 'reviewed',
-    values: { cpm: 88, reach: 86, freq: 78, targ: 82, attr: 76, ctx: 38, dig: 42, cult: 28, earn: 44, mom: 38, budg: 45, cpk: 38, scale: 88, pay: 32, rev: 22 },
-  },
-  {
-    id: 'targeted-b',
-    brand: 'Sample Bank',
-    category: 'Financial services',
-    channel: 'OOH · hub markets',
-    title: 'Variant B — targeted context',
-    target: '8.2M viewable imp · +6pp recall · 12K branch visits · top-3 SOV',
-    budget: 580000, flight: '6 wk',
-    cult: 'reviewed', mom: 'reviewed',
-    values: { cpm: 72, reach: 76, freq: 78, targ: 80, attr: 72, ctx: 80, dig: 82, cult: 76, earn: 78, mom: 76, budg: 78, cpk: 76, scale: 78, pay: 78, rev: 80 },
-  },
-  {
-    id: 'bespoke-c',
-    brand: 'Sample Bank',
-    category: 'Financial services',
-    channel: 'OOH · single market',
-    title: 'Variant C — premium bespoke',
-    target: '8.2M viewable imp · +6pp recall · 12K branch visits · top-3 SOV',
-    budget: 940000, flight: '4 wk',
-    cult: 'reviewed', mom: 'pending',
-    values: { cpm: 58, reach: 52, freq: 64, targ: 60, attr: 56, ctx: 90, dig: 92, cult: 86, earn: 88, mom: 84, budg: 38, cpk: 42, scale: 28, pay: 48, rev: 36 },
-  },
-  {
-    id: 'search-q2',
-    brand: 'Auto dealer group',
-    category: 'Auto',
-    channel: 'Search',
-    title: 'Q2 acquisition push',
-    target: '$48 CPA · 4.2K leads · 14% conv',
-    budget: 180000, flight: '12 wk',
-    cult: 'pending', mom: 'reviewed',
-    values: { cpm: 78, reach: 70, freq: 74, targ: 80, attr: 76, ctx: 62, dig: 54, cult: 48, earn: 52, mom: 60, budg: 64, cpk: 62, scale: 62, pay: 60, rev: 64 },
-  },
+  {id:'trust-q3', brand:'Sample Bank', category:'Financial services', channel:'OOH · place-based', title:'Q3 trust campaign', target:'8.2M viewable imp · +6pp recall · 12K branch visits · top-3 SOV', budget:1200000, flight:'8 wk', cult:'reviewed', mom:'reviewed', values:{cpm:75,reach:82,freq:72,targ:78,attr:70,ctx:78,dig:80,cult:72,earn:80,mom:76,budg:78,cpk:75,scale:80,pay:76,rev:80}},
+  {id:'saturation-a', brand:'Sample Bank', category:'Financial services', channel:'OOH · national', title:'Variant A — saturation play', target:'8.2M viewable imp · +6pp recall · 12K branch visits', budget:1200000, flight:'8 wk', cult:'pending', mom:'reviewed', values:{cpm:88,reach:86,freq:78,targ:82,attr:76,ctx:38,dig:42,cult:28,earn:44,mom:38,budg:45,cpk:38,scale:88,pay:32,rev:22}},
+  {id:'targeted-b', brand:'Sample Bank', category:'Financial services', channel:'OOH · hub markets', title:'Variant B — targeted context', target:'8.2M viewable imp · +6pp recall · 12K branch visits', budget:580000, flight:'6 wk', cult:'reviewed', mom:'reviewed', values:{cpm:72,reach:76,freq:78,targ:80,attr:72,ctx:80,dig:82,cult:76,earn:78,mom:76,budg:78,cpk:76,scale:78,pay:78,rev:80}},
+  {id:'bespoke-c', brand:'Sample Bank', category:'Financial services', channel:'OOH · single market', title:'Variant C — premium bespoke', target:'8.2M viewable imp · +6pp recall · 12K branch visits', budget:940000, flight:'4 wk', cult:'reviewed', mom:'pending', values:{cpm:58,reach:52,freq:64,targ:60,attr:56,ctx:90,dig:92,cult:86,earn:88,mom:84,budg:38,cpk:42,scale:28,pay:48,rev:36}},
+  {id:'search-q2', brand:'Auto dealer group', category:'Auto', channel:'Search', title:'Q2 acquisition push', target:'$48 CPA · 4.2K leads · 14% conv', budget:180000, flight:'12 wk', cult:'pending', mom:'reviewed', values:{cpm:78,reach:70,freq:74,targ:80,attr:76,ctx:62,dig:54,cult:48,earn:52,mom:60,budg:64,cpk:62,scale:62,pay:60,rev:64}},
 ];
 
-// -----------------------------------------------------------------
-// PLUMB → NERVA INPUT MAPPING
-// -----------------------------------------------------------------
-function plumbToNerva(scores, flightPressure = 0.5) {
-  const m = (arr) => arr.reduce((a, b) => a + b, 0) / arr.length / 100;
-  const opt = m([scores.cpm, scores.reach, scores.freq, scores.targ, scores.attr]);
-  const auth = m([scores.ctx, scores.dig, scores.cult, scores.earn, scores.mom]);
-  const pricing_stability = m([scores.budg, scores.scale, scores.pay]);
-  const pricing_risk = (200 - scores.cpk - scores.rev) / 200; // inverted: high cost/low reversibility = high risk
+function plumbToNerva(scores, flightPressure=0.5) {
+  const m = arr => arr.reduce((a,b)=>a+b,0)/arr.length/100;
+  const opt = m([scores.cpm,scores.reach,scores.freq,scores.targ,scores.attr]);
+  const auth = m([scores.ctx,scores.dig,scores.cult,scores.earn,scores.mom]);
+  const pricing_stability = m([scores.budg,scores.scale,scores.pay]);
+  const pricing_risk = (200 - scores.cpk - scores.rev) / 200;
   return {
-    E:  flightPressure,
-    S:  auth,                  // strategic plan quality ≡ authenticity
-    R:  1 - pricing_risk,      // R is risk: lower pricing health → higher risk
-    Sp: opt,                   // support / evidence ≡ optimization data
-    St: pricing_stability,     // stability ≡ pricing fundamentals
-    composites: { opt: opt * 100, auth: auth * 100, pricing: ((pricing_stability * 100 * 3) + scores.cpk + scores.rev) / 5 },
+    E: flightPressure, S: auth, R: 1-pricing_risk, Sp: opt, St: pricing_stability,
+    composites: { opt:opt*100, auth:auth*100, pricing:((pricing_stability*100*3)+scores.cpk+scores.rev)/5 },
   };
 }
 
-// -----------------------------------------------------------------
-// PLUMB VERDICT MAPPING (Plumb uses CONSULT instead of ESCALATE)
-// -----------------------------------------------------------------
 const PLUMB_VERDICT = {
-  COMMIT:   { label: 'COMMIT',   action: 'Approve',     color: '#1f6b3f' },
-  HOLD:     { label: 'HOLD',     action: 'Tighten',     color: '#8a6a1a' },
-  WAIT:     { label: 'WAIT',     action: 'Renegotiate', color: '#3a5285' },
-  ESCALATE: { label: 'CONSULT',  action: 'Escalate',    color: '#9a5a14' },
-  TOXIC:    { label: 'TOXIC',    action: 'Reject',      color: '#a3361b' },
+  COMMIT:   {label:'COMMIT',  action:'Approve',     color:'#1f6b3f'},
+  HOLD:     {label:'HOLD',    action:'Tighten',     color:'#8a6a1a'},
+  WAIT:     {label:'WAIT',    action:'Renegotiate', color:'#3a5285'},
+  ESCALATE: {label:'CONSULT', action:'Escalate',    color:'#9a5a14'},
+  TOXIC:    {label:'TOXIC',   action:'Reject',      color:'#a3361b'},
 };
 
-const PRICING_SUB = (composite) => {
-  if (composite >= 72) return { label: 'FAIR',      tint: '#1f6b3f' };
-  if (composite >= 55) return { label: 'STRETCHED', tint: '#8a6a1a' };
-  return                     { label: 'WRONG',     tint: '#a3361b' };
-};
+const PRICING_SUB = c => c>=72 ? {label:'FAIR',tint:'#1f6b3f'} : c>=55 ? {label:'STRETCHED',tint:'#8a6a1a'} : {label:'WRONG',tint:'#a3361b'};
 
-// -----------------------------------------------------------------
-// VISUAL TOKENS
-// -----------------------------------------------------------------
 const px = {
-  bg: '#f6f2ea',
-  paper: '#fbf8f0',
-  ink: '#15110b',
-  inkDim: 'rgba(21,17,11,0.62)',
-  inkFaint: 'rgba(21,17,11,0.38)',
-  rule: 'rgba(21,17,11,0.14)',
-  ruleHi: 'rgba(21,17,11,0.32)',
-  accent: '#a3361b',
-  green: '#1f6b3f',
-  amber: '#8a6a1a',
-  blue: '#3a5285',
-  serif: '"Newsreader", "Iowan Old Style", Georgia, serif',
-  sans: '"IBM Plex Sans", system-ui, sans-serif',
-  mono: '"JetBrains Mono", ui-monospace, monospace',
+  bg:'#f6f2ea', paper:'#fbf8f0', ink:'#15110b',
+  inkDim:'rgba(21,17,11,0.62)', inkFaint:'rgba(21,17,11,0.38)',
+  rule:'rgba(21,17,11,0.14)', ruleHi:'rgba(21,17,11,0.32)',
+  accent:'#a3361b', green:'#1f6b3f', amber:'#8a6a1a', blue:'#3a5285',
+  serif:'"Newsreader","Iowan Old Style",Georgia,serif',
+  sans:'"IBM Plex Sans",system-ui,sans-serif',
+  mono:'"JetBrains Mono",ui-monospace,monospace',
 };
 
-// -----------------------------------------------------------------
-// MICRO COMPONENTS
-// -----------------------------------------------------------------
-function PlumbSlider({ value, onChange, color = px.ink }) {
-  return (
-    <input type="range" min="0" max="100" step="1" value={value}
-      onChange={e => onChange(parseInt(e.target.value, 10))}
-      style={{ width: '100%', accentColor: color, height: 4 }} />
-  );
+// ── PLUMB COMPONENTS ──────────────────────────────────────
+function PlumbSlider({value, onChange, color=px.ink}) {
+  return <input type="range" min="0" max="100" step="1" value={value} onChange={e=>onChange(parseInt(e.target.value,10))} style={{width:'100%',accentColor:color,height:4}}/>;
 }
 
-function MetricRow({ metric, value, onChange, humanReviewed }) {
-  const color = value >= 70 ? px.green : value >= 55 ? px.amber : px.accent;
+function MetricRow({metric, value, onChange, humanReviewed}) {
+  const color = value>=70 ? px.green : value>=55 ? px.amber : px.accent;
   return (
-    <div style={{ padding:'8px 0', borderBottom: `1px solid ${px.rule}` }}>
-      <div style={{ display:'flex', alignItems:'baseline', justifyContent:'space-between', gap: 6 }}>
-        <div style={{ minWidth: 0 }}>
-          <div style={{ font: `500 13.5px/1.2 ${px.serif}`, color: px.ink, display:'flex', alignItems:'center', gap: 6 }}>
+    <div style={{padding:'8px 0',borderBottom:`1px solid ${px.rule}`}}>
+      <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',gap:6}}>
+        <div style={{minWidth:0}}>
+          <div style={{font:`500 13.5px/1.2 ${px.serif}`,color:px.ink,display:'flex',alignItems:'center',gap:6}}>
             {metric.label}
             {metric.human && (
-              <span style={{
-                font:`600 9px/1 ${px.mono}`, letterSpacing:'0.1em',
-                padding:'2px 4px', borderRadius: 2,
-                background: humanReviewed === 'reviewed' ? 'rgba(31,107,63,0.12)' : 'rgba(163,54,27,0.12)',
-                color: humanReviewed === 'reviewed' ? px.green : px.accent,
-                border: `1px solid ${humanReviewed === 'reviewed' ? 'rgba(31,107,63,0.4)' : 'rgba(163,54,27,0.4)'}`,
-              }}>
-                {humanReviewed === 'reviewed' ? 'REVIEWED' : 'NEEDS REVIEW'}
+              <span style={{font:`600 9px/1 ${px.mono}`,letterSpacing:'0.1em',padding:'2px 4px',borderRadius:2,
+                background:humanReviewed==='reviewed'?'rgba(31,107,63,0.12)':'rgba(163,54,27,0.12)',
+                color:humanReviewed==='reviewed'?px.green:px.accent,
+                border:`1px solid ${humanReviewed==='reviewed'?'rgba(31,107,63,0.4)':'rgba(163,54,27,0.4)'}`}}>
+                {humanReviewed==='reviewed'?'REVIEWED':'NEEDS REVIEW'}
               </span>
             )}
           </div>
-          <div style={{ font:`11.5px/1.3 ${px.sans}`, color: px.inkDim, marginTop: 1 }}>{metric.source}</div>
+          <div style={{font:`11.5px/1.3 ${px.sans}`,color:px.inkDim,marginTop:1}}>{metric.source}</div>
         </div>
-        <div style={{ font:`400 22px/1 ${px.mono}`, color, fontVariantNumeric: 'tabular-nums', flex:'0 0 auto' }}>{value}</div>
+        <div style={{font:`400 22px/1 ${px.mono}`,color,fontVariantNumeric:'tabular-nums',flex:'0 0 auto'}}>{value}</div>
       </div>
-      <div style={{ marginTop: 6 }}>
-        <PlumbSlider value={value} onChange={onChange} color={color} />
-      </div>
+      <div style={{marginTop:6}}><PlumbSlider value={value} onChange={onChange} color={color}/></div>
     </div>
   );
 }
 
-function GateBadge({ score, layer }) {
-  let label, color, bg;
-  if (score >= 70)      { label = 'CLEARS';  color = px.green; bg = 'rgba(31,107,63,0.10)'; }
-  else if (score >= 55) { label = 'SOFT';    color = px.amber; bg = 'rgba(138,106,26,0.10)'; }
-  else                  { label = 'FAILS';   color = px.accent; bg = 'rgba(163,54,27,0.10)'; }
-  return (
-    <span style={{
-      font:`600 10.5px/1 ${px.mono}`, letterSpacing:'0.16em',
-      padding:'4px 8px', background: bg, color, border: `1px solid ${color}55`,
-    }}>{label}</span>
-  );
+function GateBadge({score}) {
+  const [label,color,bg] = score>=70 ? ['CLEARS',px.green,'rgba(31,107,63,0.10)'] : score>=55 ? ['SOFT',px.amber,'rgba(138,106,26,0.10)'] : ['FAILS',px.accent,'rgba(163,54,27,0.10)'];
+  return <span style={{font:`600 10.5px/1 ${px.mono}`,letterSpacing:'0.16em',padding:'4px 8px',background:bg,color,border:`1px solid ${color}55`}}>{label}</span>;
 }
 
-// Layer card
-function LayerCard({ layer, scores, setScore, humanState, setHumanState, composite }) {
+function LayerCard({layer, scores, setScore, humanState, setHumanState, composite}) {
   return (
-    <div style={{
-      background: px.paper, border: `1px solid ${px.ruleHi}`,
-      display:'flex', flexDirection:'column', minHeight: 0, padding: '14px 16px',
-    }}>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap: 8, marginBottom: 10 }}>
+    <div style={{background:px.paper,border:`1px solid ${px.ruleHi}`,display:'flex',flexDirection:'column',minHeight:0,padding:'14px 16px'}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:8,marginBottom:10}}>
         <div>
-          <div style={{ font:`10px/1 ${px.mono}`, color: px.inkFaint, letterSpacing:'0.2em' }}>LAYER · {layer.id.toUpperCase()}</div>
-          <h2 style={{ margin: '4px 0 0', font:`500 22px/1.05 ${px.serif}`, color: px.ink, letterSpacing:'-0.01em' }}>{layer.name}.</h2>
-          <div style={{ font:`italic 12.5px/1.3 ${px.serif}`, color: px.inkDim, marginTop: 2 }}>{layer.subtitle}</div>
+          <div style={{font:`10px/1 ${px.mono}`,color:px.inkFaint,letterSpacing:'0.2em'}}>LAYER · {layer.id.toUpperCase()}</div>
+          <h2 style={{margin:'4px 0 0',font:`500 22px/1.05 ${px.serif}`,color:px.ink,letterSpacing:'-0.01em'}}>{layer.name}.</h2>
+          <div style={{font:`italic 12.5px/1.3 ${px.serif}`,color:px.inkDim,marginTop:2}}>{layer.subtitle}</div>
         </div>
-        <div style={{ textAlign:'right' }}>
-          <div style={{ font:`200 38px/0.9 ${px.serif}`, color: px.ink, letterSpacing:'-0.02em', fontVariantNumeric: 'tabular-nums' }}>
-            {Math.round(composite)}
-          </div>
-          <div style={{ marginTop: 4 }}>
-            <GateBadge score={composite} layer={layer.id} />
-          </div>
+        <div style={{textAlign:'right'}}>
+          <div style={{font:`200 38px/0.9 ${px.serif}`,color:px.ink,letterSpacing:'-0.02em',fontVariantNumeric:'tabular-nums'}}>{Math.round(composite)}</div>
+          <div style={{marginTop:4}}><GateBadge score={composite}/></div>
         </div>
       </div>
-      <div style={{ font:`11px/1.4 ${px.sans}`, color: px.inkDim, marginBottom: 8 }}>{layer.note}</div>
-      <div style={{ flex:1, minHeight: 0, overflowY: 'auto' }}>
+      <div style={{font:`11px/1.4 ${px.sans}`,color:px.inkDim,marginBottom:8}}>{layer.note}</div>
+      <div style={{flex:1,minHeight:0,overflowY:'auto'}}>
         {layer.metrics.map(m => (
           <MetricRow key={m.id} metric={m} value={scores[m.id]} humanReviewed={humanState[m.id]}
-            onChange={v => setScore(m.id, v)} />
+            onChange={v=>setScore(m.id,v)}/>
         ))}
       </div>
     </div>
   );
 }
 
-// Simple forecast cone for Plumb (lighter style than terminal)
-function PlumbForecastChart({ history, current, forecast }) {
-  const W = 280, H = 88;
-  const M = { l: 6, r: 6, t: 10, b: 14 };
-  const pw = W - M.l - M.r, ph = H - M.t - M.b;
-  const nowX = 0.4;
-  const histPts = history.map((h, i) => ({ x: (i / Math.max(1, history.length)) * nowX, r: h.r }));
-  const fcPts = [{ x: nowX, r: current.r, sigma: 0 }];
-  forecast.points.forEach(p => fcPts.push({ x: nowX + (p.minutes / 60) * (1 - nowX), r: p.r, sigma: p.sigma }));
-  const xp = v => M.l + v * pw, yp = v => M.t + (1 - v) * ph;
+function PlumbForecastChart({history, current, forecast}) {
+  const W=280, H=88, M={l:6,r:6,t:10,b:14};
+  const pw=W-M.l-M.r, ph=H-M.t-M.b;
+  const nowX=0.4;
+  const histPts = history.map((h,i) => ({x:(i/Math.max(1,history.length))*nowX, r:h.r}));
+  const fcPts = [{x:nowX,r:current.r,sigma:0}];
+  forecast.points.forEach(p => fcPts.push({x:nowX+(p.minutes/60)*(1-nowX),r:p.r,sigma:p.sigma}));
+  const xp = v => M.l+v*pw, yp = v => M.t+(1-v)*ph;
   const tauY = yp(current.tau);
-  const bandTop = fcPts.map(p => `${xp(p.x)},${yp(Math.min(1, p.r + p.sigma))}`).join(' ');
-  const bandBot = fcPts.map(p => `${xp(p.x)},${yp(Math.max(0, p.r - p.sigma))}`).reverse().join(' ');
-
+  const bandTop = fcPts.map(p=>`${xp(p.x)},${yp(Math.min(1,p.r+p.sigma))}`).join(' ');
+  const bandBot = fcPts.map(p=>`${xp(p.x)},${yp(Math.max(0,p.r-p.sigma))}`).reverse().join(' ');
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ width:'100%', height: H, display:'block' }}>
-      <line x1={M.l} y1={tauY} x2={M.l + pw} y2={tauY} stroke={px.ink} strokeDasharray="3 3" opacity="0.4" />
-      <text x={M.l + pw - 2} y={tauY - 3} textAnchor="end" style={{ font:`9.5px ${px.mono}`, fill: px.inkDim }}>τ {fmt(current.tau,2)}</text>
-      <line x1={xp(nowX)} y1={M.t} x2={xp(nowX)} y2={M.t + ph} stroke={px.ink} strokeDasharray="1 2" opacity="0.35" />
-      <text x={xp(nowX)} y={M.t - 2} textAnchor="middle" style={{ font:`9.5px ${px.mono}`, fill: px.ink }}>NOW</text>
-      <polygon points={`${bandTop} ${bandBot}`} fill={px.ink} opacity="0.10" />
-      <polyline points={histPts.map(p => `${xp(p.x)},${yp(p.r)}`).join(' ')} fill="none" stroke={px.ink} strokeWidth="1.4" opacity="0.7" />
-      {histPts.map((p, i) => <circle key={i} cx={xp(p.x)} cy={yp(p.r)} r="1.6" fill={px.ink} opacity="0.6" />)}
-      <polyline points={fcPts.map(p => `${xp(p.x)},${yp(p.r)}`).join(' ')} fill="none" stroke={px.ink} strokeWidth="1.6" strokeDasharray="3 2" />
-      <circle cx={xp(nowX)} cy={yp(current.r)} r="3" fill={px.ink} />
-      {forecast.points.map((p, i) => {
-        const x = xp(nowX + (p.minutes / 60) * (1 - nowX));
-        return (
-          <g key={i}>
-            <line x1={x} y1={M.t + ph} x2={x} y2={M.t + ph + 2} stroke={px.inkDim} />
-            <text x={x} y={M.t + ph + 11} textAnchor="middle" style={{ font:`9.5px ${px.mono}`, fill: px.inkDim }}>{p.label.replace('T+', '')}</text>
-          </g>
-        );
+    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{width:'100%',height:H,display:'block'}}>
+      <line x1={M.l} y1={tauY} x2={M.l+pw} y2={tauY} stroke={px.ink} strokeDasharray="3 3" opacity="0.4"/>
+      <text x={M.l+pw-2} y={tauY-3} textAnchor="end" style={{font:`9.5px ${px.mono}`,fill:px.inkDim}}>τ {fmt(current.tau,2)}</text>
+      <line x1={xp(nowX)} y1={M.t} x2={xp(nowX)} y2={M.t+ph} stroke={px.ink} strokeDasharray="1 2" opacity="0.35"/>
+      <text x={xp(nowX)} y={M.t-2} textAnchor="middle" style={{font:`9.5px ${px.mono}`,fill:px.ink}}>NOW</text>
+      <polygon points={`${bandTop} ${bandBot}`} fill={px.ink} opacity="0.10"/>
+      <polyline points={histPts.map(p=>`${xp(p.x)},${yp(p.r)}`).join(' ')} fill="none" stroke={px.ink} strokeWidth="1.4" opacity="0.7"/>
+      {histPts.map((p,i) => <circle key={i} cx={xp(p.x)} cy={yp(p.r)} r="1.6" fill={px.ink} opacity="0.6"/>)}
+      <polyline points={fcPts.map(p=>`${xp(p.x)},${yp(p.r)}`).join(' ')} fill="none" stroke={px.ink} strokeWidth="1.6" strokeDasharray="3 2"/>
+      <circle cx={xp(nowX)} cy={yp(current.r)} r="3" fill={px.ink}/>
+      {forecast.points.map((p,i) => {
+        const x = xp(nowX+(p.minutes/60)*(1-nowX));
+        return <g key={i}><line x1={x} y1={M.t+ph} x2={x} y2={M.t+ph+2} stroke={px.inkDim}/><text x={x} y={M.t+ph+11} textAnchor="middle" style={{font:`9.5px ${px.mono}`,fill:px.inkDim}}>{p.label.replace('T+','')}</text></g>;
       })}
     </svg>
   );
 }
 
-// -----------------------------------------------------------------
-// MAIN VIEW
-// -----------------------------------------------------------------
+// ── PLUMB MAIN VIEW ───────────────────────────────────────
 function PlumbView() {
-  const { state, update, metrics, forecast, history, api } = useNerva();
-  const [scores, setScores] = usePlumbState(PLUMB_DEFAULTS);
-  const [humanState, setHumanState] = usePlumbState({ cult: 'reviewed', mom: 'reviewed' });
-  const [brief, setBrief] = usePlumbState(PLUMB_BRIEFS[0]);
-  const [flightPressure, setFlightPressure] = usePlumbState(0.5);
-  const [oneWayDoor, setOneWayDoor] = usePlumbState('First measurable recall signal at week 2');
+  const {state, update, metrics, forecast, history, api} = useNerva();
+  const [scores, setScores] = useState(PLUMB_DEFAULTS);
+  const [humanState, setHumanState] = useState({cult:'reviewed', mom:'reviewed'});
+  const [brief, setBrief] = useState(PLUMB_BRIEFS[0]);
+  const [flightPressure, setFlightPressure] = useState(0.5);
+  const [oneWayDoor, setOneWayDoor] = useState('First measurable recall signal at week 2');
 
-  // Push derived NERVA inputs whenever scores change
-  const mapped = usePlumbMemo(() => plumbToNerva(scores, flightPressure), [scores, flightPressure]);
-
-  usePlumbEffect(() => {
-    update({ E: mapped.E, S: mapped.S, R: mapped.R, Sp: mapped.Sp, St: mapped.St });
+  const mapped = useMemo(() => plumbToNerva(scores, flightPressure), [scores, flightPressure]);
+  useEffect(() => {
+    update({E:mapped.E, S:mapped.S, R:mapped.R, Sp:mapped.Sp, St:mapped.St});
   }, [mapped.E, mapped.S, mapped.R, mapped.Sp, mapped.St]);
 
   const composites = mapped.composites;
   const overall = Math.round((composites.opt + composites.auth + composites.pricing) / 3);
-
-  // Plumb's verdict semantics: NERVA verdict, but renamed CONSULT
   const verdict = metrics.verdict;
-  // If a human-review metric is below 70 and not reviewed, force CONSULT
-  const humanGate = (humanState.cult === 'pending' && scores.cult < 70) || (humanState.mom === 'pending' && scores.mom < 70);
-  const finalVerdict = humanGate && verdict === 'COMMIT' ? 'ESCALATE' : verdict;
+  const humanGate = (humanState.cult==='pending' && scores.cult<70) || (humanState.mom==='pending' && scores.mom<70);
+  const finalVerdict = humanGate && verdict==='COMMIT' ? 'ESCALATE' : verdict;
   const v = PLUMB_VERDICT[finalVerdict];
-
-  // Pricing sub-verdict (Plumb's "FAIR/STRETCHED/WRONG")
   const pricingSub = PRICING_SUB(composites.pricing);
-
-  // Setter that snapshots brief + values together
-  const applyBrief = (b) => {
-    setBrief(b);
-    setScores(b.values);
-    setHumanState({ cult: b.cult, mom: b.mom });
-  };
-  const setScore = (id, v) => setScores(s => ({ ...s, [id]: v }));
-
-  // The "Plumb thesis" line — TOXIC explanation
   const isToxicShape = composites.opt >= 65 && composites.auth < 50;
 
+  const applyBrief = b => { setBrief(b); setScores(b.values); setHumanState({cult:b.cult, mom:b.mom}); };
+  const setScore = (id, val) => setScores(s => ({...s, [id]:val}));
+
   return (
-    <div style={{
-      width:'100%', height: '100%', background: px.bg, color: px.ink,
-      fontFamily: px.sans, overflow: 'hidden auto', display:'flex', flexDirection:'column',
-    }}>
+    <div style={{width:'100%',minHeight:'100vh',background:px.bg,color:px.ink,fontFamily:px.sans,display:'flex',flexDirection:'column'}}>
       {/* HEADER */}
-      <header style={{
-        padding: '14px 28px 12px', display:'grid', gridTemplateColumns:'1fr auto 1fr', alignItems:'end', gap: 18,
-        borderBottom: `1px solid ${px.ink}`, background: px.paper,
-      }}>
+      <header style={{padding:'14px 28px 12px',display:'grid',gridTemplateColumns:'1fr auto 1fr',alignItems:'end',gap:18,borderBottom:`1px solid ${px.ink}`,background:px.paper}}>
         <div>
-          <div style={{ font:`10px ${px.mono}`, color: px.inkDim, letterSpacing:'0.22em' }}>AC ADS · PLUMB · v3 · 2026</div>
-          <h1 style={{ margin: '4px 0 0', font:`500 38px/0.95 ${px.serif}`, color: px.ink, letterSpacing:'-0.02em' }}>Plumb.</h1>
-          <div style={{ font:`italic 14px/1.3 ${px.serif}`, color: px.inkDim, marginTop: 2 }}>The three-layer buyside audit.</div>
+          <div style={{font:`10px ${px.mono}`,color:px.inkDim,letterSpacing:'0.22em'}}>AC ADS · PLUMB · v3 · 2026</div>
+          <h1 style={{margin:'4px 0 0',font:`500 38px/0.95 ${px.serif}`,color:px.ink,letterSpacing:'-0.02em'}}>Plumb.</h1>
+          <div style={{font:`italic 14px/1.3 ${px.serif}`,color:px.inkDim,marginTop:2}}>The three-layer buyside audit.</div>
         </div>
-        <div style={{ textAlign:'center', borderLeft:`1px solid ${px.rule}`, borderRight:`1px solid ${px.rule}`, padding: '0 22px' }}>
-          <div style={{ font:`10px ${px.mono}`, color: px.inkDim, letterSpacing:'0.18em' }}>SCORING ENGINE</div>
-          <div style={{ font:`500 16px/1 ${px.serif}`, marginTop: 4 }}>
-            running on <span style={{ font:`600 14px ${px.mono}`, letterSpacing:'0.18em', color: px.ink }}>NERVA v10</span>
-          </div>
-          <div style={{ font:`italic 11.5px/1.3 ${px.serif}`, color: px.inkDim, marginTop: 4 }}>
-            decision integrity engine · {api.region} · {Math.round(api.latency)}ms
-          </div>
+        <div style={{textAlign:'center',borderLeft:`1px solid ${px.rule}`,borderRight:`1px solid ${px.rule}`,padding:'0 22px'}}>
+          <div style={{font:`10px ${px.mono}`,color:px.inkDim,letterSpacing:'0.18em'}}>SCORING ENGINE</div>
+          <div style={{font:`500 16px/1 ${px.serif}`,marginTop:4}}>running on <span style={{font:`600 14px ${px.mono}`,letterSpacing:'0.18em',color:px.ink}}>NERVA v10</span></div>
+          <div style={{font:`italic 11.5px/1.3 ${px.serif}`,color:px.inkDim,marginTop:4}}>decision integrity engine · {api.region} · {Math.round(api.latency)}ms</div>
         </div>
-        <div style={{ textAlign:'right', font:`11px/1.45 ${px.mono}`, color: px.inkDim }}>
-          <div style={{ color: px.ink, font:`500 12px ${px.mono}`, letterSpacing:'0.08em' }}>AUDIT 28491 · LIVE</div>
-          <div>operator: cmdr.chen</div>
-          <div>session 7F-2A91 · 14:08:21</div>
-          <div style={{ color: px.green, marginTop: 1 }}>● api nominal {api.uptime}%</div>
+        <div style={{textAlign:'right',font:`11px/1.45 ${px.mono}`,color:px.inkDim}}>
+          <div style={{color:px.ink,font:`500 12px ${px.mono}`,letterSpacing:'0.08em'}}>AUDIT 28491 · LIVE</div>
+          <div>session 7F-2A91</div>
+          <div style={{color:px.green,marginTop:1}}>● api nominal {api.uptime}%</div>
+          <a href="/index.html" style={{color:px.accent,font:`11px ${px.mono}`,letterSpacing:"0.14em",textDecoration:"none",marginTop:6,display:"block",fontWeight:600}}>← NERVA v10</a>
         </div>
       </header>
 
       {/* BRIEF BAR */}
-      <div style={{
-        padding: '10px 28px', borderBottom: `1px solid ${px.rule}`, background: px.bg,
-        display:'grid', gridTemplateColumns: 'auto 1fr auto', gap: 24, alignItems:'center',
-      }}>
+      <div style={{padding:'10px 28px',borderBottom:`1px solid ${px.rule}`,background:px.bg,display:'grid',gridTemplateColumns:'auto 1fr auto',gap:24,alignItems:'center'}}>
         <div>
-          <div style={{ font:`9.5px ${px.mono}`, color: px.inkDim, letterSpacing:'0.18em', marginBottom: 2 }}>BRIEF</div>
-          <div style={{ font:`500 15px/1.1 ${px.serif}`, color: px.ink }}>
-            {brief.brand} <span style={{ color: px.inkDim }}>·</span> {brief.title}
-          </div>
-          <div style={{ font:`italic 12px ${px.serif}`, color: px.inkDim }}>
-            {brief.category} · {brief.channel} · ${(brief.budget/1000).toFixed(0)}K · {brief.flight}
-          </div>
+          <div style={{font:`9.5px ${px.mono}`,color:px.inkDim,letterSpacing:'0.18em',marginBottom:2}}>BRIEF</div>
+          <div style={{font:`500 15px/1.1 ${px.serif}`,color:px.ink}}>{brief.brand} <span style={{color:px.inkDim}}>·</span> {brief.title}</div>
+          <div style={{font:`italic 12px ${px.serif}`,color:px.inkDim}}>{brief.category} · {brief.channel} · ${(brief.budget/1000).toFixed(0)}K · {brief.flight}</div>
         </div>
-        <div style={{ font:`12px/1.4 ${px.serif}`, color: px.inkDim, paddingLeft: 16, borderLeft:`1px solid ${px.rule}` }}>
-          <span style={{ color: px.ink }}>Measured against ·</span> {brief.target}
+        <div style={{font:`12px/1.4 ${px.serif}`,color:px.inkDim,paddingLeft:16,borderLeft:`1px solid ${px.rule}`}}>
+          <span style={{color:px.ink}}>Measured against ·</span> {brief.target}
         </div>
-        <div style={{ display:'flex', gap: 6, flexWrap:'wrap', justifyContent:'flex-end' }}>
+        <div style={{display:'flex',gap:6,flexWrap:'wrap',justifyContent:'flex-end'}}>
           {PLUMB_BRIEFS.map(b => (
-            <button key={b.id} onClick={() => applyBrief(b)} style={{
-              background: brief.id === b.id ? px.ink : 'transparent',
-              color: brief.id === b.id ? px.paper : px.ink,
-              border: `1px solid ${px.ink}`,
-              font:`600 10px/1 ${px.mono}`, letterSpacing:'0.06em',
-              padding:'5px 8px', cursor:'pointer',
-            }}>{b.title.split('—')[0].trim() || b.title}</button>
+            <button key={b.id} onClick={() => applyBrief(b)} style={{background:brief.id===b.id?px.ink:'transparent',color:brief.id===b.id?px.paper:px.ink,border:`1px solid ${px.ink}`,font:`600 10px/1 ${px.mono}`,letterSpacing:'0.06em',padding:'5px 8px',cursor:'pointer'}}>
+              {b.title.split('—')[0].trim()||b.title}
+            </button>
           ))}
         </div>
       </div>
 
-      {/* MAIN: 3 LAYER CARDS + VERDICT COLUMN */}
-      <div style={{
-        flex: 1, minHeight: 0, display:'grid',
-        gridTemplateColumns: '1fr 1fr 1fr 380px', gap: 12, padding: '14px 22px 0',
-      }}>
-        <LayerCard layer={PLUMB_LAYERS[0]} scores={scores} setScore={setScore}
-          humanState={humanState} setHumanState={setHumanState} composite={composites.opt} />
-        <LayerCard layer={PLUMB_LAYERS[1]} scores={scores} setScore={setScore}
-          humanState={humanState} setHumanState={setHumanState} composite={composites.auth} />
-        <LayerCard layer={PLUMB_LAYERS[2]} scores={scores} setScore={setScore}
-          humanState={humanState} setHumanState={setHumanState} composite={composites.pricing} />
+      {/* MAIN GRID */}
+      <div style={{flex:1,display:'grid',gridTemplateColumns:'1fr 1fr 1fr 380px',gap:12,padding:'14px 22px 0'}}>
+        <LayerCard layer={PLUMB_LAYERS[0]} scores={scores} setScore={setScore} humanState={humanState} setHumanState={setHumanState} composite={composites.opt}/>
+        <LayerCard layer={PLUMB_LAYERS[1]} scores={scores} setScore={setScore} humanState={humanState} setHumanState={setHumanState} composite={composites.auth}/>
+        <LayerCard layer={PLUMB_LAYERS[2]} scores={scores} setScore={setScore} humanState={humanState} setHumanState={setHumanState} composite={composites.pricing}/>
 
         {/* VERDICT COLUMN */}
-        <aside style={{ display:'flex', flexDirection:'column', gap: 12, minHeight: 0 }}>
-          {/* Verdict callout */}
-          <div style={{
-            background: px.paper, border: `2px solid ${v.color}`,
-            padding: '14px 18px',
-          }}>
-            <div style={{ display:'flex', alignItems:'baseline', justifyContent:'space-between' }}>
-              <span style={{ font:`10px ${px.mono}`, color: px.inkDim, letterSpacing:'0.2em' }}>VERDICT</span>
-              <span style={{ font:`10px ${px.mono}`, color: px.inkDim, letterSpacing:'0.12em' }}>composite {overall}</span>
+        <aside style={{display:'flex',flexDirection:'column',gap:12,minHeight:0}}>
+          <div style={{background:px.paper,border:`2px solid ${v.color}`,padding:'14px 18px'}}>
+            <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between'}}>
+              <span style={{font:`10px ${px.mono}`,color:px.inkDim,letterSpacing:'0.2em'}}>VERDICT</span>
+              <span style={{font:`10px ${px.mono}`,color:px.inkDim,letterSpacing:'0.12em'}}>composite {overall}</span>
             </div>
-            <div style={{ font:`500 56px/0.95 ${px.serif}`, color: v.color, letterSpacing:'-0.03em', marginTop: 2 }}>
-              {v.label.charAt(0) + v.label.slice(1).toLowerCase()}
+            <div style={{font:`500 56px/0.95 ${px.serif}`,color:v.color,letterSpacing:'-0.03em',marginTop:2}}>
+              {v.label.charAt(0)+v.label.slice(1).toLowerCase()}
             </div>
-            <div style={{ display:'flex', alignItems:'baseline', gap: 8, marginTop: 4 }}>
-              <span style={{ font:`italic 14px ${px.serif}`, color: v.color }}>{v.action}.</span>
-              <span style={{ font:`italic 13px ${px.serif}`, color: px.inkDim }}>
-                pricing <span style={{ color: pricingSub.tint }}>{pricingSub.label.toLowerCase()}</span>
-              </span>
+            <div style={{display:'flex',alignItems:'baseline',gap:8,marginTop:4}}>
+              <span style={{font:`italic 14px ${px.serif}`,color:v.color}}>{v.action}.</span>
+              <span style={{font:`italic 13px ${px.serif}`,color:px.inkDim}}>pricing <span style={{color:pricingSub.tint}}>{pricingSub.label.toLowerCase()}</span></span>
             </div>
-            <div style={{ font:`13px/1.5 ${px.serif}`, color: px.ink, marginTop: 10 }}>
-              {finalVerdict === 'COMMIT' && 'All three layers earn the buy. Distribution math clears the floor, authenticity earns the moment, pricing is sound against the named outcomes.'}
-              {finalVerdict === 'HOLD' && 'One layer is soft but not disqualifying. Tighten the inputs and re-score before approving spend.'}
-              {finalVerdict === 'WAIT' && 'Pricing fails or both quality layers are below threshold. Not a media question yet — return to strategy or renegotiate the rate.'}
-              {finalVerdict === 'ESCALATE' && 'One layer requires judgment the model cannot supply. Escalate to named senior strategist; override reasoning logs to audit field.'}
-              {finalVerdict === 'TOXIC' && (isToxicShape
+            <div style={{font:`13px/1.5 ${px.serif}`,color:px.ink,marginTop:10}}>
+              {finalVerdict==='COMMIT' && 'All three layers earn the buy. Distribution math clears the floor, authenticity earns the moment, pricing is sound against the named outcomes.'}
+              {finalVerdict==='HOLD' && 'One layer is soft but not disqualifying. Tighten the inputs and re-score before approving spend.'}
+              {finalVerdict==='WAIT' && 'Pricing fails or both quality layers are below threshold. Not a media question yet — return to strategy or renegotiate the rate.'}
+              {finalVerdict==='ESCALATE' && 'One layer requires judgment the model cannot supply. Escalate to named senior strategist; override reasoning logs to audit field.'}
+              {finalVerdict==='TOXIC' && (isToxicShape
                 ? 'High optimization, low authenticity. The buy scores well on metrics the agency charges against — and poorly on the layer they have no incentive to measure. The verdict no compensation model produces on its own.'
                 : 'Hard veto. Reversibility too low against current foundation. Do not proceed.')}
             </div>
           </div>
 
-          {/* Three-gate visualization */}
-          <div style={{ background: px.paper, border: `1px solid ${px.ruleHi}`, padding: '12px 16px' }}>
-            <div style={{ font:`10px ${px.mono}`, color: px.inkDim, letterSpacing:'0.2em', marginBottom: 8 }}>COMPOUND GATE</div>
-            {[
-              ['Optimization', composites.opt, 70],
-              ['Authenticity', composites.auth, 70],
-              ['Pricing',      composites.pricing, 70],
-            ].map(([l, c, t]) => {
-              const color = c >= 70 ? px.green : c >= 55 ? px.amber : px.accent;
+          {/* Compound gate */}
+          <div style={{background:px.paper,border:`1px solid ${px.ruleHi}`,padding:'12px 16px'}}>
+            <div style={{font:`10px ${px.mono}`,color:px.inkDim,letterSpacing:'0.2em',marginBottom:8}}>COMPOUND GATE</div>
+            {[['Optimization',composites.opt,70],['Authenticity',composites.auth,70],['Pricing',composites.pricing,70]].map(([l,c,t]) => {
+              const color = c>=70 ? px.green : c>=55 ? px.amber : px.accent;
               return (
-                <div key={l} style={{ display:'grid', gridTemplateColumns:'90px 1fr 38px', alignItems:'center', gap: 8, marginBottom: 6 }}>
-                  <span style={{ font:`13px/1 ${px.serif}`, color: px.ink }}>{l}</span>
-                  <div style={{ position:'relative', height: 8, background:'rgba(21,17,11,0.06)' }}>
-                    <div style={{ position:'absolute', left: 0, top: 0, bottom: 0, width: `${c}%`, background: color }} />
-                    <div style={{ position:'absolute', left: `${t}%`, top: -3, bottom: -3, width: 1.5, background: px.ink }} />
+                <div key={l} style={{display:'grid',gridTemplateColumns:'90px 1fr 38px',alignItems:'center',gap:8,marginBottom:6}}>
+                  <span style={{font:`13px/1 ${px.serif}`,color:px.ink}}>{l}</span>
+                  <div style={{position:'relative',height:8,background:'rgba(21,17,11,0.06)'}}>
+                    <div style={{position:'absolute',left:0,top:0,bottom:0,width:`${c}%`,background:color}}/>
+                    <div style={{position:'absolute',left:`${t}%`,top:-3,bottom:-3,width:1.5,background:px.ink}}/>
                   </div>
-                  <span style={{ font:`12px/1 ${px.mono}`, color, textAlign:'right' }}>{Math.round(c)}</span>
+                  <span style={{font:`12px/1 ${px.mono}`,color,textAlign:'right'}}>{Math.round(c)}</span>
                 </div>
               );
             })}
-            <div style={{ font:`italic 11px/1.4 ${px.serif}`, color: px.inkDim, marginTop: 6, paddingTop: 6, borderTop:`1px solid ${px.rule}` }}>
+            <div style={{font:`italic 11px/1.4 ${px.serif}`,color:px.inkDim,marginTop:6,paddingTop:6,borderTop:`1px solid ${px.rule}`}}>
               All three gates clear independently for COMMIT. A strong Optimization score does not override a failed Authenticity score.
             </div>
           </div>
 
-          {/* Forecast at flight close */}
-          <div style={{ background: px.paper, border: `1px solid ${px.ruleHi}`, padding: '12px 16px' }}>
-            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', marginBottom: 6 }}>
-              <span style={{ font:`10px ${px.mono}`, color: px.inkDim, letterSpacing:'0.2em' }}>FORECAST AT FLIGHT CLOSE</span>
-              <span style={{ font:`9.5px ${px.mono}`, color: px.inkFaint, letterSpacing:'0.1em' }}>damped-trend · n={history.length+1}</span>
+          {/* Forecast */}
+          <div style={{background:px.paper,border:`1px solid ${px.ruleHi}`,padding:'12px 16px'}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',marginBottom:6}}>
+              <span style={{font:`10px ${px.mono}`,color:px.inkDim,letterSpacing:'0.2em'}}>FORECAST AT FLIGHT CLOSE</span>
+              <span style={{font:`9.5px ${px.mono}`,color:px.inkFaint,letterSpacing:'0.1em'}}>n={history.length+1}</span>
             </div>
-            <PlumbForecastChart history={history} current={metrics} forecast={forecast} />
-            <div style={{ marginTop: 4, fontSize: 11.5, font:`11.5px/1.4 ${px.serif}`, color: px.inkDim }}>
-              {forecast.window}.
-              {' '}
-              <span style={{ color: px.inkDim }}>P(≥τ) at flight close: <strong style={{ color: px.ink }}>{Math.round(forecast.points[forecast.points.length-1].pAbove * 100)}%</strong></span>
+            <PlumbForecastChart history={history} current={metrics} forecast={forecast}/>
+            <div style={{marginTop:4,font:`11.5px/1.4 ${px.serif}`,color:px.inkDim}}>
+              {forecast.window}. P(≥τ) at close: <strong style={{color:px.ink}}>{Math.round(forecast.points[forecast.points.length-1].pAbove*100)}%</strong>
             </div>
           </div>
 
-          {/* One-way door + KPIs */}
-          {finalVerdict === 'COMMIT' && (
-            <div style={{ background: px.paper, border: `1px solid ${px.ruleHi}`, padding: '12px 16px' }}>
-              <div style={{ font:`10px ${px.mono}`, color: px.inkDim, letterSpacing:'0.2em', marginBottom: 6 }}>ONE-WAY DOOR CRITERION</div>
-              <input value={oneWayDoor} onChange={e => setOneWayDoor(e.target.value)}
-                style={{ width: '100%', font:`13px/1.4 ${px.serif}`, padding:'4px 6px', background:'transparent', border:`1px solid ${px.rule}`, color: px.ink, outline:'none' }} />
-              <div style={{ font:`italic 11px/1.4 ${px.serif}`, color: px.inkDim, marginTop: 6 }}>
-                Stamps to the IO. Falsified at flight close against the named KPI target set.
-              </div>
+          {finalVerdict==='COMMIT' && (
+            <div style={{background:px.paper,border:`1px solid ${px.ruleHi}`,padding:'12px 16px'}}>
+              <div style={{font:`10px ${px.mono}`,color:px.inkDim,letterSpacing:'0.2em',marginBottom:6}}>ONE-WAY DOOR CRITERION</div>
+              <input value={oneWayDoor} onChange={e=>setOneWayDoor(e.target.value)} style={{width:'100%',font:`13px/1.4 ${px.serif}`,padding:'4px 6px',background:'transparent',border:`1px solid ${px.rule}`,color:px.ink,outline:'none'}}/>
+              <div style={{font:`italic 11px/1.4 ${px.serif}`,color:px.inkDim,marginTop:6}}>Stamps to the IO. Falsified at flight close against the named KPI target set.</div>
             </div>
           )}
-          {finalVerdict === 'ESCALATE' && (
-            <div style={{ background: px.paper, border: `1px solid ${px.ruleHi}`, padding: '12px 16px' }}>
-              <div style={{ font:`10px ${px.mono}`, color: px.inkDim, letterSpacing:'0.2em', marginBottom: 6 }}>ESCALATION QUEUE</div>
-              <div style={{ font:`13px/1.5 ${px.serif}`, color: px.ink }}>
-                Route to <strong>Senior strategist</strong> · channel SME.
-              </div>
-              <div style={{ font:`italic 11px/1.4 ${px.serif}`, color: px.inkDim, marginTop: 4 }}>
-                Documented escalations hit at 78%. Undocumented at 33%. Override reasoning stamps to audit field.
-              </div>
-              <button style={{
-                marginTop: 8, width: '100%', background: px.ink, color: px.paper,
-                border: 'none', font:`600 11px/1 ${px.mono}`, letterSpacing:'0.16em',
-                padding:'8px 0', cursor:'pointer',
-              }}>SEND TO REVIEW · SARAH K</button>
+          {finalVerdict==='ESCALATE' && (
+            <div style={{background:px.paper,border:`1px solid ${px.ruleHi}`,padding:'12px 16px'}}>
+              <div style={{font:`10px ${px.mono}`,color:px.inkDim,letterSpacing:'0.2em',marginBottom:6}}>ESCALATION QUEUE</div>
+              <div style={{font:`13px/1.5 ${px.serif}`,color:px.ink}}>Route to <strong>Senior strategist</strong> · channel SME.</div>
+              <div style={{font:`italic 11px/1.4 ${px.serif}`,color:px.inkDim,marginTop:4}}>Documented escalations hit at 78%. Undocumented at 33%. Override reasoning stamps to audit field.</div>
+              <button style={{marginTop:8,width:'100%',background:px.ink,color:px.paper,border:'none',font:`600 11px/1 ${px.mono}`,letterSpacing:'0.16em',padding:'8px 0',cursor:'pointer'}}>SEND TO REVIEW · SARAH K</button>
             </div>
           )}
         </aside>
       </div>
 
-      {/* FOOTER — flight pressure + audit trail */}
-      <div style={{
-        marginTop: 14, padding: '12px 28px 16px', borderTop: `1px solid ${px.rule}`,
-        display:'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 24, background: px.paper,
-      }}>
+      {/* FOOTER */}
+      <div style={{marginTop:14,padding:'12px 28px 16px',borderTop:`1px solid ${px.rule}`,display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:24,background:px.paper}}>
         <div>
-          <div style={{ font:`10px ${px.mono}`, color: px.inkDim, letterSpacing:'0.2em', marginBottom: 4 }}>NERVA DERIVED INPUTS</div>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(5, 1fr)', gap: 6, font:`12px ${px.mono}`, color: px.ink }}>
-            {[
-              ['E', mapped.E, 'flight pressure'],
-              ['S', mapped.S, 'authenticity'],
-              ['R', mapped.R, 'price risk'],
-              ['Sp', mapped.Sp, 'optimization'],
-              ['St', mapped.St, 'pricing health'],
-            ].map(([k, v, sub]) => (
-              <div key={k}>
-                <div style={{ color: px.accent }}>{k}</div>
-                <div>{fmt(v, 2)}</div>
-                <div style={{ font:`italic 10px ${px.serif}`, color: px.inkFaint }}>{sub}</div>
-              </div>
+          <div style={{font:`10px ${px.mono}`,color:px.inkDim,letterSpacing:'0.2em',marginBottom:4}}>NERVA DERIVED INPUTS</div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:6,font:`12px ${px.mono}`,color:px.ink}}>
+            {[['E',mapped.E,'flight pressure'],['S',mapped.S,'authenticity'],['R',mapped.R,'price risk'],['Sp',mapped.Sp,'optimization'],['St',mapped.St,'pricing health']].map(([k,val,sub]) => (
+              <div key={k}><div style={{color:px.accent}}>{k}</div><div>{fmt(val,2)}</div><div style={{font:`italic 10px ${px.serif}`,color:px.inkFaint}}>{sub}</div></div>
             ))}
           </div>
         </div>
         <div>
-          <div style={{ font:`10px ${px.mono}`, color: px.inkDim, letterSpacing:'0.2em', marginBottom: 4 }}>FLIGHT PRESSURE · E</div>
-          <div style={{ display:'flex', alignItems:'center', gap: 10 }}>
-            <input type="range" min="0" max="1" step="0.01" value={flightPressure}
-              onChange={e => setFlightPressure(parseFloat(e.target.value))}
-              style={{ flex: 1, accentColor: px.accent }} />
-            <span style={{ font:`14px ${px.mono}`, color: px.ink, width: 40 }}>{fmt(flightPressure, 2)}</span>
+          <div style={{font:`10px ${px.mono}`,color:px.inkDim,letterSpacing:'0.2em',marginBottom:4}}>FLIGHT PRESSURE · E</div>
+          <div style={{display:'flex',alignItems:'center',gap:10}}>
+            <input type="range" min="0" max="1" step="0.01" value={flightPressure} onChange={e=>setFlightPressure(parseFloat(e.target.value))} style={{flex:1,accentColor:px.accent}}/>
+            <span style={{font:`14px ${px.mono}`,color:px.ink,width:40}}>{fmt(flightPressure,2)}</span>
           </div>
-          <div style={{ font:`italic 11px/1.4 ${px.serif}`, color: px.inkDim, marginTop: 4 }}>
-            Time-to-IO pressure. Higher values raise NERVA's adaptive threshold τ — strong signals still clear, marginal ones won't.
-          </div>
+          <div style={{font:`italic 11px/1.4 ${px.serif}`,color:px.inkDim,marginTop:4}}>Time-to-IO pressure. Higher values raise NERVA's adaptive threshold τ.</div>
         </div>
         <div>
-          <div style={{ font:`10px ${px.mono}`, color: px.inkDim, letterSpacing:'0.2em', marginBottom: 4 }}>NERVA SIGNAL</div>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap: 12, font:`12px ${px.mono}` }}>
-            <div><div style={{ color: px.inkDim }}>|r|</div><div style={{ font:`400 18px ${px.mono}`, color: v.color }}>{fmt(metrics.r, 3)}</div></div>
-            <div><div style={{ color: px.inkDim }}>τ</div><div style={{ font:`400 18px ${px.mono}` }}>{fmt(metrics.tau, 3)}</div></div>
-            <div><div style={{ color: px.inkDim }}>EV</div><div style={{ font:`400 18px ${px.mono}`, color: metrics.EV > 0 ? px.green : px.accent }}>{fmt(metrics.EV, 2)}</div></div>
-            <div><div style={{ color: px.inkDim }}>ρ</div><div style={{ font:`400 18px ${px.mono}` }}>{fmt(metrics.reversibility, 2)}</div></div>
+          <div style={{font:`10px ${px.mono}`,color:px.inkDim,letterSpacing:'0.2em',marginBottom:4}}>NERVA SIGNAL</div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,font:`12px ${px.mono}`}}>
+            {[['|r|',metrics.r,v.color],['τ',metrics.tau,null],['EV',metrics.EV,metrics.EV>0?px.green:px.accent],['ρ',metrics.reversibility,null]].map(([l,val,col]) => (
+              <div key={l}><div style={{color:px.inkDim}}>{l}</div><div style={{font:`400 18px ${px.mono}`,color:col||px.ink}}>{fmt(val,3)}</div></div>
+            ))}
           </div>
-          <div style={{ font:`italic 11px/1.4 ${px.serif}`, color: px.inkDim, marginTop: 4 }}>
-            Plumb's verdict gates and NERVA's signal both clear on the same evidence. The receipt is the same number, in two languages.
-          </div>
+          <div style={{font:`italic 11px/1.4 ${px.serif}`,color:px.inkDim,marginTop:4}}>Plumb's verdict and NERVA's signal gate on the same evidence. The receipt is the same number, in two languages.</div>
         </div>
       </div>
     </div>
   );
 }
 
-window.PlumbView = PlumbView;
-
-function Root() {
-  return (
-    <NervaProvider>
-      <PlumbView/>
-    </NervaProvider>
-  );
-}
-ReactDOM.createRoot(document.getElementById('root')).render(<Root/>);
+// ── ROOT ──────────────────────────────────────────────────
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <NervaProvider><PlumbView/></NervaProvider>
+);
 </script>
 </body>
 </html>
