@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0a0e15" />
+<title>NERVA v11 · Mobile</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,200;0,6..72,300;0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&display=swap" />
+<style>
+  html, body, #root { margin: 0; padding: 0; min-height: 100%; width: 100%; background: #0a0e15; font-family: 'IBM Plex Sans', system-ui, sans-serif; color: #e8e3d8; }
+  body { overscroll-behavior-y: contain; }
+  input[type=range] { -webkit-appearance: none; appearance: none; background: transparent; touch-action: manipulation; }
+  input[type=range]::-webkit-slider-runnable-track { height: 3px; background: rgba(232,227,216,0.10); border-radius: 2px; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; appearance:none; width: 18px; height: 18px; border-radius: 50%; background: currentColor; margin-top: -7.5px; cursor: pointer; }
+  input[type=range]::-moz-range-track { height: 3px; background: rgba(232,227,216,0.10); }
+  input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border: none; border-radius: 50%; background: currentColor; cursor: pointer; }
+  textarea, input { font-family: inherit; }
+  button { font-family: inherit; }
+  ::selection { background: #f5b942; color: #0a0e15; }
+  /* Bigger touch targets on mobile */
+  @media (pointer: fine) {
+    input[type=range]::-webkit-slider-thumb { width: 12px; height: 12px; margin-top: -4.5px; }
+    input[type=range]::-moz-range-thumb { width: 12px; height: 12px; }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="nerva-v11-core.jsx"></script>
+<script type="text/babel" src="variation-v11-mobile.jsx"></script>
+
+<script type="text/babel" data-presets="env,react">
+  function Root() {
+    return (
+      <NervaV11Provider>
+        <NervaV11Mobile />
+      </NervaV11Provider>
+    );
+  }
+  ReactDOM.createRoot(document.getElementById('root')).render(<Root />);
+</script>
+</body>
+</html>

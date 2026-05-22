@@ -63,95 +63,76 @@ function V11Panel({ title, hint, accent, children, style }) {
 }
 
 // Paired value+confidence slider row — v11 signature input
-function V11InputRow({ symbol, label, sub, value, conf, unlocked, axisColor, masterC, onValue, onConf }) {
+function V11InputRow({ symbol, label, sub, value, conf, unlocked, axisColor, onValue, onConf, onRelockOne, isLast }) {
   const qColor = v11_qualityColor(conf);
-  const masterPercent = (masterC * 100).toFixed(1);
   return (
     <div style={{
-      padding: '10px 12px', borderTop: `1px solid ${t11.line}`,
-      background: 'transparent',
+      padding: '10px 12px 9px',
+      borderTop: `1px solid ${t11.line}`,
+      borderBottom: isLast ? `1px solid ${t11.line}` : 'none',
     }}>
-      <div style={{ display:'flex', alignItems:'baseline', gap: 8, marginBottom: 4 }}>
-        <span style={{ font:`600 12px/1 ${t11.mono}`, color: axisColor, letterSpacing:'0.04em', width: 22 }}>{symbol}</span>
-        <span style={{ font:`500 12.5px/1 ${t11.sans}`, color: t11.ink }}>{label}</span>
-        <span style={{ marginLeft:'auto', font:`500 14px/1 ${t11.mono}`, color: t11.ink, fontVariantNumeric:'tabular-nums' }}>{v11_fmt(value, 2)}</span>
+      {/* HEADER — symbol · label · subtitle · value (all one line) */}
+      <div style={{ display:'flex', alignItems:'baseline', gap: 6, marginBottom: 5 }}>
+        <span style={{
+          font:`600 12px/1 ${t11.mono}`, color: axisColor, letterSpacing:'0.04em',
+          width: 20, flex:'0 0 auto',
+        }}>{symbol}</span>
+        <span style={{ font:`500 12.5px/1 ${t11.sans}`, color: t11.ink, flex:'0 0 auto' }}>{label}</span>
+        <span style={{
+          font:`italic 10.5px/1.2 ${t11.serif}`, color: t11.inkFaint,
+          flex: 1, minWidth: 0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap',
+        }}>· {sub}</span>
+        <span style={{
+          font:`500 14px/1 ${t11.mono}`, color: t11.ink, fontVariantNumeric:'tabular-nums',
+          flex:'0 0 auto',
+        }}>{v11_fmt(value, 2)}</span>
       </div>
+
+      {/* VALUE slider — primary, axis-colored, full width */}
       <input type="range" min="0" max="1" step="0.01" value={value}
         onChange={e => onValue(parseFloat(e.target.value))}
-        style={{ width:'100%', color: axisColor, accentColor: axisColor, height: 4 }} />
-      <div style={{ font:`10px/1.2 ${t11.sans}`, color: t11.inkFaint, marginTop: 3 }}>{sub}</div>
+        style={{
+          width:'100%', accentColor: axisColor, color: axisColor,
+          height: 4, display:'block', margin: '0 0 8px',
+        }} />
 
-      {/* confidence sub-slider */}
-      <div style={{ marginTop: 7, paddingTop: 7, borderTop:`1px dashed ${t11.line}` }}>
-        <div style={{ display:'flex', alignItems:'baseline', gap: 6, marginBottom: 3 }}>
-          <span style={{ font:`500 9px/1 ${t11.mono}`, color: t11.inkDim, letterSpacing:'0.14em' }}>DATA QUALITY</span>
-          <span style={{ font:`500 9px/1 ${t11.mono}`, color: qColor, letterSpacing:'0.14em', marginLeft: 4 }}>
-            {v11_qualityLabel(conf)}
-          </span>
-          {unlocked && (
-            <span style={{
-              font:`700 9px/1 ${t11.mono}`, color: t11.accent, marginLeft: 6,
-              letterSpacing:'0.18em',
-              padding: '2px 5px',
-              border: `1px solid ${t11.accent}88`,
-              background: 'rgba(245,185,66,0.10)',
-              borderRadius: 1,
-            }}>OVERRIDDEN</span>
-          )}
-          <span style={{ marginLeft:'auto', font:`12px/1 ${t11.mono}`, color: qColor }}>{Math.round(conf*100)}<span style={{ color: t11.inkFaint }}>%</span></span>
-        </div>
-        <div style={{ position: 'relative' }}>
-          <input type="range" min="0" max="1" step="0.01" value={conf}
-            onChange={e => onConf(parseFloat(e.target.value))}
-            className="nerva-conf-slider"
-            style={{ width:'100%', color: qColor, accentColor: qColor, height: 2 }} />
-          {unlocked && (
-            <div
-              title={`master is at ${masterPercent}%`}
-              style={{
-                position: 'absolute',
-                left: `calc(${masterPercent}% - 1px)`,
-                top: -3,
-                width: 2,
-                height: 14,
-                background: t11.accent,
-                opacity: 0.55,
-                pointerEvents: 'none',
-                transition: 'left 200ms ease',
-              }}
-            >
-              <div style={{
-                position: 'absolute',
-                top: -4, left: -3,
-                width: 8, height: 8,
-                border: `1px solid ${t11.accent}`,
-                borderRadius: '50%',
-                opacity: 0.8,
-                boxSizing: 'border-box',
-                background: t11.bg,
-              }} />
-            </div>
-          )}
-        </div>
+      {/* CONFIDENCE label row — quality level · percent · relock (separated from slider) */}
+      <div style={{ display:'flex', alignItems:'baseline', gap: 6, marginBottom: 3 }}>
+        <span style={{
+          font:`500 8.5px/1 ${t11.mono}`, color: t11.inkFaint, letterSpacing:'0.18em',
+        }}>QUALITY</span>
+        <span style={{
+          font:`500 8.5px/1 ${t11.mono}`, color: qColor, letterSpacing:'0.18em',
+        }}>· {v11_qualityLabel(conf)}</span>
+        <span style={{
+          marginLeft:'auto',
+          font:`500 11px/1 ${t11.mono}`, color: qColor, fontVariantNumeric:'tabular-nums',
+        }}>{Math.round(conf*100)}<span style={{ color: t11.inkFaint }}>%</span></span>
+        <button
+          title={unlocked ? 'Relock to master quality' : 'Following master'}
+          onClick={onRelockOne}
+          aria-label={unlocked ? 'Relock to master' : ''}
+          style={{
+            background:'transparent', border:'none',
+            cursor: unlocked ? 'pointer' : 'default',
+            color: unlocked ? t11.accent : 'transparent',
+            padding: 0, font:`13px/1 ${t11.mono}`, width: 14,
+          }}>↺</button>
       </div>
+
+      {/* CONFIDENCE slider — full width, matching value slider above */}
+      <input type="range" min="0" max="1" step="0.01" value={conf}
+        onChange={e => onConf(parseFloat(e.target.value))}
+        style={{
+          width:'100%', accentColor: qColor, color: qColor,
+          height: 2, display:'block', opacity: 0.92,
+        }} />
     </div>
   );
 }
 
 // Master quality dial — bigger, more distinctive than the prototype
-function MasterDial({ value, onChange, hasUnlocked, unlockedCount, totalCount, onRelock }) {
-  const lockedCount = totalCount - unlockedCount;
-  let statusColor, statusText;
-  if (unlockedCount === 0) {
-    statusColor = t11.inkDim;
-    statusText = `MASTER ACTIVE · ${totalCount}/${totalCount} FOLLOW`;
-  } else if (unlockedCount === totalCount) {
-    statusColor = '#ff9a3c';
-    statusText = `MASTER INACTIVE · ${totalCount}/${totalCount} OVERRIDDEN`;
-  } else {
-    statusColor = t11.accent;
-    statusText = `${lockedCount}/${totalCount} FOLLOW · ${unlockedCount} OVERRIDDEN`;
-  }
+function MasterDial({ value, onChange, hasUnlocked, onRelock }) {
   const size = 130;
   const cx = size/2, cy = size/2;
   const rOuter = 54, rInner = 44;
@@ -196,25 +177,14 @@ function MasterDial({ value, onChange, hasUnlocked, unlockedCount, totalCount, o
       </div>
       <input type="range" min="0" max="1" step="0.01" value={value}
         onChange={e => onChange(parseFloat(e.target.value))}
-        style={{ width:'100%', color: arcColor, accentColor: arcColor, marginTop: 10 }} />
-      <div style={{
-        marginTop: 8, padding: '4px 8px',
-        font:`600 9px/1.2 ${t11.mono}`, color: statusColor,
-        letterSpacing:'0.14em', textAlign:'center',
-        border: `1px solid ${statusColor}33`,
-        background: unlockedCount === totalCount ? 'rgba(255,154,60,0.06)' : 'transparent',
-        width: '100%',
-        borderRadius: 1,
-      }}>
-        {statusText}
-      </div>
+        style={{ width:'100%', accentColor: arcColor, color: arcColor, marginTop: 10 }} />
       <button onClick={onRelock} disabled={!hasUnlocked} style={{
         marginTop: 6, width:'100%', background: hasUnlocked ? 'transparent' : 'transparent',
         color: hasUnlocked ? t11.accent : t11.inkGhost,
         border: `1px solid ${hasUnlocked ? `${t11.accent}55` : t11.line}`,
         font:`600 10px/1 ${t11.mono}`, letterSpacing:'0.14em',
         padding:'6px 0', cursor: hasUnlocked ? 'pointer' : 'not-allowed', borderRadius: 2,
-      }}>↺ RELOCK ALL TO MASTER</button>
+      }}>↺ RELOCK TO MASTER</button>
     </div>
   );
 }
@@ -268,7 +238,7 @@ function V11PhaseSpace({ result, c }) {
     { y0: 0,        h: ph * 0.32, fg: V11_VC.COMMIT.fg, label: 'COMMIT' },
     { y0: ph*0.32, h: ph * 0.28, fg: V11_VC.HOLD.fg,   label: 'HOLD' },
     { y0: ph*0.60, h: ph * 0.18, fg: V11_VC.WAIT.fg,   label: 'WAIT' },
-    { y0: ph*0.78, h: ph * 0.22, fg: V11_VC.ESCALATE.fg, label: 'ESCALATE' },
+    { y0: ph*0.78, h: ph * 0.22, fg: V11_VC.ESCALATE.fg, label: 'BRAKE' },
   ];
 
   return (
@@ -302,11 +272,11 @@ function V11PhaseSpace({ result, c }) {
       <line x1={M.l} y1={M.t} x2={M.l} y2={M.t+ph} stroke={t11.lineHi} strokeWidth="1" />
       <line x1={M.l} y1={M.t+ph} x2={M.l+pw} y2={M.t+ph} stroke={t11.lineHi} strokeWidth="1" />
 
-      {/* τ boundary — circular from origin (bottom-left), approximate */}
+      {/* τ boundary — circular from origin (bottom-left), in risk red to match the R slider */}
       <circle cx={originPx} cy={originPy} r={tauScreenR} fill="none"
-        stroke={t11.inkDim} strokeWidth="1" strokeDasharray="3 3" opacity="0.55" />
+        stroke={t11.risk} strokeWidth="1.1" strokeDasharray="3 3" opacity="0.7" />
       <text x={originPx + tauScreenR * 0.707 + 6} y={originPy - tauScreenR * 0.707 - 4}
-        style={{ font:`9.5px ${t11.mono}`, fill: t11.inkDim }}>
+        style={{ font:`9.5px ${t11.mono}`, fill: t11.risk, opacity: 0.9 }}>
         τ = {v11_fmt(tau, 3)}
       </text>
 
@@ -389,18 +359,16 @@ function NervaV11Cockpit() {
   const {
     v, c, unlocked, masterC, kernel, tauMode, tauManual, scenarioId, scenario,
     result, history, api, scenarios,
-    updateValue, updateConfidence, updateMaster, relock, applyScenario,
+    updateValue, updateConfidence, updateMaster, relock, relockOne, applyScenario,
     parseScenario, parsing,
     setTauMode, setTauManual, setKernel, setScenario,
   } = useNervaV11();
   const vc = V11_VC[result.decision];
   const vcPure = V11_VC[result.pure_verdict];
   const hasUnlocked = Object.values(unlocked).some(Boolean);
-  const unlockedCount = Object.values(unlocked).filter(Boolean).length;
-  const totalCount = Object.keys(unlocked).length;
 
   const inputDefs = [
-    { k: 'E',  label: 'Urgency',   sub: 'priority / time pressure',         axis: t11.risk },
+    { k: 'E',  label: 'Urgency',   sub: 'priority / time pressure',         axis: t11.intent },
     { k: 'S',  label: 'Strategy',  sub: 'plan quality / coherence',         axis: t11.intent },
     { k: 'R',  label: 'Risk',      sub: 'exposure to negative outcomes',    axis: t11.risk },
     { k: 'Sp', label: 'Support',   sub: 'evidence / data confidence',       axis: t11.integrity },
@@ -427,7 +395,7 @@ function NervaV11Cockpit() {
           <span style={{ color: t11.inkFaint }}>·</span>
           <span style={{ color: t11.inkDim }}>MIXED-STATE COCKPIT</span>
           <span style={{ color: t11.inkFaint }}>·</span>
-          <span style={{ color: t11.inkDim }}>STARPOINT LLC</span>
+          <span style={{ color: t11.inkDim }}>SESSION 7F-2A91 · OPERATOR sample_user</span>
         </div>
         <div style={{ display:'flex', alignItems:'center', gap: 16 }}>
           {/* kernel toggle */}
@@ -445,6 +413,7 @@ function NervaV11Cockpit() {
           </div>
           <span style={{ color: V11_VC.COMMIT.fg }}>● {api.status.toUpperCase()}</span>
           <span style={{ color: t11.inkDim }}>{api.region}</span>
+          <span style={{ color: t11.inkDim }}>{Math.round(api.latency)}ms</span>
           <span style={{ color: t11.inkDim }}>{api.uptime}%</span>
         </div>
       </div>
@@ -494,14 +463,14 @@ function NervaV11Cockpit() {
 
           <V11Panel title="Inputs" hint="value × data quality" style={{ flex: 1, overflowY:'auto' }} accent={t11.accent}>
             <div style={{ margin:'0 -12px' }}>
-              {inputDefs.map(d => (
+              {inputDefs.map((d, i) => (
                 <V11InputRow key={d.k}
                   symbol={d.k} label={d.label} sub={d.sub}
                   value={v[d.k]} conf={c[d.k]} unlocked={unlocked[d.k]}
-                  axisColor={d.axis}
-                  masterC={masterC}
+                  axisColor={d.axis} isLast={i === inputDefs.length - 1}
                   onValue={(val) => updateValue(d.k, val)}
-                  onConf={(val) => updateConfidence(d.k, val)} />
+                  onConf={(val) => updateConfidence(d.k, val)}
+                  onRelockOne={() => relockOne(d.k)} />
               ))}
             </div>
           </V11Panel>
@@ -526,7 +495,7 @@ function NervaV11Cockpit() {
                 </div>
                 <input type="range" min="0" max="0.9" step="0.01" value={tauManual}
                   onChange={e => setTauManual(parseFloat(e.target.value))}
-                  style={{ width:'100%', color: t11.accent, accentColor: t11.accent }} />
+                  style={{ width:'100%', accentColor: t11.accent }} />
               </div>
             ) : (
               <div style={{ font:`11px/1.45 ${t11.mono}`, color: t11.inkDim }}>
@@ -616,7 +585,7 @@ function NervaV11Cockpit() {
           </div>
 
           {/* PHASE SPACE + side stats */}
-          <V11Panel title="Phase space · (intent × integrity) projection" hint={`envelope width = per-input data quality · not per-axis shrinkage`}>
+          <V11Panel title="Phase space · (intent × integrity) projection" hint={`anisotropic envelope from per-axis confidence`}>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 168px', gap: 12, flex: 1, minHeight: 0 }}>
               <V11PhaseSpace result={result} c={c} />
               <div style={{ display:'flex', flexDirection:'column', gap: 10, fontSize: 11 }}>
@@ -685,11 +654,7 @@ function NervaV11Cockpit() {
         {/* ============ RIGHT — Master + Brake + Provenance + History ============ */}
         <div style={{ display:'flex', flexDirection:'column', gap: 8, minHeight: 0, overflow:'hidden' }}>
           <V11Panel title="Master data quality" hint="global · all inputs" accent={t11.accent}>
-            <MasterDial value={masterC} onChange={updateMaster}
-              hasUnlocked={hasUnlocked}
-              unlockedCount={unlockedCount}
-              totalCount={totalCount}
-              onRelock={relock} />
+            <MasterDial value={masterC} onChange={updateMaster} hasUnlocked={hasUnlocked} onRelock={relock} />
           </V11Panel>
 
           {/* BRAKE STATUS */}
@@ -739,6 +704,20 @@ function NervaV11Cockpit() {
 
           {/* PROVENANCE RECEIPT */}
           <V11Panel title="Confidence provenance" hint="audit receipt" accent={t11.accent}>
+            <div style={{
+              padding:'6px 8px', marginBottom: 8, background:'rgba(245,185,66,0.06)',
+              border:`1px solid ${t11.accent}33`,
+            }}>
+              <div style={{ font:`9.5px/1 ${t11.mono}`, color: t11.inkFaint, letterSpacing:'0.16em', marginBottom: 4 }}>
+                v11 DENSITY MATRIX
+              </div>
+              <div style={{ font:`500 12.5px/1.3 ${t11.mono}`, color: t11.ink }}>
+                ρ = C · ρ<sub style={{ fontSize:9 }}>pure</sub> + (1 − C) · <span style={{ fontStyle:'italic' }}>I</span>/2
+              </div>
+              <div style={{ font:`italic 10.5px/1.4 ${t11.serif}`, color: t11.inkDim, marginTop: 3 }}>
+                Convex combination with maximally mixed state. C = {v11_fmt(result.aggregate_C, 3)}.
+              </div>
+            </div>
             <div style={{ display:'flex', flexDirection:'column', font:`11px/1.45 ${t11.mono}` }}>
               {[
                 ['aggregate C',         v11_fmt(result.aggregate_C, 4), 'shrinkage factor', null],
@@ -758,7 +737,7 @@ function NervaV11Cockpit() {
               ))}
             </div>
             <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${t11.line}`, font:`italic 10.5px/1.4 ${t11.serif}`, color: t11.inkDim }}>
-              Every call carries this receipt. Nielsen & Chuang Ch. 11 · Shannon 1948 · Baumgratz–Cramer–Plenio 2014.
+              Every call carries this receipt. Nielsen &amp; Chuang Ch. 11 · Shannon 1948 · Baumgratz–Cramer–Plenio 2014.
             </div>
           </V11Panel>
 
