@@ -91,10 +91,7 @@ function V11InputRow({ symbol, label, sub, value, conf, unlocked, axisColor, onV
       {/* VALUE slider — primary, axis-colored, full width */}
       <input type="range" min="0" max="1" step="0.01" value={value}
         onChange={e => onValue(parseFloat(e.target.value))}
-        style={{
-          width:'100%', accentColor: axisColor, color: axisColor,
-          height: 4, display:'block', margin: '0 0 8px',
-        }} />
+        style={{ width:'100%', color: axisColor, display:'block', margin: '0 0 8px' }} />
 
       {/* CONFIDENCE label row — quality level · percent · relock (separated from slider) */}
       <div style={{ display:'flex', alignItems:'baseline', gap: 6, marginBottom: 3 }}>
@@ -120,13 +117,11 @@ function V11InputRow({ symbol, label, sub, value, conf, unlocked, axisColor, onV
           }}>↺</button>
       </div>
 
-      {/* CONFIDENCE slider — full width, matching value slider above */}
+      {/* CONFIDENCE slider — smaller thumb via nerva-conf-slider class */}
       <input type="range" min="0" max="1" step="0.01" value={conf}
+        className="nerva-conf-slider"
         onChange={e => onConf(parseFloat(e.target.value))}
-        style={{
-          width:'100%', accentColor: qColor, color: qColor,
-          height: 2, display:'block', opacity: 0.92,
-        }} />
+        style={{ width:'100%', color: qColor, display:'block', opacity: 0.92 }} />
     </div>
   );
 }
@@ -177,7 +172,7 @@ function MasterDial({ value, onChange, hasUnlocked, onRelock }) {
       </div>
       <input type="range" min="0" max="1" step="0.01" value={value}
         onChange={e => onChange(parseFloat(e.target.value))}
-        style={{ width:'100%', accentColor: arcColor, color: arcColor, marginTop: 10 }} />
+        style={{ width:'100%', color: arcColor, marginTop: 10 }} />
       <button onClick={onRelock} disabled={!hasUnlocked} style={{
         marginTop: 6, width:'100%', background: hasUnlocked ? 'transparent' : 'transparent',
         color: hasUnlocked ? t11.accent : t11.inkGhost,
