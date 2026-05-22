@@ -68,6 +68,19 @@ button{cursor:pointer;font-family:inherit}
   .nav-right { gap: 8px; font-size: 8.5px; }
   #view-root { overflow-y: auto; -webkit-overflow-scrolling: touch; }
 }
+.nav-tab.v11-tab.active{color:#f5b942;border-bottom-color:#f5b942}
+.nerva-v11-root{width:100%;height:100%}
+.nerva-v11-root input[type=range]{-webkit-appearance:none;appearance:none;background:transparent;cursor:pointer;outline:none}
+.nerva-v11-root input[type=range]::-webkit-slider-runnable-track{height:4px;background:linear-gradient(180deg,rgba(232,227,216,0.04),rgba(232,227,216,0.14));border:1px solid rgba(232,227,216,0.06);border-radius:1px}
+.nerva-v11-root input[type=range]::-moz-range-track{height:4px;background:rgba(232,227,216,0.10);border:1px solid rgba(232,227,216,0.06);border-radius:1px}
+.nerva-v11-root input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:16px;height:16px;background:#11161f;border:2px solid currentColor;border-radius:50%;margin-top:-7px;cursor:grab;box-shadow:0 0 0 1px rgba(10,14,21,0.9),0 0 6px rgba(0,0,0,0.6),inset 0 0 0 2px #11161f;transition:transform 80ms ease,box-shadow 80ms ease}
+.nerva-v11-root input[type=range]::-webkit-slider-thumb:hover,.nerva-v11-root input[type=range]::-webkit-slider-thumb:active{transform:scale(1.12);box-shadow:0 0 0 1px rgba(10,14,21,0.9),0 0 10px currentColor,inset 0 0 0 2px #11161f;cursor:grabbing}
+.nerva-v11-root input[type=range]::-moz-range-thumb{width:16px;height:16px;background:#11161f;border:2px solid currentColor;border-radius:50%;cursor:grab;box-shadow:0 0 0 1px rgba(10,14,21,0.9),0 0 6px rgba(0,0,0,0.6);transition:transform 80ms ease,box-shadow 80ms ease}
+.nerva-v11-root input[type=range]::-moz-range-thumb:hover,.nerva-v11-root input[type=range]::-moz-range-thumb:active{transform:scale(1.12);box-shadow:0 0 0 1px rgba(10,14,21,0.9),0 0 10px currentColor;cursor:grabbing}
+.nerva-v11-root input[type=range].nerva-conf-slider::-webkit-slider-runnable-track{height:2px}
+.nerva-v11-root input[type=range].nerva-conf-slider::-moz-range-track{height:2px}
+.nerva-v11-root input[type=range].nerva-conf-slider::-webkit-slider-thumb{width:11px;height:11px;border-width:1.5px;margin-top:-5px;box-shadow:0 0 0 1px rgba(10,14,21,0.9),0 0 3px rgba(0,0,0,0.5)}
+.nerva-v11-root input[type=range].nerva-conf-slider::-moz-range-thumb{width:11px;height:11px;border-width:1.5px}
 </style>
 </head>
 <body>
@@ -80,11 +93,13 @@ button{cursor:pointer;font-family:inherit}
     <button class="nav-tab" data-view="bloomberg">B · TERMINAL</button>
     <button class="nav-tab" data-view="phase">C · PHASE SPACE</button>
     <button class="nav-tab" data-view="brutalist">D · BRUTALIST</button>
+    <button class="nav-tab v11-tab" data-view="v11">E · V11</button>
     <div class="nav-sep"></div>
     <button class="nav-tab about-tab" data-view="about">ABOUT</button>
     <button class="nav-tab api-tab" data-view="api">API</button>
     <div class="nav-sep"></div>
     <a href="/plumb.html" target="_blank" style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.1em;padding:0 12px;height:38px;display:flex;align-items:center;text-decoration:none;color:rgba(255,255,255,0.3);border-bottom:2px solid transparent;flex-shrink:0;white-space:nowrap;" onmouseover="this.style.color='#3ddc97';this.style.borderBottomColor='#3ddc97'" onmouseout="this.style.color='rgba(255,255,255,0.3)';this.style.borderBottomColor='transparent'">PLUMB ↗</a>
+    <a href="/v11.html" target="_blank" style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.1em;padding:0 12px;height:38px;display:flex;align-items:center;text-decoration:none;color:rgba(255,255,255,0.3);border-bottom:2px solid transparent;flex-shrink:0;white-space:nowrap;" onmouseover="this.style.color='#f5b942';this.style.borderBottomColor='#f5b942'" onmouseout="this.style.color='rgba(255,255,255,0.3)';this.style.borderBottomColor='transparent'">V11 ↗</a>
     <div class="nav-right">
       <span id="nav-verdict" style="letter-spacing:0.14em;font-weight:600">—</span>
       <span id="nav-r">|r|=—</span>
@@ -97,6 +112,8 @@ button{cursor:pointer;font-family:inherit}
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin></script>
+<script type="text/babel" src="nerva-v11-core.jsx"></script>
+<script type="text/babel" src="variation-v11.jsx"></script>
 <script type="text/babel" data-presets="env,react">
 const {createContext,useContext,useState,useMemo,useCallback,useEffect,useRef} = React;
 const clamp=(v,lo=0,hi=1)=>Math.max(lo,Math.min(hi,v));
@@ -1192,6 +1209,7 @@ function App(){
 
   const View=VIEWS[view];
   if(view==='about')return <AboutView/>;
+  if(view==='v11')return <div className="nerva-v11-root"><NervaV11Provider><NervaV11Cockpit/></NervaV11Provider></div>;
   return <NervaProvider><View/></NervaProvider>;
 }
 
