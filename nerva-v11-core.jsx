@@ -227,12 +227,9 @@ function NervaV11Provider({ children }) {
   }, []);
   const updateMaster = useV11Callback((m) => {
     setMasterC(m);
-    setC(s => {
-      const next = { ...s };
-      Object.keys(next).forEach(k => { if (!unlocked[k]) next[k] = m; });
-      return next;
-    });
-  }, [unlocked]);
+    setC({ E: m, S: m, R: m, Sp: m, St: m });
+    setUnlocked({ E: false, S: false, R: false, Sp: false, St: false });
+  }, []);
   const relock = useV11Callback(() => {
     setUnlocked({ E: false, S: false, R: false, Sp: false, St: false });
     setC({ E: masterC, S: masterC, R: masterC, Sp: masterC, St: masterC });
@@ -308,7 +305,7 @@ function NervaV11Provider({ children }) {
   const value = {
     v, c, unlocked, masterC, kernel, tauMode, tauManual, scenarioId, scenario,
     result, history, api, scenarios: V11_SCENARIOS,
-    updateValue, updateConfidence, updateMaster, relock, applyScenario,
+    updateValue, updateConfidence, updateMaster, relock, relockOne, applyScenario,
     parseScenario, parsing,
     setTauMode, setTauManual, setKernel, setScenario,
   };

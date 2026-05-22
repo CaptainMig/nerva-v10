@@ -75,7 +75,7 @@ function MInputRow({ symbol, label, sub, value, conf, unlocked, axisColor, onVal
 
       <input type="range" min="0" max="1" step="0.01" value={value}
         onChange={e => onValue(parseFloat(e.target.value))}
-        style={{ width:'100%', accentColor: axisColor, color: axisColor, height: 6, margin:'0 0 10px' }} />
+        style={{ width:'100%', color: axisColor, margin:'0 0 10px' }} />
 
       <div style={{ display:'flex', alignItems:'baseline', gap: 6, marginBottom: 4 }}>
         <span style={{ font:`500 9px/1 ${tm.mono}`, color: tm.inkFaint, letterSpacing:'0.18em' }}>QUALITY</span>
@@ -92,8 +92,9 @@ function MInputRow({ symbol, label, sub, value, conf, unlocked, axisColor, onVal
       </div>
 
       <input type="range" min="0" max="1" step="0.01" value={conf}
+        className="nerva-conf-slider"
         onChange={e => onConf(parseFloat(e.target.value))}
-        style={{ width:'100%', accentColor: qColor, color: qColor, height: 3, opacity: 0.92, margin: 0 }} />
+        style={{ width:'100%', color: qColor, opacity: 0.92, margin: 0 }} />
     </div>
   );
 }
@@ -204,7 +205,7 @@ function MMasterDial({ value, onChange, hasUnlocked, onRelock }) {
         </div>
         <input type="range" min="0" max="1" step="0.01" value={value}
           onChange={e => onChange(parseFloat(e.target.value))}
-          style={{ width:'100%', accentColor: arcColor, color: arcColor, height: 6 }} />
+          style={{ width:'100%', color: arcColor }} />
         <button onClick={onRelock} disabled={!hasUnlocked} style={{
           background:'transparent',
           color: hasUnlocked ? tm.accent : tm.inkGhost,
