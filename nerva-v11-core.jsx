@@ -237,6 +237,10 @@ function NervaV11Provider({ children }) {
     setUnlocked({ E: false, S: false, R: false, Sp: false, St: false });
     setC({ E: masterC, S: masterC, R: masterC, Sp: masterC, St: masterC });
   }, [masterC]);
+  const relockOne = useV11Callback((k) => {
+    setC(s => ({ ...s, [k]: masterC }));
+    setUnlocked(u => ({ ...u, [k]: false }));
+  }, [masterC]);
   const applyScenario = useV11Callback((id) => {
     const s = V11_SCENARIOS.find(x => x.id === id);
     if (!s) return;
