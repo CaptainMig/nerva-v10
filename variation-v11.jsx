@@ -390,6 +390,7 @@ function NervaV11Cockpit() {
     v, c, unlocked, masterC, kernel, tauMode, tauManual, scenarioId, scenario,
     result, history, api, scenarios,
     updateValue, updateConfidence, updateMaster, relock, applyScenario,
+    parseScenario, parsing,
     setTauMode, setTauManual, setKernel, setScenario,
   } = useNervaV11();
   const vc = V11_VC[result.decision];
@@ -462,6 +463,20 @@ function NervaV11Cockpit() {
                 font:`12px/1.4 ${t11.sans}`, padding: 6, resize:'none', outline:'none',
                 height: 78, marginBottom: 6,
               }} />
+            <button
+              onClick={() => parseScenario(scenario)}
+              disabled={parsing}
+              style={{
+                width:'100%', marginBottom: 6,
+                background: parsing ? 'transparent' : 'rgba(245,185,66,0.10)',
+                border: `1px solid ${parsing ? t11.line : t11.accent + '88'}`,
+                color: parsing ? t11.inkGhost : t11.accent,
+                font:`600 10px/1 ${t11.mono}`, letterSpacing:'0.14em',
+                padding:'7px 0', cursor: parsing ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {parsing ? '⟳ PARSING…' : '⚡ PARSE WITH AI · 10 sliders'}
+            </button>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap: 4 }}>
               {scenarios.map(s => (
                 <button key={s.id} onClick={() => applyScenario(s.id)} style={{
