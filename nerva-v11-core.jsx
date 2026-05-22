@@ -256,6 +256,42 @@ function NervaV11Provider({ children }) {
     return seeds.map(s => ({ ...s, result: evaluate(s.v, s.c, { kernel: 'v11', tauMode: 'auto' }) }));
   });
 
+  // AI parser
+  const [parsing, setParsing] = useV11State(false);
+  const parseScenario = useV11Callback(async (text) => {
+    if (!text.trim()) return;
+    setParsing(true);
+    try {
+      const res = await fetch('/api/parse', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scenario: text }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const parsed = await res.json();
+      const vPatch = {}, cPatch = {};
+      ['E','S','R','Sp','St'].forEach(k => {
+        if (parsed[k] !== undefined) vPatch[k] = v11clamp(parseFloat(parsed[k]));
+        const ck = 'c' + k;
+        if (parsed[ck] !== undefined) cPatch[k] = v11clamp(parseFloat(parsed[ck]));
+      });
+      if (Object.keys(vPatch).length) setV(s => ({ ...s, ...vPatch }));
+      if (Object.keys(cPatch).length) {
+        setC(s => ({ ...s, ...cPatch }));
+        setUnlocked(u => {
+          const next = { ...u };
+          Object.keys(cPatch).forEach(k => { next[k] = true; });
+          return next;
+        });
+      }
+      setScenarioId('');
+    } catch (e) {
+      console.warn('Parse error:', e);
+    } finally {
+      setParsing(false);
+    }
+  }, []);
+
   // API status
   const [api, setApi] = useV11State({ latency: 92, region: 'us-west-2', model: 'nerva-v11-haiku-4.5', status: 'nominal', uptime: 99.984 });
   useV11Effect(() => {
@@ -269,6 +305,7 @@ function NervaV11Provider({ children }) {
     v, c, unlocked, masterC, kernel, tauMode, tauManual, scenarioId, scenario,
     result, history, api, scenarios: V11_SCENARIOS,
     updateValue, updateConfidence, updateMaster, relock, applyScenario,
+    parseScenario, parsing,
     setTauMode, setTauManual, setKernel, setScenario,
   };
   return React.createElement(NervaV11Context.Provider, { value }, children);
