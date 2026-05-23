@@ -127,7 +127,7 @@ function V11InputRow({ symbol, label, sub, value, conf, unlocked, axisColor, onV
 }
 
 // Master quality dial — bigger, more distinctive than the prototype
-function MasterDial({ value, onChange, hasUnlocked, onRelock }) {
+function MasterDial({ value, onChange, hasUnlocked, hasLocked, onRelock }) {
   const size = 130;
   const cx = size/2, cy = size/2;
   const rOuter = 54, rInner = 44;
@@ -172,7 +172,16 @@ function MasterDial({ value, onChange, hasUnlocked, onRelock }) {
       </div>
       <input type="range" min="0" max="1" step="0.01" value={value}
         onChange={e => onChange(parseFloat(e.target.value))}
+        title="Sets aggregate confidence for all locked inputs. Instrumented API data = 85–95%. Verified report = 60–75%. Market projection / AI summary = 40–55%. Self-reported = 25–45%"
         style={{ width:'100%', color: arcColor, marginTop: 10 }} />
+      {value > 0.70 && hasLocked && (
+        <div style={{
+          marginTop: 7, font:`9.5px/1.5 ${t11.mono}`, color: t11.inkFaint,
+          textAlign:'center',
+        }}>
+          master override sets all inputs equally · confidence should reflect data quality, not source authority
+        </div>
+      )}
       <button onClick={onRelock} disabled={!hasUnlocked} style={{
         marginTop: 6, width:'100%', background: hasUnlocked ? 'transparent' : 'transparent',
         color: hasUnlocked ? t11.accent : t11.inkGhost,
@@ -361,6 +370,7 @@ function NervaV11Cockpit() {
   const vc = V11_VC[result.decision];
   const vcPure = V11_VC[result.pure_verdict];
   const hasUnlocked = Object.values(unlocked).some(Boolean);
+  const hasLocked = !Object.values(unlocked).every(Boolean);
 
   const inputDefs = [
     { k: 'E',  label: 'Urgency',   sub: 'priority / time pressure',         axis: t11.intent },
@@ -649,7 +659,7 @@ function NervaV11Cockpit() {
         {/* ============ RIGHT — Master + Brake + Provenance + History ============ */}
         <div style={{ display:'flex', flexDirection:'column', gap: 8, minHeight: 0, overflow:'hidden' }}>
           <V11Panel title="Master data quality" hint="global · all inputs" accent={t11.accent}>
-            <MasterDial value={masterC} onChange={updateMaster} hasUnlocked={hasUnlocked} onRelock={relock} />
+            <MasterDial value={masterC} onChange={updateMaster} hasUnlocked={hasUnlocked} hasLocked={hasLocked} onRelock={relock} />
           </V11Panel>
 
           {/* BRAKE STATUS */}
