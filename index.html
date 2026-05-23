@@ -717,7 +717,7 @@ function BloombergView(){
       </div>
       <div style={{display:'grid',gridTemplateColumns:'260px 1fr 1fr 240px',gridTemplateRows:'1fr 1fr 140px',gap:1,background:blx.line,overflow:'hidden'}}>
         {panel('INP','INPUTS','OPERATOR',<>
-          <div style={{color:blx.hi,fontSize:10.5,lineHeight:1.5,marginBottom:6,maxHeight:60,overflow:'hidden'}}>{state.scenario}</div>
+          <textarea value={state.scenario} onChange={e=>update({scenario:e.target.value})} style={{width:'100%',background:'transparent',color:blx.hi,border:`1px solid ${blx.line}`,font:`10.5px/1.5 ${blx.mono}`,height:60,padding:3,marginBottom:6,resize:'none',outline:'none'}}/>
           <div style={{display:'flex',gap:4,marginBottom:6}}>
             <button onClick={()=>parseScenario(state.scenario)} disabled={parsing} style={{flex:1,background:parsing?'transparent':'rgba(247,201,72,0.12)',border:`1px solid ${parsing?blx.line:blx.text}`,color:parsing?blx.dim:blx.text,font:`700 10px/1 ${blx.mono}`,letterSpacing:'0.08em',padding:'4px 0'}}>
               {parsing?'PARSING...':'F2 · PARSE'}
