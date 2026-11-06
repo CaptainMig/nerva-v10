@@ -95,9 +95,16 @@
   textarea::-webkit-scrollbar-thumb, *::-webkit-scrollbar-thumb { background: rgba(232,227,216,0.18); }
   button { font-family: inherit; }
   ::selection { background: #f5b942; color: #0a0e15; }
+  /* Small-viewport notice: this instrument is desktop-only; the summary lives at / */
+  #nerva-mobile-notice { display: none; }
+  @media (max-width: 699px) {
+    #nerva-mobile-notice { display: block; position: fixed; top: 0; left: 0; right: 0; z-index: 10000; background: #f5b942; color: #0a0e15; font: 500 13px/1.4 "IBM Plex Sans", system-ui, sans-serif; padding: 10px 14px; text-align: center; }
+    #nerva-mobile-notice a { color: inherit; font-weight: 700; text-decoration: underline; }
+  }
 </style>
 </head>
 <body>
+<div id="nerva-mobile-notice">This instrument is built for a desktop. The summary is at <a href="/">/</a>.</div>
 <div id="root"></div>
 
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
