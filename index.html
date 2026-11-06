@@ -103,13 +103,13 @@ footer a{word-break:break-all}
     <li>Weights evidence by trust, not agreement. Stale or distrusted sources cannot manufacture confidence, however many of them agree.</li>
     <li>Raises the bar with risk and irreversibility; lowers it when the action can be undone.</li>
     <li>Brakes the instant evidence fails; resumes only when it has clearly recovered. The worst verdict latches, and only an operator releases it.</li>
-    <li>Runs locally in microseconds. Spends bandwidth only on the escalate path.</li>
+    <li>Runs locally in tens of microseconds (31 µs median per verdict, pure Python, benchmark in the repo). Spends bandwidth only on the escalate path.</li>
   </ul>
 </section>
 
 <section class="panel">
   <h2>Same action. Three kinds of agreement.</h2>
-  <p class="sub">Justification J is weighted by trust in the evidence, not by how much of it agrees.</p>
+  <p class="sub">Illustrative. Justification J is weighted by trust in the evidence, not by how much of it agrees.</p>
   <div class="row"><div><p class="lab">Trusted, fresh sources agree</p><div class="track"><div class="fill" style="width:82%"></div><div class="theta" style="left:62%"></div></div></div><span class="v commit">COMMIT</span></div>
   <div class="row"><div><p class="lab">Stale sources agree <small>same readings, nothing has updated</small></p><div class="track"><div class="fill" style="width:48%"></div><div class="theta" style="left:62%"></div></div></div><span class="v wait">WAIT</span></div>
   <div class="row"><div><p class="lab">Distrusted sources agree <small>consensus from feeds that have earned no trust</small></p><div class="track"><div class="fill" style="width:31%"></div><div class="theta" style="left:62%"></div></div></div><span class="v hold">HOLD</span></div>
@@ -142,7 +142,7 @@ footer a{word-break:break-all}
 
 <section>
   <h2>Where it stands</h2>
-  <p class="maturity">Reference implementation in Python and TypeScript, public on GitHub. Wired into DiMOS, an open robotics stack, so every skill call passes through a verdict before actuation; exercised in replay against recorded sensor traces, not on a physical robot. A four-version falsification series (400 drone-sim trials, pre-registered predictions) and a 20-seed hysteresis evaluation. All simulation. Nothing fielded; nothing independently reproduced yet.</p>
+  <p class="maturity">Reference implementation in Python and TypeScript, public on GitHub. Wired into DiMOS, an open robotics stack, so every skill call passes through a verdict before actuation; exercised in replay against recorded sensor traces, not on a physical robot. A four-version falsification series (400 drone-sim trials, predictions documented before testing) and a 20-seed hysteresis evaluation. All simulation. Nothing fielded; nothing independently reproduced yet.</p>
 </section>
 
 <section>
