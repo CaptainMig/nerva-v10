@@ -6,7 +6,8 @@ NERVA sits between reasoning and high-stakes action. Returns one of five structu
 
 This repo is the live cockpit platform. The current primary surface is **NERVA v11 · Mixed-State Decision Integrity Cockpit** — the instrument that exposes the full audit cluster and serves as the operational deployment for high-stakes governance.
 
-→ Live platform: [nerva-v10.vercel.app](https://nerva-v10.vercel.app)
+→ Summary (phone-friendly): [nerva-v10.vercel.app](https://nerva-v10.vercel.app)
+→ Cockpit platform: [nerva-v10.vercel.app/cockpit.html](https://nerva-v10.vercel.app/cockpit.html)
 → Primary instrument: [nerva-v10.vercel.app/v11.html](https://nerva-v10.vercel.app/v11.html)
 
 ---
@@ -24,7 +25,7 @@ The cockpit is the visualization. The kernel is the math. The ledger is the memo
 
 ## NERVA v11 · The primary cockpit
 
-**v11 is the production instrument.** The earlier view modes (A through D) shipped during the development of the kernel's visual vocabulary; v11 is what the platform was building toward and is the surface that should be evaluated when assessing NERVA as a governance instrument.
+**v11 is the working prototype.** The earlier view modes (A through D) shipped during the development of the kernel's visual vocabulary; v11 is what the platform was building toward and is the surface that should be evaluated when assessing NERVA as a governance instrument.
 
 ### What v11 adds
 
@@ -45,7 +46,7 @@ The cluster exposes five sub-panels in Audit mode:
 - **Summary / Audit mode toggle** — daily-use view collapses to the verdict, metrics, and reasoning; audit view exposes the full instrument cluster for high-stakes deliberation
 - **The One-Way Brake** — high-stakes irreversible decisions with insufficient margin are routed to WAIT regardless of other conditions, with the brake state surfaced on the masthead
 - **TOXIC refusal** — five published refuse categories (non-consenting third-party harm, undisclosed MNPI, decisions made for others who should be making them themselves, active-crisis signals, deceptive theses) — NERVA returns no verdict for these
-- **Receipt provenance** — every scored decision produces a signed receipt with a unique hash for ledger ingestion
+- **Receipt provenance** — every scored decision produces a hashed receipt with a unique hash for ledger ingestion
 
 ### Why v11 over the other modes
 
@@ -57,7 +58,7 @@ The four earlier modes share the same kernel but expose different visual surface
 
 | Mode | Status | What it shows |
 |---|---|---|
-| **v11 · Mixed-State Cockpit** | Production | Full instrument cluster, Summary/Audit toggle, primary deployment surface |
+| **v11 · Mixed-State Cockpit** | Prototype | Full instrument cluster, Summary/Audit toggle, primary deployment surface |
 | **A · Cockpit** | Reference | Original verdict card layout — masthead, verdict word, metrics, Bloch projection, reasoning, provenance |
 | **B · Terminal** | Reference | Monospace operator view for keyboard-driven decision intake |
 | **C · Phase Space** | Reference | Phase-map visualization isolated from full card chrome |
@@ -115,7 +116,7 @@ The lift score — the empirical hit-rate of decisions that followed NERVA versu
 
 ## Status
 
-- **v11 cockpit:** Production, deployed, primary surface
+- **v11 cockpit:** Working prototype, deployed, primary surface
 - **Reference modes A–D:** Stable, available for design reference
 - **Plumb application:** Deployed, pilot proposal v1.0 published
 - **Reference kernel (Python):** Deterministic implementation available in companion repo
@@ -135,4 +136,4 @@ The lift score — the empirical hit-rate of decisions that followed NERVA versu
 
 ---
 
-*NERVA v10 platform · v11 primary instrument · Starpoint LLC · patent pending*
+*NERVA v10 platform · v11 primary instrument · Starpoint LLC*
