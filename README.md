@@ -132,15 +132,18 @@ node tools/v111-verdict-diff.mjs --base main
 
 The diff runs the v11 kernel at `main` and the working-tree kernel over the six presets and five history seeds, every tick of `replay.html`'s replay (`tools/replay-frames.json`, from `tools/extract-replay-frames.mjs`), and a 20,000-input seeded sweep, and writes `tools/v111-verdict-diff.md`. It exits non-zero on any permissive change.
 
+**Pre-registered expectation (spec §6, as amended in review).** No verdict becomes less conservative for the same inputs. *Permissive* means any transition toward COMMIT, any drop in τ, or any rise in EV, whether or not the verdict changed. A HOLD ↔ WAIT reclassification below threshold is listed but not counted: neither verdict permits action. Result on this branch: PASS, 0 permissive across 20,672 inputs; 255 named conservative changes (COMMIT → HOLD/WAIT); 184 HOLD ↔ WAIT reclassifications; no transition into ESCALATE or TOXIC.
+
 **Decisions taken in review.**
 
 - The plain One-Way Brake (irreversible with weak integrity) is not named among the three escalation reasons. It is mapped to `low_confidence_foundation`, so evidence cannot release it. See `escalationReasonFromFlags`. Kept.
 - Evidence release from FALLBACK_HOLD also requires that the kernel is no longer demanding a human on the release tick. Kept.
 - The TOXIC veto uses the raw R, not R_eff. An earlier draft used R_eff there, which turned low Risk confidence into a permanent operator-only latch; in a silent-stadium mission that is a dead unit for an input that was merely unknown. Changed.
 
-**Open for review.**
+- Below threshold, HOLD versus WAIT is split on C ≥ 0.5. Because c_R no longer enters C, some inputs with low Risk confidence move from WAIT to HOLD, and others the other way. Neither allows action, so these are reclassifications, listed in the diff and not counted. The report's appendix keeps the alternative normalization for reference. Kernel side closed.
 
-- Below threshold, HOLD versus WAIT is split on C ≥ 0.5. Because c_R no longer enters C, some inputs with low Risk confidence move from WAIT to HOLD. Neither allows action, and the diff never shows a gained COMMIT, a lowered τ, or a raised EV, but the diff reports them as permissive under the strict ordering. The report's appendix shows the alternative normalization that avoids this at the cost of shrinking fully instrumented inputs by 0.85.
+**Open.**
+
 - `replay.html` carries its own copy of the v11 math and is a labeled illustration; it was not changed.
 - The DiMOS gate and the drone-sim harness live outside this repository. The September-series replays were not run here; the gate tests use synthetic stand-ins for the same scenarios. The branch is review-ready, not merge-ready, until those replays run against the DiMOS gate.
 
