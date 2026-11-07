@@ -98,7 +98,7 @@ The math is published in full. The reference implementation lives at [CaptainMig
 
 ## v11.1 · unreachable-escalation fallback and risk-sign correction
 
-Branch `v11.1-fallback`, unmerged until the verdict diff has been reviewed by a person.
+Branch `v11.1-fallback`, unmerged until the verdict diff has been reviewed by a person. The spec is at `docs/NERVA-v11.1-spec.md`, with section 6 as amended in review; the diff tool implements that section.
 
 **What changes.** Two things, in the same release.
 
