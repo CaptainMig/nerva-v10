@@ -1,12 +1,28 @@
 // nerva-v11-core.jsx — v11 mixed-state kernel as pure JS, plus React context.
 // Ported from kernel/v11.ts. Same math, same verdicts, no API call needed.
+//
+// v11.1 (risk-sign correction, spec §6):
+//   - Risk no longer adds to the signal magnitude. r_y is removed; the Bloch
+//     vector is (r_x, 0, r_z) with the same √3 normalization, so |r| ≤ √(2/3)
+//     ≈ 0.8165 (all-ones input: r_x = r_z = 1/√3). That ceiling is below the
+//     maximum τ, so sufficiently risky inputs cannot reach COMMIT at all.
+//   - Risk enters only through the bar and the guards, as effective risk
+//     R_eff = 1 − c_R · (1 − R). Full confidence: R_eff = R. Zero confidence:
+//     R_eff = 1. Uncertain risk is treated as maximum risk. R_eff replaces R
+//     in τ, in the TOXIC veto and in the EV block.
+//   - Confidence shrinkage C is computed from the four case-for inputs only
+//     (E, S, Sp, St), weights renormalized to sum to 1. Risk's confidence acts
+//     through R_eff, never through C.
 
 const { createContext: V11Ctx, useContext: useV11Ctx, useState: useV11State, useMemo: useV11Memo, useEffect: useV11Effect, useCallback: useV11Callback, useRef: useV11Ref } = React;
 
 // -----------------------------------------------------------------
 // CONSTANTS (from kernel/v11.ts)
 // -----------------------------------------------------------------
-const CONF_WEIGHTS = { E: 0.15, S: 0.15, R: 0.15, Sp: 0.275, St: 0.275 };
+// v11 weights were { E: 0.15, S: 0.15, R: 0.15, Sp: 0.275, St: 0.275 }.
+// v11.1 drops R and renormalizes the remaining four by their sum (0.85).
+const CONF_WEIGHTS = { E: 0.15 / 0.85, S: 0.15 / 0.85, Sp: 0.275 / 0.85, St: 0.275 / 0.85 };
+const KERNEL_VERSION = '11.1';
 const TAU_BASE = 0.25, TAU_E = 0.35, TAU_R = 0.25, TAU_REV = 0.15;
 const BRAKE_REV = 0.4, BRAKE_I = 0.55, BRAKE_IC = 0.6;
 const TOXIC_I_MAX = 0.30, TOXIC_R_MIN = 0.65;
@@ -20,16 +36,22 @@ const v11clamp = (x) => Math.max(0, Math.min(1, Number.isFinite(x) ? x : 0));
 // MATH
 // -----------------------------------------------------------------
 function blochPure(v) {
+  // v11.1: Risk is not part of the case for acting. r_y = 0 by construction.
   const r_x = (v.E + v.S) / (2 * SQRT3);
-  const r_y = v.R / SQRT3;
+  const r_y = 0;
   const r_z = (v.Sp * v.St) / SQRT3;
-  return { r_x, r_y, r_z, magnitude: Math.sqrt(r_x*r_x + r_y*r_y + r_z*r_z) };
+  return { r_x, r_y, r_z, magnitude: Math.sqrt(r_x*r_x + r_z*r_z) };
 }
 function blochMixed(pure, C) {
   return { r_x: C*pure.r_x, r_y: C*pure.r_y, r_z: C*pure.r_z, magnitude: C*pure.magnitude };
 }
 function aggConfidence(c) {
-  return CONF_WEIGHTS.E*c.E + CONF_WEIGHTS.S*c.S + CONF_WEIGHTS.R*c.R + CONF_WEIGHTS.Sp*c.Sp + CONF_WEIGHTS.St*c.St;
+  // v11.1: four case-for inputs only. c.R does not enter C.
+  return CONF_WEIGHTS.E*c.E + CONF_WEIGHTS.S*c.S + CONF_WEIGHTS.Sp*c.Sp + CONF_WEIGHTS.St*c.St;
+}
+function effectiveRisk(R, cR) {
+  // v11.1: R_eff = 1 − c_R · (1 − R). Uncertain risk reads as higher risk.
+  return 1 - cR * (1 - R);
 }
 function densityMetrics(state) {
   const r = state.magnitude;
@@ -106,14 +128,17 @@ function evaluate(values, confidences, opts = {}) {
 
   const integrity = v.Sp * v.St;
   const reversibility = (v.Sp + v.St) / 2;
-  const ev = v.Sp - v.R;
+  // v11.1: effective risk carries Risk's confidence; it replaces R in τ,
+  // the TOXIC veto and the EV block. In v10 mode c.R = 1 so R_eff = R.
+  const rEff = effectiveRisk(v.R, c.R);
+  const ev = v.Sp - rEff;
   const tau = opts.tauMode === 'manual'
     ? (opts.tauManual ?? 0.25)
-    : computeTau(dens.entropy, v.R, reversibility);
+    : computeTau(dens.entropy, rEff, reversibility);
   const tauPure = computeTau(densPure.entropy, v.R, reversibility);
 
   const pre = verdictPipeline({
-    integrity, risk: v.R, reversibility, urgency: v.E, ev,
+    integrity, risk: rEff, reversibility, urgency: v.E, ev,
     c_Sp: c.Sp, c_St: c.St, is_v11: isV11,
   });
   const decision = verdictFromR({
@@ -122,10 +147,11 @@ function evaluate(values, confidences, opts = {}) {
   });
 
   // Counterfactual: what would v10 say with c=1 across the board?
+  // (c_R = 1 ⇒ R_eff = R, so the counterfactual uses the raw R and raw EV.)
   let pureVerdict = decision;
   if (provided) {
     const prePure = verdictPipeline({
-      integrity, risk: v.R, reversibility, urgency: v.E, ev,
+      integrity, risk: v.R, reversibility, urgency: v.E, ev: v.Sp - v.R,
       c_Sp: 1, c_St: 1, is_v11: false,
     });
     pureVerdict = verdictFromR({
@@ -144,6 +170,8 @@ function evaluate(values, confidences, opts = {}) {
     entropy: dens.entropy, entropy_pure: densPure.entropy,
     purity: dens.purity, coherence: dens.coherence,
     integrity, reversibility, ev, tau, tau_pure: tauPure,
+    risk_effective: rEff,
+    kernel_version: KERNEL_VERSION,
     confidences: c,
   };
 }
@@ -335,5 +363,7 @@ function qualityColor(c) {
 Object.assign(window, {
   NervaV11Provider, useNervaV11, V11_SCENARIOS,
   v11_evaluate: evaluate, v11_qualityLabel: qualityLabel, v11_qualityColor: qualityColor,
+  v11_effectiveRisk: effectiveRisk, v11_blochPure: blochPure, v11_aggConfidence: aggConfidence,
+  v11_CONF_WEIGHTS: CONF_WEIGHTS, v11_KERNEL_VERSION: KERNEL_VERSION,
   v11_fmt: (n, d=2) => (n === null || n === undefined || Number.isNaN(n)) ? '—' : Number(n).toFixed(d),
 });

@@ -96,6 +96,52 @@ The math is published in full. The reference implementation lives at [CaptainMig
 
 ---
 
+## v11.1 · unreachable-escalation fallback and risk-sign correction
+
+Branch `v11.1-fallback`, unmerged until the verdict diff has been reviewed by a person.
+
+**What changes.** Two things, in the same release.
+
+1. **Escalation gate.** ESCALATE used to assume an operator would answer. The gate now bounds the wait: it re-signals on a backoff schedule, falls back to a hold when the operator is unreachable, invokes the integrator's safe behavior if one was supplied, and records all of it on the receipt. No path turns an unanswered ESCALATE into COMMIT. TOXIC still releases only to an operator. Reference implementation: `nerva-v11-gate.js` here (browser or node), mirrored by `nerva_gate.py` in Nerva_Prompt_Universal.
+2. **Risk-sign correction** in `nerva-v11-core.jsx`. Risk no longer adds to the signal magnitude: the Bloch vector is (r_x, 0, r_z), so |r| ≤ √(2/3) ≈ 0.8165. Risk enters only through the bar and the guards as effective risk R_eff = 1 − c_R·(1 − R), so uncertain risk reads as higher risk. Confidence shrinkage C comes from E, S, Sp, St only (weights renormalized to sum to 1); Risk's confidence acts through R_eff, never through C.
+
+**Gate states.** `COMMIT · HOLD · WAIT · ESCALATE_PENDING · FALLBACK_HOLD · TOXIC_LATCHED`. Escalation reasons: `uncertainty`, `emergency_irreversible`, `low_confidence_foundation`. Only `uncertainty` can be released by evidence (signal ≥ Θ + δ for k consecutive ticks); the other two wait for a human. Receipts carry `escalated_at, escalation_reason, operator_reachable, timeout_s, retries, backoff_factor, fallback_invoked, safe_action_id, released_by, dwell_ticks_at_release, comms_events`. Every signal and retry counts as a comms event for the bandwidth metric.
+
+**Parameters (provisional, hand-set, to be calibrated).**
+
+| Parameter | Value | Note |
+|---|---|---|
+| `T_esc` | 5 s sim time | first escalation timeout |
+| `N_retry` | 3 | retries before fallback |
+| `backoff_factor` | 2 | each retry waits twice as long |
+| δ | 0.08 | release margin above the bar, unchanged from v11 |
+| k | 20 ticks (2.0 s at 10 Hz) | dwell above bar + δ, unchanged from v11 |
+| `c_R` | data-quality tier mapping | until calibration replaces it |
+
+With these values an escalation with the link status unknown reaches FALLBACK_HOLD 75 s after it was raised (5 + 10 + 20 + 40). A known-unreachable operator falls back at once.
+
+**Run the checks.**
+
+```bash
+node --test 'tests/*.test.mjs'
+```
+
+```bash
+node tools/v111-verdict-diff.mjs --base main
+```
+
+The diff runs the v11 kernel at `main` and the working-tree kernel over the six presets and five history seeds, every tick of `replay.html`'s replay (`tools/replay-frames.json`, from `tools/extract-replay-frames.mjs`), and a 20,000-input seeded sweep, and writes `tools/v111-verdict-diff.md`. It exits non-zero on any permissive change.
+
+**Decisions flagged for review.**
+
+- The plain One-Way Brake (irreversible with weak integrity) is not named among the three escalation reasons. It is mapped to `low_confidence_foundation`, so evidence cannot release it. See `escalationReasonFromFlags`.
+- The kernel's `low_confidence_brake` flag cannot fire: reversibility < 0.4 implies Sp·St < 0.16 < BRAKE_I, so weak integrity always accompanies an irreversible input. Pre-existing; constants were not changed.
+- Below threshold, HOLD versus WAIT is split on C ≥ 0.5. Because c_R no longer enters C, some inputs with low Risk confidence move from WAIT to HOLD. Neither allows action, and the diff never shows a gained COMMIT, a lowered τ, or a raised EV, but the diff reports them as permissive under the strict ordering. The report's appendix shows the alternative normalization that avoids this at the cost of shrinking fully instrumented inputs by 0.85.
+- `replay.html` carries its own copy of the v11 math and is a labeled illustration; it was not changed.
+- The DiMOS gate and the drone-sim harness live outside this repository. The September-series replays were not run here; the gate tests use synthetic stand-ins for the same scenarios.
+
+---
+
 ## Two deployment paths
 
 **Cockpit platform (this repo)** — operator-facing visualization for human decision workflows. Static HTML, no server, browser-local state. Suitable for personal use, pilot deployments, and demonstration of the methodology.
