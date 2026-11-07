@@ -103,7 +103,7 @@ Branch `v11.1-fallback`, unmerged until the verdict diff has been reviewed by a 
 **What changes.** Two things, in the same release.
 
 1. **Escalation gate.** ESCALATE used to assume an operator would answer. The gate now bounds the wait: it re-signals on a backoff schedule, falls back to a hold when the operator is unreachable, invokes the integrator's safe behavior if one was supplied, and records all of it on the receipt. No path turns an unanswered ESCALATE into COMMIT. TOXIC still releases only to an operator. Reference implementation: `nerva-v11-gate.js` here (browser or node), mirrored by `nerva_gate.py` in Nerva_Prompt_Universal.
-2. **Risk-sign correction** in `nerva-v11-core.jsx`. Risk no longer adds to the signal magnitude: the Bloch vector is (r_x, 0, r_z), so |r| ≤ √(2/3) ≈ 0.8165. Risk enters only through the bar and the guards as effective risk R_eff = 1 − c_R·(1 − R), so uncertain risk reads as higher risk. Confidence shrinkage C comes from E, S, Sp, St only (weights renormalized to sum to 1); Risk's confidence acts through R_eff, never through C.
+2. **Risk-sign correction** in `nerva-v11-core.jsx`, which is the canonical v11 kernel (there is no separate TypeScript kernel in this repo). Risk no longer adds to the signal magnitude: the Bloch vector is (r_x, 0, r_z), so |r| ≤ √(2/3) ≈ 0.8165. Risk enters only through the bar and the guards. Effective risk R_eff = 1 − c_R·(1 − R) replaces R in τ and in the EV block, so uncertain risk reads as higher risk where that belongs. The TOXIC veto keeps the raw R: TOXIC means actual low integrity with actual high risk, and an uncertain risk reading on an irreversible action lands in ESCALATE with the fallback path, not in an operator-only latch. Confidence shrinkage C comes from E, S, Sp, St only (weights renormalized to sum to 1); Risk's confidence acts through R_eff, never through C.
 
 **Gate states.** `COMMIT · HOLD · WAIT · ESCALATE_PENDING · FALLBACK_HOLD · TOXIC_LATCHED`. Escalation reasons: `uncertainty`, `emergency_irreversible`, `low_confidence_foundation`. Only `uncertainty` can be released by evidence (signal ≥ Θ + δ for k consecutive ticks); the other two wait for a human. Receipts carry `escalated_at, escalation_reason, operator_reachable, timeout_s, retries, backoff_factor, fallback_invoked, safe_action_id, released_by, dwell_ticks_at_release, comms_events`. Every signal and retry counts as a comms event for the bandwidth metric.
 
@@ -132,13 +132,19 @@ node tools/v111-verdict-diff.mjs --base main
 
 The diff runs the v11 kernel at `main` and the working-tree kernel over the six presets and five history seeds, every tick of `replay.html`'s replay (`tools/replay-frames.json`, from `tools/extract-replay-frames.mjs`), and a 20,000-input seeded sweep, and writes `tools/v111-verdict-diff.md`. It exits non-zero on any permissive change.
 
-**Decisions flagged for review.**
+**Decisions taken in review.**
 
-- The plain One-Way Brake (irreversible with weak integrity) is not named among the three escalation reasons. It is mapped to `low_confidence_foundation`, so evidence cannot release it. See `escalationReasonFromFlags`.
-- The kernel's `low_confidence_brake` flag cannot fire: reversibility < 0.4 implies Sp·St < 0.16 < BRAKE_I, so weak integrity always accompanies an irreversible input. Pre-existing; constants were not changed.
+- The plain One-Way Brake (irreversible with weak integrity) is not named among the three escalation reasons. It is mapped to `low_confidence_foundation`, so evidence cannot release it. See `escalationReasonFromFlags`. Kept.
+- Evidence release from FALLBACK_HOLD also requires that the kernel is no longer demanding a human on the release tick. Kept.
+- The TOXIC veto uses the raw R, not R_eff. An earlier draft used R_eff there, which turned low Risk confidence into a permanent operator-only latch; in a silent-stadium mission that is a dead unit for an input that was merely unknown. Changed.
+
+**Open for review.**
+
 - Below threshold, HOLD versus WAIT is split on C ≥ 0.5. Because c_R no longer enters C, some inputs with low Risk confidence move from WAIT to HOLD. Neither allows action, and the diff never shows a gained COMMIT, a lowered τ, or a raised EV, but the diff reports them as permissive under the strict ordering. The report's appendix shows the alternative normalization that avoids this at the cost of shrinking fully instrumented inputs by 0.85.
 - `replay.html` carries its own copy of the v11 math and is a labeled illustration; it was not changed.
-- The DiMOS gate and the drone-sim harness live outside this repository. The September-series replays were not run here; the gate tests use synthetic stand-ins for the same scenarios.
+- The DiMOS gate and the drone-sim harness live outside this repository. The September-series replays were not run here; the gate tests use synthetic stand-ins for the same scenarios. The branch is review-ready, not merge-ready, until those replays run against the DiMOS gate.
+
+**First item for v11.2.** The kernel's `low_confidence_brake` flag cannot fire: reversibility < 0.4 implies Sp·St < 0.16 < BRAKE_I, so an irreversible input always trips the One-Way Brake first. The guard meant to catch "irreversible on guessed inputs" has been dead code since July, and that capability is currently enforced by a different guard than the one named for it. It is a one-line ordering or condition fix; it was left alone in this release because kernel constants and guard order were out of scope.
 
 ---
 

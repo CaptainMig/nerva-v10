@@ -52,7 +52,7 @@ test('R_eff = 1 − c_R·(1 − R): full confidence gives R, zero confidence giv
   }
 });
 
-test('lower Risk confidence never makes the verdict less conservative (τ up, EV down, veto only added)', () => {
+test('lower Risk confidence never makes the verdict less conservative (τ up, EV down)', () => {
   const v = { E: 0.5, S: 0.7, R: 0.4, Sp: 0.7, St: 0.7 };
   let prevTau = -Infinity, prevEv = Infinity;
   for (const cR of [1, 0.8, 0.6, 0.4, 0.2, 0]) {
@@ -61,10 +61,21 @@ test('lower Risk confidence never makes the verdict less conservative (τ up, EV
     assert.ok(r.ev <= prevEv + 1e-12, `ev not monotone at c_R=${cR}`);
     prevTau = r.tau; prevEv = r.ev;
   }
-  // TOXIC veto: a risk reading that is safe at full confidence can veto when uncertain
-  const t = { E: 0.5, S: 0.5, R: 0.5, Sp: 0.4, St: 0.4 };   // integrity 0.16 < 0.30
-  assert.notEqual(ev(t, { ...ONES }).decision, 'TOXIC');        // R_eff = 0.5 ≤ 0.65
-  assert.equal(ev(t, { ...ONES, R: 0.2 }).decision, 'TOXIC');  // R_eff = 0.9 > 0.65
+});
+
+test('TOXIC veto uses the raw R: uncertain risk escalates, it does not latch', () => {
+  // integrity 0.1225 < 0.30 and reversibility 0.35 < 0.40: the veto turns on R alone
+  const t = { E: 0.5, S: 0.5, R: 0.5, Sp: 0.35, St: 0.35 };
+  for (const cR of [1, 0.5, 0.2, 0]) {
+    const r = ev(t, { ...ONES, R: cR });
+    assert.notEqual(r.decision, 'TOXIC', `c_R=${cR}: R=0.5 ≤ 0.65 must not veto`);   // R_eff reaches 1, still no veto
+    assert.equal(r.decision, 'ESCALATE');   // irreversible + weak integrity: One-Way Brake, fallback path available
+  }
+  assert.equal(ev({ ...t, R: 0.7 }, ONES).decision, 'TOXIC');        // actual high risk vetoes
+  assert.equal(ev({ ...t, R: 0.7 }, { ...ONES, R: 0.1 }).decision, 'TOXIC');
+  // the "irreversible" preset stays ESCALATE, as in v11
+  const s = K.V11_SCENARIOS.find(x => x.id === 'irreversible');
+  assert.equal(ev(s.v, s.c).decision, 'ESCALATE');
 });
 
 test('C excludes Risk confidence and uses renormalized weights that sum to 1', () => {
@@ -79,7 +90,7 @@ test('C excludes Risk confidence and uses renormalized weights that sum to 1', (
   assert.ok(Math.abs(K.v11_aggConfidence(ONES) - 1) < 1e-12);
 });
 
-test('Risk still enters τ, the veto and the EV block through R_eff', () => {
+test('Risk enters τ and the EV block through R_eff', () => {
   const lo = ev({ E: 0.5, S: 0.7, R: 0.1, Sp: 0.8, St: 0.8 }, ONES);
   const hi = ev({ E: 0.5, S: 0.7, R: 0.9, Sp: 0.8, St: 0.8 }, ONES);
   assert.ok(hi.tau > lo.tau);
@@ -87,6 +98,10 @@ test('Risk still enters τ, the veto and the EV block through R_eff', () => {
   assert.equal(lo.flags.ev_block, false);
   assert.equal(hi.flags.ev_block, true);
   assert.ok(Math.abs(hi.risk_effective - 0.9) < 1e-12);
+  // and through confidence alone: same R, lower c_R, EV block switches on
+  const unsure = ev({ E: 0.5, S: 0.7, R: 0.1, Sp: 0.8, St: 0.8 }, { ...ONES, R: 0.1 });
+  assert.equal(unsure.flags.ev_block, true);
+  assert.ok(unsure.tau > lo.tau);
 });
 
 test('shrinkage scales the case for acting only: |r| falls with C, τ rises', () => {

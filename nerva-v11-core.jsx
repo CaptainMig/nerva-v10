@@ -1,15 +1,18 @@
-// nerva-v11-core.jsx — v11 mixed-state kernel as pure JS, plus React context.
-// Ported from kernel/v11.ts. Same math, same verdicts, no API call needed.
+// nerva-v11-core.jsx — the canonical v11 kernel, as pure JS, plus React context.
+// This file is the kernel. There is no separate kernel/v11.ts in this repo.
 //
 // v11.1 (risk-sign correction, spec §6):
 //   - Risk no longer adds to the signal magnitude. r_y is removed; the Bloch
 //     vector is (r_x, 0, r_z) with the same √3 normalization, so |r| ≤ √(2/3)
 //     ≈ 0.8165 (all-ones input: r_x = r_z = 1/√3). That ceiling is below the
 //     maximum τ, so sufficiently risky inputs cannot reach COMMIT at all.
-//   - Risk enters only through the bar and the guards, as effective risk
-//     R_eff = 1 − c_R · (1 − R). Full confidence: R_eff = R. Zero confidence:
-//     R_eff = 1. Uncertain risk is treated as maximum risk. R_eff replaces R
-//     in τ, in the TOXIC veto and in the EV block.
+//   - Risk enters only through the bar and the guards. Effective risk
+//     R_eff = 1 − c_R · (1 − R) carries Risk's confidence: full confidence
+//     gives R, zero confidence gives 1, uncertain risk is treated as higher
+//     risk. R_eff replaces R in τ and in the EV block. The TOXIC veto keeps
+//     the raw R: TOXIC means actual low integrity with actual high risk, and
+//     an unknown risk reading must land in ESCALATE (with the fallback path),
+//     not in an operator-only latch.
 //   - Confidence shrinkage C is computed from the four case-for inputs only
 //     (E, S, Sp, St), weights renormalized to sum to 1. Risk's confidence acts
 //     through R_eff, never through C.
@@ -17,7 +20,7 @@
 const { createContext: V11Ctx, useContext: useV11Ctx, useState: useV11State, useMemo: useV11Memo, useEffect: useV11Effect, useCallback: useV11Callback, useRef: useV11Ref } = React;
 
 // -----------------------------------------------------------------
-// CONSTANTS (from kernel/v11.ts)
+// CONSTANTS
 // -----------------------------------------------------------------
 // v11 weights were { E: 0.15, S: 0.15, R: 0.15, Sp: 0.275, St: 0.275 }.
 // v11.1 drops R and renormalizes the remaining four by their sum (0.85).
@@ -128,8 +131,9 @@ function evaluate(values, confidences, opts = {}) {
 
   const integrity = v.Sp * v.St;
   const reversibility = (v.Sp + v.St) / 2;
-  // v11.1: effective risk carries Risk's confidence; it replaces R in τ,
-  // the TOXIC veto and the EV block. In v10 mode c.R = 1 so R_eff = R.
+  // v11.1: effective risk carries Risk's confidence; it replaces R in τ and
+  // the EV block. The TOXIC veto uses the raw R. In v10 mode c.R = 1 so
+  // R_eff = R.
   const rEff = effectiveRisk(v.R, c.R);
   const ev = v.Sp - rEff;
   const tau = opts.tauMode === 'manual'
@@ -138,7 +142,7 @@ function evaluate(values, confidences, opts = {}) {
   const tauPure = computeTau(densPure.entropy, v.R, reversibility);
 
   const pre = verdictPipeline({
-    integrity, risk: rEff, reversibility, urgency: v.E, ev,
+    integrity, risk: v.R, reversibility, urgency: v.E, ev,
     c_Sp: c.Sp, c_St: c.St, is_v11: isV11,
   });
   const decision = verdictFromR({
